@@ -103,9 +103,9 @@ class TestLoggo(unittest.TestCase):
                 result = dummy.optional_provided(kw='Something')
                 self.assertIsNone(result)
                 (alert, logged_msg), extras = logger.call_args_list[0]
-                self.assertTrue('2 args, 1 kwargs' in logged_msg)
+                self.assertTrue('0 args, 1 kwargs' in logged_msg)
                 (alert, logged_msg), extras = logger.call_args_list[-1]
-                self.assertTrue('Returned a tuple' in logged_msg)
+                self.assertTrue('Errored with ValueError' in logged_msg)
 
 
 if __name__ == '__main__':

@@ -109,22 +109,22 @@ class Loggo(object):
             os.makedirs(logpath)
         return os.path.join(logpath, 'log.txt')
 
-    def _build_string(self, msg, level, log_data, truncate=150, colour=True):
+    def _build_string(self, msg, level, log_data, truncate=0, colour=True):
         """
         Make a single line string, or multiline if traceback provided, for print
         and file logging
         """
         tstamp = datetime.now().strftime('%d.%m %Y %H:%M:%S')
-        tb = log_data.pop('traceback', '')
+        # if there is a traceback, colour it or not
+        tb = log_data.get('traceback', '')
         if tb:
-            truncate += len(tb)
             if colour:
                 tb = '{}{}{}'.format(COLOUR_MAP['critical'], tb, COLOUR_MAP['end'])
             tb = '\t' + tb.replace('\n', '\n\t')
         datapoints = [tstamp, msg, level, log_data]
         strung = '\t' + '\t'.join([str(s).strip('\n') for s in datapoints])
-        if len(strung) > truncate:
-            strung[:truncate] + '...'
+        if truncate and len(strung) > truncate:
+            strung = strung[:truncate] + '...'
         if tb:
             strung = '{} -- see below: \n{}\n'.format(strung, tb)
         return strung
@@ -134,7 +134,7 @@ class Loggo(object):
         Very simple log writer, could expand
         """
         with open(self.get_logfile_path(), 'a') as fo:
-            fo.write(line)
+            fo.write(line.rstrip('\n') + '\n')
 
     def add_handler(self):
         """
@@ -237,7 +237,6 @@ class Loggo(object):
         Make data safe for logging
         """
         message = self._force_string_and_truncate(message)
-        # data needs to become a dict, ideally with something in it
         if data is None:
             data = dict()
         elif not isinstance(data, dict):
@@ -256,8 +255,9 @@ class Loggo(object):
         try:
             data = self._parse_input(alert, data)
             message, string_data = self.sanitise(message, data)
-            single_string = self._build_string(message, alert, string_data)
+            single_string = self._build_string(message, alert, string_data, truncate=200)
             plain_string = self._build_string(message, alert, string_data, colour=False)
+            string_data.pop('traceback', None)
 
             if self.do_print:
                 print(colour_msg(single_string, alert))
@@ -269,22 +269,8 @@ class Loggo(object):
             self.logger.log(log_level, message, extra=string_data)
 
         except Exception as error:
-            #trace = traceback.format_exc()
-            #self.log_and_raise(error, trace, **kwargs)
             self._emergency_log('General log failure: ' + str(error), message, error)
 
-    def log_and_raise(self, error, traceback, *args, **kwargs):
-        """
-        Log an exception and then raise it
-        """
-        extras = getattr(self, 'log_data', dict())
-        extras.update(kwargs)
-        if args:
-            extras['pased_args'] = args
-        if traceback:
-            extras['traceback'] = traceback
-        self.log(str(error), 'critical', extras)
-        raise error.__class__('[LOGGED] ' + str(error))
 
     def _emergency_log(self, error_msg, msg, exception):  #  no cover
         """

@@ -40,7 +40,8 @@ class logme(Loggo):
             return response
         except Exception as error:
             trace = traceback.format_exc()
-            self.log_and_raise(error, trace, *args, **kwargs)
+            self.generate_log('error', error, trace)
+            raise error.__class__('[LOGGED] ' + str(error))
 
     def get_msg(self, response):
         """
@@ -71,7 +72,7 @@ class logme(Loggo):
             data.update(self.log_data)
         return data
 
-    def generate_log(self, where, response):
+    def generate_log(self, where, response, trace=False):
         """
         General logger for before, after or error in function
         """
@@ -98,4 +99,6 @@ class logme(Loggo):
         msg = formed if not msg else '{old}: {new}'.format(old=formed, new=msg)
         level = self.get_alert(response)
         log_data = self.get_log_data(response)
+        if trace:
+            log_data['traceback'] = trace
         self.log(msg, level, log_data)
