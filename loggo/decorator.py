@@ -21,10 +21,11 @@ class logme(Loggo):
     function is the function to be decorated
     config is the needed configuration, with default provided in config.py
     """
-    def __init__(self, function=None, config=SETTINGS):
+    def __init__(self, function=None, config=SETTINGS, just_errors=False):
 
         self.callable_type = 'function' if not ismethod(function) else 'class method'
         self.function = function
+        self.just_errors = just_errors
         super().__init__(config)
 
     def __call__(self, *args, **kwargs):
@@ -40,7 +41,6 @@ class logme(Loggo):
         except Exception as error:
             trace = traceback.format_exc()
             self.log_and_raise(error, trace, *args, **kwargs)
-            raise
 
     def get_msg(self, response):
         """
@@ -75,6 +75,8 @@ class logme(Loggo):
         """
         General logger for before, after or error in function
         """
+        if self.just_errors:
+            return
         unformatted = FORMS.get(where)
         # format args
         forms = dict(module=getattr(self.function, '__module__', 'modul'),

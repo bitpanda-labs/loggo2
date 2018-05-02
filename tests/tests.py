@@ -12,7 +12,7 @@ def test(first, other, kwargs=None):
     else:
         return (first+other, kwargs)
 
-@Loggo.exhaustive
+@Loggo.everything
 class DummyClass(object):
     """
     A class with regular methods, static methods and errors

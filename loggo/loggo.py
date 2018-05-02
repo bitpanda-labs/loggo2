@@ -76,13 +76,28 @@ class Loggo(object):
 
     @staticmethod
     def logme(function):
+        """
+        Decorator for methods that logs start, end and error
+        """
         from .decorator import logme as _logme
         return _logme(function, SETTINGS)
 
     @staticmethod
-    def exhaustive(cls):
+    def everything(cls):
+        """
+        Decorator for classes which logs evyerthing
+        """
         from .class_decorator import exhaustive as _exhaustive
         return _exhaustive(cls, SETTINGS)
+
+    @staticmethod
+    def errors(function):
+        """
+        Decorator for functions that only logs errors
+        """
+        from .decorator import logme as _logme
+        return _logme(function, SETTINGS, just_errors=True)
+
 
     def get_logfile_path(self):
         """
@@ -95,6 +110,10 @@ class Loggo(object):
         return os.path.join(logpath, 'log.txt')
 
     def _build_string(self, msg, level, log_data, truncate=150):
+        """
+        Make a single line string, or multiline if traceback provided, for print
+        and file logging
+        """
         tstamp = datetime.now().strftime('%d.%m %Y %H:%M:%S')
         tb = log_data.pop('traceback', '')
         if tb:
@@ -110,8 +129,11 @@ class Loggo(object):
         return strung
 
     def write_to_file(self, line):
+        """
+        Very simple log writer, could expand
+        """
         with open(self.get_logfile_path(), 'a') as fo:
-            fo.write('\t'.join(line))
+            fo.write(line)
 
     def add_handler(self):
         """
