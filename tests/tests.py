@@ -1,8 +1,10 @@
 import unittest
 from loggo import Loggo
+test_setup = LOGGER = dict(facility='DKTEST', ip='192.168.1.11', port=12206, do_print=True, do_write=True)
+Loggo.setup(test_setup)
 from unittest.mock import patch
 
-@Loggo.logme
+@Loggo
 def test(first, other, kwargs=None):
     """
     A function that may or may not error
@@ -74,7 +76,6 @@ class TestLoggo(unittest.TestCase):
     def test_exhaustive_0(self):
         with patch('logging.Logger.log') as logger:
             result = dummy.add_and_maybe_subtract(15, 10, 5)
-
             (alert, logged_msg), extras = logger.call_args_list[0]
             self.assertTrue('3 args' in logged_msg)
             (alert, logged_msg), extras = logger.call_args_list[-1]
