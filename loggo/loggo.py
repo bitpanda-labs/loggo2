@@ -31,7 +31,7 @@ try:
                       critical=Fore.WHITE + Back.RED + Style.BRIGHT,
                       dev=Fore.RED + Style.BRIGHT,
                       debug=Style.DIM,
-                      greenbright=Fore.GREEN+Style.BRIGHT,
+                      greenbright=Fore.GREEN + Style.BRIGHT,
                       end=Style.RESET_ALL)
 except ImportError:
     COLOUR_MAP = dict()
@@ -40,7 +40,7 @@ from .config import SETTINGS
 
 def colour_msg(msg, alert):
     """
-    Try to colour a message, if we can
+    Try to colour a message if colorama is installed, based on alert level
     """
     if alert is None:
         alert = COLOUR_MAP.get('greenbright', '')
@@ -50,7 +50,7 @@ def colour_msg(msg, alert):
 
 class Loggo(object):
     """
-    A generalised logger for daemonKit and Transaction2
+    A generalised logger for daemonKit and Transaction2, maybe your project too
     """
 
     def __init__(self, config, **kwargs):
@@ -109,7 +109,7 @@ class Loggo(object):
             os.makedirs(logpath)
         return os.path.join(logpath, 'log.txt')
 
-    def _build_string(self, msg, level, log_data, truncate=150):
+    def _build_string(self, msg, level, log_data, truncate=150, colour=True):
         """
         Make a single line string, or multiline if traceback provided, for print
         and file logging
@@ -118,7 +118,8 @@ class Loggo(object):
         tb = log_data.pop('traceback', '')
         if tb:
             truncate += len(tb)
-            tb = '{}{}{}'.format(COLOUR_MAP['critical'], tb, COLOUR_MAP['end'])
+            if colour:
+                tb = '{}{}{}'.format(COLOUR_MAP['critical'], tb, COLOUR_MAP['end'])
             tb = '\t' + tb.replace('\n', '\n\t')
         datapoints = [tstamp, msg, level, log_data]
         strung = '\t' + '\t'.join([str(s).strip('\n') for s in datapoints])
@@ -256,21 +257,21 @@ class Loggo(object):
             data = self._parse_input(alert, data)
             message, string_data = self.sanitise(message, data)
             single_string = self._build_string(message, alert, string_data)
-
-            if self.do_write:
-                self.write_to_file(single_string)
+            plain_string = self._build_string(message, alert, string_data, colour=False)
 
             if self.do_print:
                 print(colour_msg(single_string, alert))
 
-            log_level = getattr(logging, log_levels.get(alert, 'INFO'))
+            if self.do_write:
+                self.write_to_file(plain_string)
 
+            log_level = getattr(logging, log_levels.get(alert, 'INFO'))
             self.logger.log(log_level, message, extra=string_data)
 
         except Exception as error:
-            raise
+            #trace = traceback.format_exc()
+            #self.log_and_raise(error, trace, **kwargs)
             self._emergency_log('General log failure: ' + str(error), message, error)
-
 
     def log_and_raise(self, error, traceback, *args, **kwargs):
         """
