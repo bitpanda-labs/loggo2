@@ -1,7 +1,9 @@
-from .config import SETTINGS, COLOUR_MAP
+from .config import SETTINGS
+from .loggo import COLOUR_MAP
 
 try:
     from colorama import init
+    init()
 except ImportError:
     init = None
 
@@ -15,7 +17,7 @@ def _get_logger(self, **kwargs):
     if 'logger' in kwargs:
         return kwargs['logger'].log
     from .loggo import Loggo
-    return Loggo(**SETTINGS).log
+    return Loggo(SETTINGS).log
 
 def LoggedException(self, error, traceback=None, args=None, kwargs=None): # pylint: disable=invalid-name
     """
@@ -38,11 +40,11 @@ def LoggedException(self, error, traceback=None, args=None, kwargs=None): # pyli
 
     extras = getattr(self, 'log_data', dict())
     extras.update(kwargs)
+
     if args:
-        extras['args'] = args
+        extras['pased_args'] = args
     if traceback:
-        traceback.print_exception()
-        extras['traceback'] = str(traceback)
+        extras['traceback'] = traceback
 
     log(str(error), 'critical', extras)
     return error

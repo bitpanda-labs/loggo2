@@ -1,12 +1,19 @@
 """
-A general logger
+A general logger that can be used for exceptions, classes, etc.
 """
 import inspect
 import logging
 import os
 from datetime import datetime
 
-from .config import LOG_LEVELS as log_levels
+try:
+    from .config import LOG_LEVELS as log_levels
+except ImportError:
+    log_levels = dict(critical='CRITICAL',
+                      dev='ERROR',
+                      minor='WARNING',
+                      info='INFO',
+                      debug='DEBUG')
 
 # you don't need graylog installed, but it is really powerful
 try:
@@ -24,17 +31,19 @@ try:
                       critical=Fore.WHITE + Back.RED + Style.BRIGHT,
                       dev=Fore.RED + Style.BRIGHT,
                       debug=Style.DIM,
-                      greendim=Style.DIM+Fore.GREEN,
+                      greenbright=Fore.GREEN+Style.BRIGHT,
                       end=Style.RESET_ALL)
 except ImportError:
     COLOUR_MAP = dict()
+
+from .config import SETTINGS
 
 def colour_msg(msg, alert):
     """
     Try to colour a message, if we can
     """
     if alert is None:
-        alert = COLOUR_MAP.get('greendim', '')
+        alert = COLOUR_MAP.get('greenbright', '')
     else:
         alert = COLOUR_MAP.get(alert, '')
     return '{colour}{msg}\x1b[0m'.format(colour=alert, msg=msg)
@@ -44,29 +53,36 @@ class Loggo(object):
     A generalised logger for daemonKit and Transaction2
     """
 
-    def __init__(self, facility='loggo', ip=None, port=None, do_print=True, do_write=False, **kwargs):
+    def __init__(self, config, **kwargs):
         """
         Settomgs can be passed in from config.SETTINGS
         """
-        from .decorator import logme
-        from .exception import LoggedException
+        self.config = config
         # copy all the args and kwargs into a dict for extra logging into
-        self.log_data = locals().copy()
-        self.facility = facility
-        self.ip = ip
-        self.port = port
-        self.do_print = do_print
-        self.do_write = do_write
-        self.kwargs = kwargs
-        # this is a way to provide a loggable exception
-        self.LoggedException = LoggedException
-        # the below is to be used as a decorator function
-        self.logme = logme
+        # set the main config values
+        self.facility = config.get('facility', 'loggo')
+        self.ip = config.get('ip', None)
+        self.port = config.get('port', None)
+        self.do_print = config.get('do_print', True)
+        self.do_write = config.get('do_write', True)
+        # store our config as extra info for logger
+        self.kwargs = config.copy()
+        self.kwargs.update(**kwargs)
 
         # build logger object and add graylog support if possible
         self.logger = logging.getLogger(self.facility) # pylint: disable=no-member
         self.logger.setLevel(logging.DEBUG)
         self.add_handler()
+
+    @staticmethod
+    def logme(function):
+        from .decorator import logme as _logme
+        return _logme(function, SETTINGS)
+
+    @staticmethod
+    def exhaustive(cls):
+        from .class_decorator import exhaustive as _exhaustive
+        return _exhaustive(cls, SETTINGS)
 
     def get_logfile_path(self):
         """
@@ -78,10 +94,20 @@ class Loggo(object):
             os.makedirs(logpath)
         return os.path.join(logpath, 'log.txt')
 
-    def _build_string(self, msg, level, log_data):
+    def _build_string(self, msg, level, log_data, truncate=150):
         tstamp = datetime.now().strftime('%d.%m %Y %H:%M:%S')
+        tb = log_data.pop('traceback', '')
+        if tb:
+            truncate += len(tb)
+            tb = '{}{}{}'.format(COLOUR_MAP['critical'], tb, COLOUR_MAP['end'])
+            tb = '\t' + tb.replace('\n', '\n\t')
         datapoints = [tstamp, msg, level, log_data]
-        return '\t'.join([str(s) for s in datapoints])
+        strung = '\t' + '\t'.join([str(s).strip('\n') for s in datapoints])
+        if len(strung) > truncate:
+            strung[:truncate] + '...'
+        if tb:
+            strung = '{} -- see below: \n{}\n'.format(strung, tb)
+        return strung
 
     def write_to_file(self, line):
         with open(self.get_logfile_path(), 'a') as fo:
@@ -136,10 +162,10 @@ class Loggo(object):
         private = {'token', 'password', 'prv', 'priv', 'xprv', 'secret', 'mnemonic'}
         out = dict()
         for key, value in dictionary.items():
-            if not any(key in i for i in private):
-                if isinstance(value, dict):
-                    value = self._remove_private_keys(value)
-                out['protected_' + key] = value
+            if isinstance(value, dict):
+                value = self._remove_private_keys(value)
+            newname = 'protected_' + key if key in private else key
+            out[newname] = value
         return out
 
     def _remove_protected_keys(self, log_data):
@@ -148,7 +174,7 @@ class Loggo(object):
         """
         out = dict()
         # names that logger will not like
-        protected = {'name', 'message', 'asctime', 'msg', 'module'}
+        protected = {'name', 'message', 'asctime', 'msg', 'module', 'args'}
         for key, value in log_data.items():
             if key in protected:
                 self.log('Should not use key {} in log data'.format(key), 'dev')
@@ -158,11 +184,7 @@ class Loggo(object):
 
     def _parse_input(self, alert, log_data):
         """
-        For compatibility reasons, the user can pass arguments to log in a many
-        different ways.
-
-        Returns:
-            log_data (dict): key-value pairs for graylog
+        For compatibility reasons for bitpanda, to be deprecated
         """
         if isinstance(alert, str) and alert.lower() == 'none':
             alert = None
@@ -200,8 +222,9 @@ class Loggo(object):
         data.update(self.kwargs)
         data = self._remove_private_keys(data)
         data = self._remove_protected_keys(data)
-        string_data = self._stringify_dict(data)
-        return message, string_data
+        data = self._stringify_dict(data)
+        #string_data = self._force_string_and_truncate(string_data)
+        return message, data
 
     def log(self, message, alert=None, data=None, **kwargs):
         """
@@ -212,17 +235,33 @@ class Loggo(object):
             message, string_data = self.sanitise(message, data)
             single_string = self._build_string(message, alert, string_data)
 
-            if self.do_write: # pylint: disable=no-member
+            if self.do_write:
                 self.write_to_file(single_string)
 
-            if self.do_print: # pylint: disable=no-member
+            if self.do_print:
                 print(colour_msg(single_string, alert))
 
             log_level = getattr(logging, log_levels.get(alert, 'INFO'))
+
             self.logger.log(log_level, message, extra=string_data)
 
         except Exception as error:
+            raise
             self._emergency_log('General log failure: ' + str(error), message, error)
+
+
+    def log_and_raise(self, error, traceback, *args, **kwargs):
+        """
+        Log an exception and then raise it
+        """
+        extras = getattr(self, 'log_data', dict())
+        extras.update(kwargs)
+        if args:
+            extras['pased_args'] = args
+        if traceback:
+            extras['traceback'] = traceback
+        self.log(str(error), 'critical', extras)
+        raise error.__class__('[LOGGED] ' + str(error))
 
     def _emergency_log(self, error_msg, msg, exception):  #  no cover
         """

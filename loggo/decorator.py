@@ -1,10 +1,12 @@
-import logging
+try:
+    from .config import SETTINGS
+except ImportError:
+    raise ImportError('Please create a config.py file in {}. '\
+                       'You can can use the config.py.example file as a template.')
+
 import traceback
 from inspect import ismethod
 
-from .config import LOG_LEVELS as log_levels
-from .config import SETTINGS as default
-from .exception import LoggedException
 from .loggo import Loggo
 
 # potentially customisable messages called before, after or on error
@@ -19,10 +21,11 @@ class logme(Loggo):
     function is the function to be decorated
     config is the needed configuration, with default provided in config.py
     """
-    def __init__(self, function, config=default):
+    def __init__(self, function=None, config=SETTINGS):
+
         self.callable_type = 'function' if not ismethod(function) else 'class method'
         self.function = function
-        super().__init__(**config)
+        super().__init__(config)
 
     def __call__(self, *args, **kwargs):
         """ This part calls the decorated function, logging all the while"""
@@ -36,7 +39,7 @@ class logme(Loggo):
             return response
         except Exception as error:
             trace = traceback.format_exc()
-            error = self.LoggedException(error, trace, args=args, kwargs=kwargs)
+            self.log_and_raise(error, trace, *args, **kwargs)
             raise
 
     def get_msg(self, response):
@@ -62,9 +65,9 @@ class logme(Loggo):
         Override/extend this method if you have a different kind of object
         """
         data = dict()
-        if traceback:
-            data['traceback'] = traceback
-        if getattr(self, 'log_data') and isinstance(self.log_data, dict):
+        #if traceback:
+        #    data['error_traceback'] = traceback
+        if hasattr(self, 'log_data') and isinstance(self.log_data, dict):
             data.update(self.log_data)
         return data
 
@@ -91,8 +94,6 @@ class logme(Loggo):
         msg = self.get_msg(response)
         # add extra info to formatted sting
         msg = formed if not msg else '{old}: {new}'.format(old=formed, new=msg)
-
         level = self.get_alert(response)
-
         log_data = self.get_log_data(response)
         self.log(msg, level, log_data)
