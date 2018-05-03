@@ -1,4 +1,3 @@
-from .config import SETTINGS
 from .loggo import COLOUR_MAP
 
 try:
@@ -8,6 +7,11 @@ except ImportError:
     init = None
 
 def _get_logger(self, **kwargs):
+    try:
+        from . import loggo
+        return loggo.log
+    except ImportError:
+        pass
     if hasattr(self, 'log'):
         return self.log
     if hasattr(self, 'logger'):
@@ -17,7 +21,7 @@ def _get_logger(self, **kwargs):
     if 'logger' in kwargs:
         return kwargs['logger'].log
     from .loggo import Loggo
-    return Loggo(SETTINGS).log
+    return Loggo.log
 
 class LoggedException(Exception):
 

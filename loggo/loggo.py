@@ -7,14 +7,11 @@ import os
 from datetime import datetime
 import traceback
 
-try:
-    from .config import LOG_LEVELS as log_levels
-except ImportError:
-    log_levels = dict(critical='CRITICAL',
-                      dev='ERROR',
-                      minor='WARNING',
-                      info='INFO',
-                      debug='DEBUG')
+LOG_LEVELS = dict(critical='CRITICAL',
+                  dev='ERROR',
+                  minor='WARNING',
+                  info='INFO',
+                  debug='DEBUG')
 
 # you don't need graylog installed, but it is really powerful
 try:
@@ -37,10 +34,12 @@ try:
 except ImportError:
     COLOUR_MAP = dict()
 
-FORMS = dict(pre='Called {module}.{function} {callable} with {nargs} args, {nkwargs} kwargs\n',
-             post='Returned a {return_type} {return_value} from {module}.{function} {callable}\n',
-             error='Errored with {error_type} "{error_string}" when calling {module}.{function} {callable} with {nargs} args, {nkwargs} kwargs\n')
+# Strings to be formatted for pre function, post function and error during function
+FORMS = dict(pre='Called {modul}.{function} {callable} with {nargs} args, {nkwargs} kwargs\n',
+             post='Returned a {return_type} {return_value} from {modul}.{function} {callable}\n',
+             error='Errored with {error_type} "{error_string}" when calling {modul}.{function} {callable} with {nargs} args, {nkwargs} kwargs\n')
 
+# colour message by alert for printing
 def colour_msg(msg, alert):
     """
     Try to colour a message if colorama is installed, based on alert level
@@ -53,12 +52,21 @@ def colour_msg(msg, alert):
 
 class Loggo(object):
 
-    """Decorator example defined as two classes.
-    No "hacks" on the object model, most bureacratic.
     """
-    config = dict(facility='DKTEST', ip=None, port=None, do_print=True, do_write=True)
+    A class for logging
+
+    You should set it up just once, in __init__.py, using the .setup(config),
+    where config is a dict like the one below.
+
+    Optionsal
+    """
+    config = dict(facility='Example', ip=None, port=None, do_print=True, do_write=True)
+    setup_called = False
 
     def __init__(self, function):
+        if not Loggo.setup_called:
+            msg = 'You first need to run Loggo.setup() with appproiate params'
+            raise ValueError(msg)
         self.callable_type = 'function' if not inspect.ismethod(function) else 'class method'
         self.function = function
         self.config = Loggo.config
@@ -68,6 +76,8 @@ class Loggo(object):
         self.port = Loggo.config.get('port', None)
         self.do_print = Loggo.config.get('do_print', True)
         self.do_write = Loggo.config.get('do_write', True)
+        self.logfile = Loggo.config.get('logfile', './logs/logs.txt')
+        self.line_length = Loggo.config.get('line_length', 200)
 
         # build logger object and add graylog support if possible
         self.logger = logging.getLogger(self.facility) # pylint: disable=no-member
@@ -75,71 +85,91 @@ class Loggo(object):
         self.add_handler()
 
     def __call__(self, *args, **kwargs):
+        """
+        This takes the args and kwargs for the decorated function
+        """
         self.nargs = len(args)
         self.nkwargs = len(kwargs)
         self.generate_log('pre', None)
         try:
             response = self.function(*args, **kwargs)
+            kwargs['passed_args'] = args
             self.generate_log('post', response, **kwargs)
             return response
         except Exception as error:
+            kwargs['passed_args'] = args
             trace = traceback.format_exc()
             self.generate_log('error', error, trace, **kwargs)
             raise error.__class__('[LOGGED] ' + str(error))
 
-    def logme(self, *args, **kwargs):
-        return self.__call__(*args, **kwargs)
+    @staticmethod
+    def logme(*args, **kwargs):
+        """
+        Just so you can use Loggo.logme?
+        """
+        return Loggo.__call__(*args, **kwargs)
 
     @staticmethod
-    def everything(logging_class):
+    def everything(original):
         """
-        Decorator for classes which logs evyerthing
+        Decorator for classes which logs every method
         """
         class LoggedClass(object):
+            """
+            A whole class to be logged
+            """
 
             def __init__(self, *args, **kwargs):
-                self.original = logging_class(*args, **kwargs)
+                self.original = original(*args, **kwargs)
 
-            def __getattribute__(self,s):
+            def __getattribute__(self, to_wrap):
                 """
-                this is called whenever any attribute of a LoggedClass object is accessed. This function first tries to
-                get the attribute off LoggedClass. If it fails then it tries to fetch the attribute from self.original (an
-                instance of the decorated class). If it manages to fetch the attribute from self.original, and
-                the attribute is an instance method then `Loggo.logme` is applied.
+                this is called whenever any attribute of a LoggedClass object is
+                accessed. This function first tries to get the attribute off
+                LoggedClass. If it fails then it tries to fetch the attribute
+                from self.original (an instance of the decorated class). If it
+                manages to fetch the attribute from self.original, and the
+                attribute is an instance method then `Loggo.logme` is applied.
                 """
                 try:
-                    x = super().__getattribute__(s)
+                    wrapped = super().__getattribute__(to_wrap)
                 except AttributeError:
                     pass
                 else:
-                    return x
-                x = self.original.__getattribute__(s)
+                    return wrapped
 
-                # special handling for init?
-                if type(x) == type(self.__init__): # it is an instance method
-                    return Loggo(x)  # this is equivalent of just decorating the method with Loggo.logme
+                wrapped = self.original.__getattribute__(to_wrap)
+
+                # do not really understand the below code. will investigate one day
+                if type(wrapped) == type(self.__init__):
+                    # this is the unsugared syntax
+                    return Loggo(wrapped)
                 else:
-                    return Loggo(x)
+                    # does something need to happen here?
+                    return Loggo(wrapped)
 
         return LoggedClass
-
 
     @staticmethod
     def setup(config):
         setattr(Loggo, 'config', config)
+        setattr(Loggo, 'setup_called', True)
+        # assert for good config here?
+        # more we need to go here?
 
     def generate_log(self, where, response, trace=False, **kwargs):
-        self.log_data = {**self.log_data, **kwargs}
         """
         General logger for before, after or error in function
         """
-        if isinstance(response, (int, float, str, list, set, dict)):
+        representable = (int, float, str, list, set, dict)
+        if isinstance(response, representable):
             return_value = '({})'.format(self._force_string_and_truncate(response, 30))
         else:
             return_value = ''
         unformatted = FORMS.get(where)
-        # format args
-        forms = dict(module=getattr(self.function, '__module__', 'modul'),
+
+        # get all the data to be fed into the strings
+        forms = dict(modul=getattr(self.function, '__module__', 'modul'),
                      function=getattr(self.function, '__name__', 'func'),
                      callable=self.callable_type,
                      nargs=self.nargs,
@@ -151,56 +181,48 @@ class Loggo(object):
         if isinstance(response, Exception):
             forms['error_type'] = response.__class__.__name__
             forms['error_string'] = str(response)
-        # traceback in kwargs too
+
+        # traceback in kwargs too?
 
         formed = unformatted.format(**forms)
-        msg = self.get_msg(response)
-        # add extra info to formatted sting
-        msg = formed if not msg else '{old}: {new}'.format(old=formed, new=msg)
+
+        msg = self.get_msg(response, formed)
+
         level = self.get_alert(response)
-        log_data = self.get_log_data(response)
+        log_data = self.get_log_data(response, forms)
         if trace:
             log_data['traceback'] = trace
         self.log(msg, level, log_data)
 
-    def get_msg(self, response):
+    def get_msg(self, response, existing):
         """
         Get a message to append to the main omne.
         Override/extend this method if you have a different kind of object
         """
-        return getattr(self, 'msg', None)
+        msg = getattr(self, 'msg', None)
+        if not msg:
+            return existing
+        return '{old}: {new}'.format(old=existing, new=msg)
 
     def get_alert(self, response):
         """
         Get an alert level from either self or response
         Override/extend this method if you have a different kind of object
         """
-        first_try = getattr(self, 'alert', None)
-        if first_try:
+        first_try = getattr(self, 'alert', -1)
+        if first_try != -1:
             return first_try
         return 'dev' if isinstance(response, Exception) else None
 
-    def get_log_data(self, response):
+    def get_log_data(self, response, forms):
         """
         Get a dict of log data from either self or pass your own in
         Override/extend this method if you have a different kind of object
         """
-        data = dict()
-        #if traceback:
-        #    data['error_traceback'] = traceback
+        data = dict(forms)
         if hasattr(self, 'log_data') and isinstance(self.log_data, dict):
             data.update(self.log_data)
         return data
-
-    def get_logfile_path(self):
-        """
-        Subclass and change this if you like
-        """
-        fpath = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-        logpath = os.path.join('..', fpath, 'logs')
-        if not os.path.exists(logpath):
-            os.makedirs(logpath)
-        return os.path.join(logpath, 'log.txt')
 
     def _build_string(self, msg, level, log_data, truncate=0, colour=True):
         """
@@ -209,24 +231,27 @@ class Loggo(object):
         """
         tstamp = datetime.now().strftime('%d.%m %Y %H:%M:%S')
         # if there is a traceback, colour it or not
-        tb = log_data.get('traceback', '')
-        if tb:
+        trace = log_data.get('traceback', '')
+        if trace:
             if colour:
-                tb = '{}{}{}'.format(COLOUR_MAP['critical'], tb, COLOUR_MAP['end'])
-            tb = '\t' + tb.replace('\n', '\n\t')
+                trace = '{}{}{}'.format(COLOUR_MAP.get('critical', ''), trace, COLOUR_MAP.get('end', ''))
+            trace = '\t' + trace.replace('\n', '\n\t')
+        log_data = {k: v for k, v in log_data.items() if k != 'traceback'}
         datapoints = [tstamp, msg, level, log_data]
         strung = '\t' + '\t'.join([str(s).strip('\n') for s in datapoints])
         if truncate and len(strung) > truncate:
             strung = strung[:truncate] + '...'
-        if tb:
-            strung = '{} -- see below: \n{}\n'.format(strung, tb)
+        if trace:
+            strung = '{} -- see below: \n{}\n'.format(strung, trace)
         return strung
 
     def write_to_file(self, line):
         """
         Very simple log writer, could expand
         """
-        with open(self.get_logfile_path(), 'a') as fo:
+        if not os.path.isdir(os.path.dirname(self.logfile)):
+            os.makedirs(os.path.dirname(self.logfile))
+        with open(self.logfile, 'a') as fo:
             fo.write(line.rstrip('\n') + '\n')
 
     def add_handler(self):
@@ -347,7 +372,7 @@ class Loggo(object):
         try:
             data = self._parse_input(alert, data)
             message, string_data = self.sanitise(message, data)
-            single_string = self._build_string(message, alert, string_data, truncate=200)
+            single_string = self._build_string(message, alert, string_data, truncate=self.line_length)
             plain_string = self._build_string(message, alert, string_data, colour=False)
             string_data.pop('traceback', None)
 
@@ -357,7 +382,7 @@ class Loggo(object):
             if self.do_write:
                 self.write_to_file(plain_string)
 
-            log_level = getattr(logging, log_levels.get(alert, 'INFO'))
+            log_level = getattr(logging, LOG_LEVELS.get(alert, 'INFO'))
             self.logger.log(log_level, message, extra=string_data)
 
         except Exception as error:
