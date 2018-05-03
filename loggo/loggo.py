@@ -359,10 +359,10 @@ class Loggo(object):
                 plain_string = self._build_string(message, alert, string_data, colour=False)
                 string_data.pop('traceback', None)
 
-                if Loggo.config.get('do_print', False):
+                if self.config.get('do_print', False):
                     print(colour_msg(single_string, alert))
 
-                if Loggo.config.get('do_write', False):
+                if self.config.get('do_write', False):
                     self.write_to_file(plain_string)
 
                 log_level = getattr(logging, LOG_LEVELS.get(alert, 'INFO'))
