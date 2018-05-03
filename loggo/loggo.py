@@ -282,15 +282,9 @@ class Loggo(object):
         names that could have sensitive data need to be removed
         """
         private = {'token', 'password', 'prv', 'priv', 'xprv', 'secret', 'mnemonic'}
-        out = dict()
-        for key, value in dictionary.items():
-            if isinstance(value, dict):
-                value = self._remove_private_keys(value)
-            newname = 'protected_' + key if key in private else key
-            out[newname] = value
-        return out
+        return {k: v for k, v in dictionary.items() if k not in private}
 
-    def _remove_protected_keys(self, log_data):
+    def _rename_protected_keys(self, log_data):
         """
         Some names cannot go into logger; remove them here and log the problem
         """
@@ -341,7 +335,7 @@ class Loggo(object):
         elif not isinstance(data, dict):
             data = dict(data=data)
         data = self._remove_private_keys(data)
-        data = self._remove_protected_keys(data)
+        data = self.rename_protected_keys(data)
         data = self._stringify_dict(data)
         #string_data = self._force_string_and_truncate(string_data)
         return message, data
