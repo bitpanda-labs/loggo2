@@ -335,7 +335,7 @@ class Loggo(object):
         elif not isinstance(data, dict):
             data = dict(data=data)
         data = self._remove_private_keys(data)
-        data = self.rename_protected_keys(data)
+        data = self._rename_protected_keys(data)
         data = self._stringify_dict(data)
         #string_data = self._force_string_and_truncate(string_data)
         return message, data
