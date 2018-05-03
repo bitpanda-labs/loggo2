@@ -386,6 +386,7 @@ class Loggo(object):
             self.logger.log(log_level, message, extra=string_data)
 
         except Exception as error:
+            raise
             self._emergency_log('General log failure: ' + str(error), message, error)
 
     def _emergency_log(self, error_msg, msg, exception):  #  no cover
