@@ -57,34 +57,25 @@ class Loggo(object):
 
     You should set it up just once, in __init__.py, using the .setup(config),
     where config is a dict like the one below.
-
-    Optionsal
     """
-    config = dict(facility='Example', ip=None, port=None, do_print=True, do_write=True)
-    setup_called = False
-
-    def __init__(self, function):
-        if not Loggo.setup_called:
-            msg = 'You first need to run Loggo.setup() with appproiate params'
-            raise ValueError(msg)
-        self.callable_type = 'function' if not inspect.ismethod(function) else 'class method'
-        self.function = function
-        self.config = Loggo.config
-        self.log_data = dict(Loggo.config)
-        self.facility = Loggo.config.get('facility', 'loggo')
-        self.ip = Loggo.config.get('ip', None)
-        self.port = Loggo.config.get('port', None)
-        self.do_print = Loggo.config.get('do_print', True)
-        self.do_write = Loggo.config.get('do_write', True)
-        self.logfile = Loggo.config.get('logfile', './logs/logs.txt')
-        self.line_length = Loggo.config.get('line_length', 200)
-
+    def __init__(self, config):
+        self.callable_type = 'function'
+        self.config = config
+        self.log_data = dict(config)
+        self.facility = config('facility', 'loggo')
+        self.ip = config('ip', None)
+        self.port = config('port', None)
+        self.do_print = config('do_print', True)
+        self.do_write = config('do_write', True)
+        self.logfile = config('logfile', './logs/logs.txt')
+        self.line_length = config('line_length', 200)
+        self.log = self.make_logger()
         # build logger object and add graylog support if possible
         self.logger = logging.getLogger(self.facility) # pylint: disable=no-member
         self.logger.setLevel(logging.DEBUG)
         self.add_handler()
 
-    def __call__(self, *args, **kwargs):
+    def decorator_magic(self, *args, **kwargs):
         """
         This takes the args and kwargs for the decorated function
         """
@@ -102,12 +93,9 @@ class Loggo(object):
             self.generate_log('error', error, trace, **kwargs)
             raise error.__class__('[LOGGED] ' + str(error))
 
-    @staticmethod
-    def logme(*args, **kwargs):
-        """
-        Just so you can use Loggo.logme?
-        """
-        return Loggo.__call__(*args, **kwargs)
+    def logme(self, function):
+        self.function = function
+        return self.decorator_magic
 
     @staticmethod
     def everything(original):
@@ -149,13 +137,6 @@ class Loggo(object):
                     return Loggo(wrapped)
 
         return LoggedClass
-
-    @staticmethod
-    def setup(config):
-        setattr(Loggo, 'config', config)
-        setattr(Loggo, 'setup_called', True)
-        # assert for good config here?
-        # more we need to go here?
 
     def generate_log(self, where, response, trace=False, **kwargs):
         """
@@ -365,29 +346,33 @@ class Loggo(object):
         #string_data = self._force_string_and_truncate(string_data)
         return message, data
 
-    def log(self, message, alert=None, data=None, **kwargs):
-        """
-        Main logging method. Takes message string, alert level, a dict
-        """
-        try:
-            data = self._parse_input(alert, data)
-            message, string_data = self.sanitise(message, data)
-            single_string = self._build_string(message, alert, string_data, truncate=self.line_length)
-            plain_string = self._build_string(message, alert, string_data, colour=False)
-            string_data.pop('traceback', None)
+    def make_logger(self):
 
-            if self.do_print:
-                print(colour_msg(single_string, alert))
+        def generated_log(message, alert=None, data=None, self=self, **kwargs):
+            """
+            Main logging method. Takes message string, alert level, a dict
+            """
+            try:
+                data = self._parse_input(alert, data)
+                message, string_data = self.sanitise(message, data)
+                single_string = self._build_string(message, alert, string_data, truncate=self.line_length)
+                plain_string = self._build_string(message, alert, string_data, colour=False)
+                string_data.pop('traceback', None)
 
-            if self.do_write:
-                self.write_to_file(plain_string)
+                if Loggo.config.get('do_print', False):
+                    print(colour_msg(single_string, alert))
 
-            log_level = getattr(logging, LOG_LEVELS.get(alert, 'INFO'))
-            self.logger.log(log_level, message, extra=string_data)
+                if Loggo.config.get('do_write', False):
+                    self.write_to_file(plain_string)
 
-        except Exception as error:
-            raise
-            self._emergency_log('General log failure: ' + str(error), message, error)
+                log_level = getattr(logging, LOG_LEVELS.get(alert, 'INFO'))
+                self.logger.log(log_level, message, extra=string_data)
+
+            except Exception as error:
+                raise
+                #self._emergency_log('General log failure: ' + str(error), message, error)
+
+        return generated_log
 
     def _emergency_log(self, error_msg, msg, exception):  #  no cover
         """
