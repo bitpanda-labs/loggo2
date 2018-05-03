@@ -62,13 +62,13 @@ class Loggo(object):
         self.callable_type = 'function'
         self.config = config
         self.log_data = dict(config)
-        self.facility = config('facility', 'loggo')
-        self.ip = config('ip', None)
-        self.port = config('port', None)
-        self.do_print = config('do_print', True)
-        self.do_write = config('do_write', True)
-        self.logfile = config('logfile', './logs/logs.txt')
-        self.line_length = config('line_length', 200)
+        self.facility = config.get('facility', 'loggo')
+        self.ip = config.get('ip', None)
+        self.port = config.get('port', None)
+        self.do_print = config.get('do_print', True)
+        self.do_write = config.get('do_write', True)
+        self.logfile = config.get('logfile', './logs/logs.txt')
+        self.line_length = config.get('line_length', 200)
         self.log = self.make_logger()
         # build logger object and add graylog support if possible
         self.logger = logging.getLogger(self.facility) # pylint: disable=no-member
