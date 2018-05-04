@@ -49,11 +49,12 @@ class TestLoggo(unittest.TestCase):
         """
         Check that an error is thrown for a func
         """
-        return
         with patch('logging.Logger.log') as logger:
             with self.assertRaisesRegex(ValueError, 'no good'):
                 result = test('astadh', 1331)
-                (alert, logged_msg), extras = logger.call_args
+            (alert, logged_msg), extras = logger.call_args
+            self.assertEqual(alert, 40)
+            self.assertTrue('Errored with ValueError "no good"' in logged_msg)
 
     def test_logme_0(self):
         """
