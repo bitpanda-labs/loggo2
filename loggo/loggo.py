@@ -120,6 +120,7 @@ class Loggo(object):
                 manages to fetch the attribute from self.original, and the
                 attribute is an instance method then `Loggo.logme` is applied.
                 """
+
                 try:
                     wrapped = super().__getattribute__(to_wrap)
                 except AttributeError:
@@ -128,8 +129,8 @@ class Loggo(object):
                     return wrapped
 
                 wrapped = self.original.__getattribute__(to_wrap)
+                return unself.logme(wrapped) if inspect.ismethod(wrapped) else wrapped
 
-                return unself.logme(wrapped)
 
         return LoggedClass
 
