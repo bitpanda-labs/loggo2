@@ -75,30 +75,31 @@ class Loggo(object):
         self.logger.setLevel(logging.DEBUG)
         self.add_handler()
 
-    def decorator_magic(self, *args, **kwargs):
-        """
-        This takes the args and kwargs for the decorated function
-        """
-        self.nargs = len(args)
-        self.nkwargs = len(kwargs)
-        self.generate_log('pre', None)
-        try:
-            response = self.function(*args, **kwargs)
-            kwargs['passed_args'] = args
-            self.generate_log('post', response, **kwargs)
-            return response
-        except Exception as error:
-            kwargs['passed_args'] = args
-            trace = traceback.format_exc()
-            self.generate_log('error', error, trace, **kwargs)
-            raise error.__class__('[LOGGED] ' + str(error))
-
     def logme(self, function):
-        self.function = function
-        return self.decorator_magic
 
-    @staticmethod
-    def everything(original):
+        def decorator_magic(*args, **kwargs):
+            """
+            This takes the args and kwargs for the decorated function
+            """
+            self.nargs = len(args)
+            self.nkwargs = len(kwargs)
+            self.generate_log('pre', None, function=function)
+            try:
+                response = function(*args, **kwargs)
+                kwargs['passed_args'] = args
+                self.generate_log('post', response, function=function, **kwargs)
+                return response
+            except Exception as error:
+                kwargs['passed_args'] = args
+                trace = traceback.format_exc()
+                self.generate_log('error', error, trace, function=function, **kwargs)
+                raise error.__class__('[LOGGED] ' + str(error))
+
+        return decorator_magic
+
+        #return self.decorator_magic
+
+    def everything(unself, original):
         """
         Decorator for classes which logs every method
         """
@@ -128,17 +129,11 @@ class Loggo(object):
 
                 wrapped = self.original.__getattribute__(to_wrap)
 
-                # do not really understand the below code. will investigate one day
-                if type(wrapped) == type(self.__init__):
-                    # this is the unsugared syntax
-                    return Loggo(wrapped)
-                else:
-                    # does something need to happen here?
-                    return Loggo(wrapped)
+                return unself.logme(wrapped)
 
         return LoggedClass
 
-    def generate_log(self, where, response, trace=False, **kwargs):
+    def generate_log(self, where, response, trace=False, function=None, **kwargs):
         """
         General logger for before, after or error in function
         """
@@ -150,8 +145,8 @@ class Loggo(object):
         unformatted = FORMS.get(where)
 
         # get all the data to be fed into the strings
-        forms = dict(modul=getattr(self.function, '__module__', 'modul'),
-                     function=getattr(self.function, '__name__', 'func'),
+        forms = dict(modul=getattr(function, '__module__', 'modul'),
+                     function=getattr(function, '__name__', 'func'),
                      callable=self.callable_type,
                      nargs=self.nargs,
                      nkwargs=self.nkwargs,
@@ -249,8 +244,10 @@ class Loggo(object):
         """
         Return stringified and truncated obj, or log alert if not possible
         """
+        typ = type(obj).__name__
         if isinstance(obj, (list, set, tuple)):
-            obj = ', '.join([self._force_string_and_truncate(i) for i in obj])
+            obj = ', '.join([str(i) for i in obj])
+            obj = '{typ}({obj})'
         elif isinstance(obj, dict):
             obj = self._stringify_dict(obj)
         try:
@@ -330,6 +327,7 @@ class Loggo(object):
         Make data safe for logging
         """
         message = self._force_string_and_truncate(message)
+
         if data is None:
             data = dict()
         elif not isinstance(data, dict):
@@ -363,8 +361,7 @@ class Loggo(object):
                 self.logger.log(log_level, message, extra=string_data)
 
             except Exception as error:
-                raise
-                #self._emergency_log('General log failure: ' + str(error), message, error)
+                self._emergency_log('General log failure: ' + str(error), message, error)
 
         return generated_log
 

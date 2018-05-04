@@ -1,10 +1,10 @@
 import unittest
 from loggo import Loggo
-test_setup = LOGGER = dict(facility='DKTEST', ip='192.168.1.11', port=12206, do_print=True, do_write=True)
-Loggo.setup(test_setup)
+test_setup = dict(facility='DKTEST', ip='192.168.1.11', port=12206, do_print=True, do_write=True)
+Loggo = Loggo(test_setup)
 from unittest.mock import patch
 
-@Loggo
+@Loggo.logme
 def test(first, other, kwargs=None):
     """
     A function that may or may not error
@@ -13,6 +13,10 @@ def test(first, other, kwargs=None):
         raise ValueError('no good')
     else:
         return (first+other, kwargs)
+
+@Loggo.logme
+def aaa():
+    return 'this'
 
 @Loggo.everything
 class DummyClass(object):
@@ -33,12 +37,11 @@ class DummyClass(object):
     def static_method(number):
         return number*number
 
-    def optional_provided(self, kw=None):
+    def optional_provided(self, kw=None, **kwargs):
         if kw:
             raise ValueError('Should not have provided!')
 
 dummy = DummyClass()
-
 
 class TestLoggo(unittest.TestCase):
 
@@ -46,6 +49,7 @@ class TestLoggo(unittest.TestCase):
         """
         Check that an error is thrown for a func
         """
+        return
         with patch('logging.Logger.log') as logger:
             with self.assertRaisesRegex(ValueError, 'no good'):
                 result = test('astadh', 1331)
@@ -56,9 +60,9 @@ class TestLoggo(unittest.TestCase):
         Test correct result
         """
         with patch('logging.Logger.log') as logger:
-            res, kwa = test(2534, 2466, kwargs=1)
+            res, kwa = test(2534, 2466, kwargs=True)
             self.assertEqual(res, 5000)
-            self.assertEqual(kwa, 1)
+            self.assertTrue(kwa)
             (alert, logged_msg), extras = logger.call_args_list[0]
             self.assertTrue('2 args, 1 kwargs' in logged_msg)
             (alert, logged_msg), extras = logger.call_args_list[-1]

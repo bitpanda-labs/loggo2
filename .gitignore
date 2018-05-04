@@ -102,3 +102,4 @@ ENV/
 .DS_Store
 loggo/config.py
 loggo/logs/log.txt
+tests/logs/
