@@ -1,6 +1,6 @@
 import unittest
 from loggo import Loggo
-test_setup = dict(facility='DKTEST', ip='192.168.1.11', port=12206, do_print=True, do_write=True)
+test_setup = dict(facility='LOGGO_TEST', ip=None, port=None, do_print=True, do_write=True)
 Loggo = Loggo(test_setup)
 from unittest.mock import patch
 

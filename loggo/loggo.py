@@ -248,8 +248,6 @@ class Loggo(object):
         if isinstance(obj, (list, set, tuple)):
             obj = ', '.join([str(i) for i in obj])
             obj = '{typ}({obj})'
-        elif isinstance(obj, dict):
-            obj = self._stringify_dict(obj)
         try:
             obj = str(obj)
         except Exception as error:
