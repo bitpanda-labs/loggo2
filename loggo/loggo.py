@@ -131,7 +131,6 @@ class Loggo(object):
                 wrapped = self.original.__getattribute__(to_wrap)
                 return unself.logme(wrapped) if inspect.ismethod(wrapped) else wrapped
 
-
         return LoggedClass
 
     def generate_log(self, where, response, trace=False, function=None, **kwargs):

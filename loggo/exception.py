@@ -7,11 +7,6 @@ except ImportError:
     init = None
 
 def _get_logger(self, **kwargs):
-    try:
-        from . import loggo
-        return loggo.log
-    except ImportError:
-        pass
     if hasattr(self, 'log'):
         return self.log
     if hasattr(self, 'logger'):
