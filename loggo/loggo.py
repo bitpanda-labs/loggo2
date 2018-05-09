@@ -129,9 +129,14 @@ class Loggo(object):
                     return wrapped
 
                 wrapped = self.original.__getattribute__(to_wrap)
-                return unself.logme(wrapped) if inspect.ismethod(wrapped) else wrapped
+                if inspect.ismethod(wrapped) and getattr(wrapped, 'do_logging', True):
+                    return unself.logme(wrapped)
+                return wrapped
 
         return LoggedClass
+
+    def ignore(self, function):
+        function.do_logging = False
 
     def generate_log(self, where, response, trace=False, function=None, **kwargs):
         """
