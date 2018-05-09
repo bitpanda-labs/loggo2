@@ -149,7 +149,7 @@ class Loggo(object):
                 except AttributeError:
                     pass
                 else:
-                    return self.original.__getattribute__(to_wrap)
+                    return object.__getattribute__(original, to_wrap)
 
                 wrapped = self.original.__getattribute__(to_wrap)
                 is_method = inspect.ismethod(wrapped) or isinstance(wrapped, types.FunctionType)
