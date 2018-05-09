@@ -128,17 +128,13 @@ class Loggo(object):
         """
         Decorator for class, which attaches itself to any methods
         """
-
-        def predicator(f):
-            is_method = inspect.ismethod(f) or isinstance(f, types.FunctionType)
-
-        name_obj = inspect.getmembers(cls, predicate=predicator)
-        for name, obj in name_obj:
-            # filter out parents here
-            if name.startswith('__') and name.endswith('__'):
-                continue
-            setattr(cls, name, self.logme(obj))
-        return cls
+        class Decorated(cls):
+            def __getattribute__(self_or_class, name):
+                to_wrap = object.__getattribute__(self_or_class, name)
+                if type(to_wrap) in [type(lambda x:x), type(self.__init__)]: # do whatever you want with this
+                    return self.logme(to_wrap)
+                return to_wrap
+        return Decorated
 
     def ignore(self, function):
         """
@@ -265,7 +261,7 @@ class Loggo(object):
         typ = type(obj).__name__
         if isinstance(obj, (list, set, tuple)):
             obj = ', '.join([str(i) for i in obj])
-            obj = '{typ}({obj})'.format(typ=typ, ob=obj)
+            obj = '{typ}({obj})'.format(typ=typ, obj=obj)
         try:
             obj = str(obj)
         except Exception as error:
