@@ -83,6 +83,7 @@ class Loggo(object):
             """
             self.nargs = len(args)
             self.nkwargs = len(kwargs)
+            self.log_data = dict(loggo=True, arguments=args, **kwargs)
             self.generate_log('pre', None, function=function)
             try:
                 response = function(*args, **kwargs)
@@ -96,8 +97,6 @@ class Loggo(object):
                 raise error.__class__('[LOGGED] ' + str(error))
 
         return decorator_magic
-
-        #return self.decorator_magic
 
     def everything(unself, original):
         """
@@ -162,8 +161,6 @@ class Loggo(object):
         if isinstance(response, Exception):
             forms['error_type'] = response.__class__.__name__
             forms['error_string'] = str(response)
-
-        # traceback in kwargs too?
 
         formed = unformatted.format(**forms)
 
