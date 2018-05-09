@@ -124,33 +124,21 @@ class Loggo(object):
 
         return decorator_magic
 
-    def everything(self, original):
+    def everything(self, cls):
         """
         Decorator for class, which attaches itself to any methods
         """
-        class LoggedClass(object):
-            """
-            A whole class to be logged
-            """
-            def __init__(subself, *args, **kwargs):
-                subself.original = original(*args, **kwargs)
 
-            def __getattribute__(subself, to_wrap):
+        def predicator(f):
+            is_method = inspect.ismethod(f) or isinstance(f, types.FunctionType)
 
-                # if the parent claass has this attribute, just return in unwrapped
-                if super().__getattribute__(to_wrap):
-                    origin = object.__getattribute__(subself, original)
-                    return object.__getattribute__(origin, to_wrap)
-
-                wrapped = origin.__getattribute__(to_wrap)
-                is_method = inspect.ismethod(wrapped) or isinstance(wrapped, types.FunctionType)
-                ignore = wrapped.__name__ in self.ignore_methods
-                log_ok = getattr(wrapped, 'do_logging', True)
-                if is_method and log_ok and not ignore:
-                    wrapped = self.logme(wrapped)
-                return wrapped
-
-        return LoggedClass
+        name_obj = inspect.getmembers(cls, predicate=predicator)
+        for name, obj in name_obj:
+            # filter out parents here
+            if name.startswith('__') and name.endswith('__'):
+                continue
+            setattr(cls, name, self.logme(obj))
+        return cls
 
     def ignore(self, function):
         """
