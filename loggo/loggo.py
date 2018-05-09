@@ -286,7 +286,7 @@ class Loggo(object):
         typ = type(obj).__name__
         if isinstance(obj, (list, set, tuple)):
             obj = ', '.join([str(i) for i in obj])
-            obj = '{typ}({obj})'
+            obj = '{typ}({obj})'.format(typ=typ, ob=obj)
         try:
             obj = str(obj)
         except Exception as error:
