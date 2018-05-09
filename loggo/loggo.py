@@ -120,7 +120,7 @@ class Loggo(object):
                 kwargs['passed_args'] = args
                 trace = traceback.format_exc()
                 self.generate_log('error', error, trace, function=function, **kwargs)
-                raise error.__class__('[LOGGED] ' + str(error))
+                raise error.__class__(str(error))
 
         return decorator_magic
 
