@@ -130,10 +130,10 @@ class Loggo(object):
         """
         class Decorated(cls):
             def __getattribute__(self_or_class, name):
-                to_wrap = object.__getattribute__(self_or_class, name)
-                if type(to_wrap) in [type(lambda x:x), type(self.__init__)]: # do whatever you want with this
-                    return self.logme(to_wrap)
-                return to_wrap
+                unwrapped = object.__getattribute__(self_or_class, name)
+                if type(unwrapped) in {type(lambda x:x), type(self.__init__)}:
+                    return self.logme(unwrapped)
+                return unwrapped
         return Decorated
 
     def ignore(self, function):
