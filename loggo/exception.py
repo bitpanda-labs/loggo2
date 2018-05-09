@@ -7,6 +7,10 @@ except ImportError:
     init = None
 
 def _get_logger(self, **kwargs):
+    if hasattr(LoggedException, 'log'):
+        return LoggedException.log
+    if hasattr(LoggedException, 'logger'):
+        return LoggedException.logger.log
     if hasattr(self, 'log'):
         return self.log
     if hasattr(self, 'logger'):
@@ -15,6 +19,7 @@ def _get_logger(self, **kwargs):
         return kwargs['log']
     if 'logger' in kwargs:
         return kwargs['logger'].log
+    # potentially should fail here!
     from .loggo import Loggo
     return Loggo.log
 
