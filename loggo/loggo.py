@@ -124,7 +124,7 @@ class Loggo(object):
 
         return decorator_magic
 
-    def everything(unself, original):
+    def everything(self, original):
         """
         Decorator for class, which attaches itself to any methods
         """
@@ -132,32 +132,22 @@ class Loggo(object):
             """
             A whole class to be logged
             """
-            def __init__(self, *args, **kwargs):
-                self.original = original(*args, **kwargs)
+            def __init__(subself, *args, **kwargs):
+                subself.original = original(*args, **kwargs)
 
-            def __getattribute__(self, to_wrap):
-                """
-                this is called whenever any attribute of a LoggedClass object is
-                accessed. This function first tries to get the attribute off
-                LoggedClass. If it fails then it tries to fetch the attribute
-                from self.original (an instance of the decorated class). If it
-                manages to fetch the attribute from self.original, and the
-                attribute is an instance method then `Loggo.logme` is applied.
-                """
-                try:
-                    wrapped = super().__getattribute__(to_wrap)
-                except AttributeError:
-                    pass
-                else:
-                    origin = object.__getattribute__(self, 'original')
+            def __getattribute__(subself, to_wrap):
+
+                # if the parent claass has this attribute, just return in unwrapped
+                if super().__getattribute__(to_wrap):
+                    origin = object.__getattribute__(subself, original)
                     return object.__getattribute__(origin, to_wrap)
 
-                wrapped = self.original.__getattribute__(to_wrap)
+                wrapped = origin.__getattribute__(to_wrap)
                 is_method = inspect.ismethod(wrapped) or isinstance(wrapped, types.FunctionType)
-                ignore = wrapped.__name__ in unself.ignore_methods
+                ignore = wrapped.__name__ in self.ignore_methods
                 log_ok = getattr(wrapped, 'do_logging', True)
                 if is_method and log_ok and not ignore:
-                    return unself.logme(wrapped)
+                    wrapped = self.logme(wrapped)
                 return wrapped
 
         return LoggedClass
