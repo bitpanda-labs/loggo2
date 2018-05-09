@@ -155,8 +155,12 @@ class Loggo(object):
             return_value = ''
         unformatted = FORMS.get(where)
 
+        modul = getattr(function, '__module__', 'modul')
+        if modul == 'loggo.loggo':
+            return
+
         # get all the data to be fed into the strings
-        forms = dict(modul=getattr(function, '__module__', 'modul'),
+        forms = dict(modul=modul,
                      function=getattr(function, '__name__', 'func'),
                      callable=self.callable_type,
                      nargs=self.nargs,
