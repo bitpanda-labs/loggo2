@@ -1,6 +1,7 @@
 """
-A general logger that can be used for exceptions, classes, etc.
+Loggo: decorators for logging
 """
+import types
 import inspect
 import logging
 import os
@@ -39,7 +40,6 @@ FORMS = dict(pre='Called {modul}.{function} {callable} with {nargs} args, {nkwar
              post='Returned a {return_type} {return_value} from {modul}.{function} {callable}\n',
              error='Errored with {error_type} "{error_string}" when calling {modul}.{function} {callable} with {nargs} args, {nkwargs} kwargs\n')
 
-# colour message by alert for printing
 def colour_msg(msg, alert):
     """
     Try to colour a message if colorama is installed, based on alert level
@@ -51,12 +51,22 @@ def colour_msg(msg, alert):
     return '{colour}{msg}\x1b[0m'.format(colour=alert, msg=msg)
 
 class Loggo(object):
-
     """
     A class for logging
 
-    You should set it up just once, in __init__.py, using the .setup(config),
-    where config is a dict like the one below.
+    On instantiation, pass in a dictionary containing the config. Currently
+    accepted config values are:
+
+    - facility: name of the app the log is coming from
+    - ip: ip address for graylog
+    - port: port for graylog
+    - logfile: path to a file to which logs will be written
+    - do_print: print logs to console
+    - do_write: write logs to file
+    - line_length: max length for console printed string
+    - private_data: key names that should be filtered out of logging. if not set,
+      some sensible defaults are used
+
     """
     def __init__(self, config):
         self.callable_type = 'function'
@@ -69,6 +79,9 @@ class Loggo(object):
         self.do_write = config.get('do_write', True)
         self.logfile = config.get('logfile', './logs/logs.txt')
         self.line_length = config.get('line_length', 200)
+        self.ignore_methods = config.get('ignore_methods', set())
+        priv = {'token', 'password', 'prv', 'priv', 'xprv', 'secret', 'mnemonic'}
+        self.private_data = config.get('private_data', priv)
         self.log = self.make_logger()
         # build logger object and add graylog support if possible
         self.logger = logging.getLogger(self.facility) # pylint: disable=no-member
@@ -76,6 +89,15 @@ class Loggo(object):
         self.add_handler()
 
     def logme(self, function):
+        """
+        This the main decorator. After having instantiated Loggo, use it as a
+        decorator like so:
+
+        @Loggo.logme
+        def f(): pass
+
+        It will the call, return and errors that occurred during the function/method
+        """
 
         def decorator_magic(*args, **kwargs):
             """
@@ -84,13 +106,17 @@ class Loggo(object):
             self.nargs = len(args)
             self.nkwargs = len(kwargs)
             self.log_data = dict(loggo=True, arguments=args, **kwargs)
+            # pre log tells you what was called  and with what arguments
             self.generate_log('pre', None, function=function)
             try:
+                # where the original function is actually run
                 response = function(*args, **kwargs)
                 kwargs['passed_args'] = args
                 self.generate_log('post', response, function=function, **kwargs)
                 return response
             except Exception as error:
+                # if the function failed, you get an error log instead of a return log
+                # the exception is then reraised
                 kwargs['passed_args'] = args
                 trace = traceback.format_exc()
                 self.generate_log('error', error, trace, function=function, **kwargs)
@@ -100,13 +126,12 @@ class Loggo(object):
 
     def everything(unself, original):
         """
-        Decorator for classes which logs every method
+        Decorator for class, which attaches itself to any methods
         """
         class LoggedClass(object):
             """
             A whole class to be logged
             """
-
             def __init__(self, *args, **kwargs):
                 self.original = original(*args, **kwargs)
 
@@ -119,28 +144,35 @@ class Loggo(object):
                 manages to fetch the attribute from self.original, and the
                 attribute is an instance method then `Loggo.logme` is applied.
                 """
-
                 try:
                     wrapped = super().__getattribute__(to_wrap)
                 except AttributeError:
                     pass
                 else:
-                    return wrapped
+                    return self.original.__getattribute__(to_wrap)
 
                 wrapped = self.original.__getattribute__(to_wrap)
-                if inspect.ismethod(wrapped) and getattr(wrapped, 'do_logging', True):
+                is_method = inspect.ismethod(wrapped) or isinstance(wrapped, types.FunctionType)
+                ignore = wrapped.__name__ in unself.ignore_methods
+                log_ok = getattr(wrapped, 'do_logging', True)
+                if is_method and log_ok and not ignore:
                     return unself.logme(wrapped)
                 return wrapped
 
         return LoggedClass
 
     def ignore(self, function):
+        """
+        A decorator that will override Loggo.everything, in case you do not want
+        to log one particular method for some reason
+        """
         function.do_logging = False
 
     def generate_log(self, where, response, trace=False, function=None, **kwargs):
         """
         General logger for before, after or error in function
         """
+        # datatypes we will try to print in logs
         representable = (int, float, str, list, set, dict)
         if isinstance(response, representable):
             return_value = '({})'.format(self._force_string_and_truncate(response, 30))
@@ -164,12 +196,16 @@ class Loggo(object):
 
         formed = unformatted.format(**forms)
 
+        # logs contain three things: a message string, a log level, and a dict of
+        # extra data. there are three methods for these, which may be overwritten
+        # by subclassing if you want
         msg = self.get_msg(response, formed)
-
         level = self.get_alert(response)
         log_data = self.get_log_data(response, forms)
+
         if trace:
             log_data['traceback'] = trace
+
         self.log(msg, level, log_data)
 
     def get_msg(self, response, existing):
@@ -212,7 +248,8 @@ class Loggo(object):
         trace = log_data.get('traceback', '')
         if trace:
             if colour:
-                trace = '{}{}{}'.format(COLOUR_MAP.get('critical', ''), trace, COLOUR_MAP.get('end', ''))
+                end = COLOUR_MAP.get('end', '')
+                trace = '{}{}{}'.format(COLOUR_MAP.get('critical', ''), trace, end)
             trace = '\t' + trace.replace('\n', '\n\t')
         log_data = {k: v for k, v in log_data.items() if k != 'traceback'}
         datapoints = [tstamp, msg, level, log_data]
@@ -225,7 +262,7 @@ class Loggo(object):
 
     def write_to_file(self, line):
         """
-        Very simple log writer, could expand
+        Very simple log writer, could expand. simple append the line to the file
         """
         if not os.path.isdir(os.path.dirname(self.logfile)):
             os.makedirs(os.path.dirname(self.logfile))
@@ -278,8 +315,7 @@ class Loggo(object):
         """
         names that could have sensitive data need to be removed
         """
-        private = {'token', 'password', 'prv', 'priv', 'xprv', 'secret', 'mnemonic'}
-        return {k: v for k, v in dictionary.items() if k not in private}
+        return {k: v for k, v in dictionary.items() if k not in self.private_data}
 
     def _rename_protected_keys(self, log_data):
         """
@@ -339,7 +375,9 @@ class Loggo(object):
         return message, data
 
     def make_logger(self):
-
+        """
+        Dynamically generate a logger. It has to be done this way for reasons.
+        """
         def generated_log(message, alert=None, data=None, self=self, **kwargs):
             """
             Main logging method. Takes message string, alert level, a dict
