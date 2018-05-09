@@ -13,6 +13,10 @@ class LoggedException(Exception):
     def __init__(self, message, level='dev', exception=ValueError, **kwargs):
         if LoggedException.log is None:
             raise ValueError('LoggedException not configured. Please set the log function as a class attribute.')
+
+        if isinstance(self, LoggedException):
+            raise exception(message) from self
+
         message = COLOUR_MAP.get('critical', '') + message
         LoggedException.log(message, level, kwargs)
         raise exception(message) from self
