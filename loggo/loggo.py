@@ -131,7 +131,7 @@ class Loggo(object):
         class Decorated(cls):
             def __getattribute__(self_or_class, name):
                 unwrapped = object.__getattribute__(self_or_class, name)
-                if type(unwrapped) in {type(lambda x:x), type(self.__init__)}:
+                if type(unwrapped) in {type(lambda x:x), type(self.__init__)} and not getattr(unwrapped, 'no_log', False):
                     return self.logme(unwrapped)
                 return unwrapped
         return Decorated
@@ -141,7 +141,7 @@ class Loggo(object):
         A decorator that will override Loggo.everything, in case you do not want
         to log one particular method for some reason
         """
-        function.do_logging = False
+        function.no_log = True
 
     def generate_log(self, where, response, trace=False, function=None, **kwargs):
         """
