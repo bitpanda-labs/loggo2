@@ -36,9 +36,9 @@ except ImportError:
     COLOUR_MAP = dict()
 
 # Strings to be formatted for pre function, post function and error during function
-FORMS = dict(pre='Called {modul}.{function} {callable} with {nargs} args, {nkwargs} kwargs\n',
+FORMS = dict(pre='Called {modul}.{function} {callable} with {nargs} args, {nkwargs} kwargs: {kwa}\n',
              post='Returned a {return_type} {return_value} from {modul}.{function} {callable}\n',
-             error='Errored with {error_type} "{error_string}" when calling {modul}.{function} {callable} with {nargs} args, {nkwargs} kwargs\n')
+             error='Errored with {error_type} "{error_string}" when calling {modul}.{function} {callable} with {nargs} args, {nkwargs} kwargs: {kwa}\n')
 
 def colour_msg(msg, alert):
     """
@@ -69,7 +69,6 @@ class Loggo(object):
 
     """
     def __init__(self, config):
-        self.callable_type = 'function'
         self.config = config
         self.log_data = dict(config)
         self.facility = config.get('facility', 'loggo')
@@ -87,6 +86,16 @@ class Loggo(object):
         self.logger = logging.getLogger(self.facility) # pylint: disable=no-member
         self.logger.setLevel(logging.DEBUG)
         self.add_handler()
+
+    @staticmethod
+    def kwargify(function, *args, **kwargs):
+        """
+        This uses some weird inspection to figure out what the names of positional
+        and keyword arguments were, so that even positional arguments with
+        private names can be censored.
+        """
+        sig = inspect.signature(function)
+        return sig.bind(*args, **kwargs).arguments
 
     def logme(self, function):
         """
@@ -106,35 +115,23 @@ class Loggo(object):
             self.nargs = len(args)
             self.nkwargs = len(kwargs)
             self.log_data = dict(loggo=True, arguments=args, **kwargs)
+            extra = self.kwargify(function, *args, **kwargs)
             # pre log tells you what was called  and with what arguments
-            self.generate_log('pre', None, function=function)
+            self.generate_log('pre', None, function=function, extra=extra)
             try:
                 # where the original function is actually run
                 response = function(*args, **kwargs)
-                kwargs['passed_args'] = args
-                self.generate_log('post', response, function=function, **kwargs)
+                #kwargs['passed_args'] = args
+                self.generate_log('post', response, function=function, extra=extra)
                 return response
             except Exception as error:
                 # if the function failed, you get an error log instead of a return log
                 # the exception is then reraised
-                kwargs['passed_args'] = args
                 trace = traceback.format_exc()
-                self.generate_log('error', error, trace, function=function, **kwargs)
+                self.generate_log('error', error, trace, function=function, extra=extra)
                 raise error.__class__(str(error))
 
         return decorator_magic
-
-    def everything(self, cls):
-        """
-        Decorator for class, which attaches itself to any methods
-        """
-        class Decorated(cls):
-            def __getattribute__(self_or_class, name):
-                unwrapped = object.__getattribute__(self_or_class, name)
-                if type(unwrapped) in {type(lambda x:x), type(self.__init__)} and not getattr(unwrapped, 'no_log', False):
-                    return self.logme(unwrapped)
-                return unwrapped
-        return Decorated
 
     def ignore(self, function):
         """
@@ -143,16 +140,59 @@ class Loggo(object):
         """
         function.no_log = True
 
-    def generate_log(self, where, response, trace=False, function=None, **kwargs):
+    def everything(self, cls):
+        """
+        Decorator for class, which attaches itself to any methods
+        """
+        class Decorated(cls):
+            def __getattribute__(self_or_class, name):
+                unwrapped = object.__getattribute__(self_or_class, name)
+                if callable(unwrapped):
+                    return self.logme(unwrapped)
+                return unwrapped
+        return Decorated
+
+    def represent_return_value(self, response):
+        representable = (int, float, str, list, set, dict, type(None), bool)
+        if isinstance(response, representable):
+            return '({})'.format(self._force_string_and_truncate(response, 20))
+        else:
+            return ''
+
+    def safe_arg_display(self, kwargs):
+        """
+        Build a string showing keyword arguments if we can
+        """
+        original = len(kwargs)
+        output_list = list()
+
+        if not original:
+            return ''
+
+        copied = dict(kwargs)
+        copied = self._remove_private_keys(copied)
+        priv_names = ', '.join([i for i in kwargs if i not in copied])
+
+        if not copied:
+            rep = '{} private arguments ({}) not displayed'.format(original, priv_names)
+        else:
+            for k, v in copied.items():
+                short = self._force_string_and_truncate(v, 10)
+                representation = '{}={}({})'.format(k, type(v).__name__, short)
+                output_list.append(representation)
+            rep = ', '.join(output_list)
+
+        if copied and len(copied) != original:
+            num_priv = original-len(copied)
+            rep += '. {} private arguments ({}) not displayed'.format(num_priv, priv_names)
+
+        return rep + '.'
+
+    def generate_log(self, where, response, trace=False, function=None, extra=None):
         """
         General logger for before, after or error in function
         """
-        # datatypes we will try to print in logs
-        representable = (int, float, str, list, set, dict)
-        if isinstance(response, representable):
-            return_value = '({})'.format(self._force_string_and_truncate(response, 30))
-        else:
-            return_value = ''
+        return_value = self.represent_return_value(response)
         unformatted = FORMS.get(where)
 
         modul = getattr(function, '__module__', 'modul')
@@ -162,10 +202,11 @@ class Loggo(object):
         # get all the data to be fed into the strings
         forms = dict(modul=modul,
                      function=getattr(function, '__name__', 'func'),
-                     callable=self.callable_type,
+                     callable='method' if inspect.ismethod(function) else 'function',
                      nargs=self.nargs,
                      nkwargs=self.nkwargs,
                      return_value=return_value,
+                     kwa=self.safe_arg_display(extra),
                      return_type=type(response).__name__)
 
         # if you got was an initialised exception, put in kwargs:
@@ -217,7 +258,7 @@ class Loggo(object):
             data.update(self.log_data)
         return data
 
-    def _build_string(self, msg, level, log_data, truncate=0, colour=True):
+    def _build_string(self, msg, level, log_data, truncate=0, colour=True, include_data=True):
         """
         Make a single line string, or multiline if traceback provided, for print
         and file logging
@@ -231,7 +272,9 @@ class Loggo(object):
                 trace = '{}{}{}'.format(COLOUR_MAP.get('critical', ''), trace, end)
             trace = '\t' + trace.replace('\n', '\n\t')
         log_data = {k: v for k, v in log_data.items() if k != 'traceback'}
-        datapoints = [tstamp, msg, level, log_data]
+        datapoints = [tstamp, msg, level]
+        if include_data:
+            datapoints.append(log_data)
         strung = '\t' + '\t'.join([str(s).strip('\n') for s in datapoints])
         if truncate and len(strung) > truncate:
             strung = strung[:truncate] + '...'
@@ -364,7 +407,7 @@ class Loggo(object):
             try:
                 data = self._parse_input(alert, data)
                 message, string_data = self.sanitise(message, data)
-                single_string = self._build_string(message, alert, string_data, truncate=self.line_length)
+                single_string = self._build_string(message, alert, string_data, truncate=self.line_length, include_data=False)
                 plain_string = self._build_string(message, alert, string_data, colour=False)
                 string_data.pop('traceback', None)
 
