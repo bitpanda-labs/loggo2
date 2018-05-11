@@ -1,7 +1,7 @@
 """
 Loggo: decorators for logging
 """
-import types
+
 import inspect
 import logging
 import os
@@ -66,9 +66,8 @@ class Loggo(object):
     - line_length: max length for console printed string
     - private_data: key names that should be filtered out of logging. if not set,
       some sensible defaults are used
-
     """
-    def __init__(self, config):
+    def __init__(self, config={}):
         self.config = config
         self.log_data = dict(config)
         self.facility = config.get('facility', 'loggo')
@@ -78,7 +77,8 @@ class Loggo(object):
         self.do_write = config.get('do_write', True)
         self.logfile = config.get('logfile', './logs/logs.txt')
         self.line_length = config.get('line_length', 200)
-        self.ignore_methods = config.get('ignore_methods', set())
+        self.obscured = config.get('obscure', '[PRIVATE_DATA]')
+        # some default private values, you can use your own instead
         priv = {'token', 'password', 'prv', 'priv', 'xprv', 'secret', 'mnemonic'}
         self.private_data = config.get('private_data', priv)
         self.log = self.make_logger()
@@ -86,6 +86,15 @@ class Loggo(object):
         self.logger = logging.getLogger(self.facility) # pylint: disable=no-member
         self.logger.setLevel(logging.DEBUG)
         self.add_handler()
+
+    def __call__(self, class_or_func):
+        """
+        Make Loggo itself a decorator
+        """
+        if inspect.isclass(class_or_func):
+            return self.everything(class_or_func)
+        else:
+            return self.logme(class_or_func)
 
     @staticmethod
     def kwargify(function, *args, **kwargs):
@@ -108,14 +117,21 @@ class Loggo(object):
         It will the call, return and errors that occurred during the function/method
         """
 
-        def decorator_magic(*args, **kwargs):
+        if getattr(function, 'no_log', False):
+            def unlogged(*args, **kwargs):
+                return function(*args, **kwargs)
+            return unlogged
+
+        def full_decoration(*args, **kwargs):
             """
             This takes the args and kwargs for the decorated function
             """
+            extra = self.kwargify(function, *args, **kwargs)
             self.nargs = len(args)
             self.nkwargs = len(kwargs)
-            self.log_data = dict(loggo=True, arguments=args, **kwargs)
-            extra = self.kwargify(function, *args, **kwargs)
+            # amazing dict comprehension
+            call_args = {k: (v if k not in self.private_data else self.obscured) for k, v in extra.items()}
+            self.log_data = dict(loggo=True, call_arguments=call_args)
             # pre log tells you what was called  and with what arguments
             self.generate_log('pre', None, function=function, extra=extra)
             try:
@@ -131,14 +147,22 @@ class Loggo(object):
                 self.generate_log('error', error, trace, function=function, extra=extra)
                 raise error.__class__(str(error))
 
-        return decorator_magic
+        return full_decoration
 
-    def ignore(self, function):
+
+    @staticmethod
+    def ignore(function):
         """
         A decorator that will override Loggo.everything, in case you do not want
         to log one particular method for some reason
         """
         function.no_log = True
+        return function
+
+    @staticmethod
+    def errors(function):
+        function.just_errors = True
+        return function
 
     def everything(self, cls):
         """
@@ -192,6 +216,9 @@ class Loggo(object):
         """
         General logger for before, after or error in function
         """
+        if getattr(function, 'just_errors', False) and where != 'error':
+            return
+
         return_value = self.represent_return_value(response)
         unformatted = FORMS.get(where)
 
@@ -286,7 +313,8 @@ class Loggo(object):
         """
         Very simple log writer, could expand. simple append the line to the file
         """
-        if not os.path.isdir(os.path.dirname(self.logfile)):
+        needed_dir = os.path.dirname(self.logfile)
+        if needed_dir and not os.path.isdir(needed_dir):
             os.makedirs(os.path.dirname(self.logfile))
         with open(self.logfile, 'a') as fo:
             fo.write(line.rstrip('\n') + '\n')
@@ -438,8 +466,8 @@ class Loggo(object):
                 print(msg)
                 print('Exiting because the system is in infinite loop')
                 error_msg = str(getattr(exception, 'message', exception))
-                exit(999)
+                quit()
         except Exception as error:
             print('Emergency log exception... gl&hf')
             print(str(error))
-            exit(999)
+            quit()

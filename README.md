@@ -6,137 +6,141 @@
 
 ```
 pip install loggo
+# or
+python setup.py install
 ```
 
 ## Setup
 
-Setting up the tool as you like requires a small amount of configuration. Put this in the main `__init__.py`. so you can import the same, ready-set-up logger easily. Let's call our app `tester`, so you would use `tester/__init__.py`
-
+Setting up the tool as you like requires a small amount of configuration. Put this in the main `__init__.py`, or in a file called `log.py`. so you can import the same, ready-set-up logger easily. Let's call our app `tester`, so you would use `tester/__init__.py`:
 
 ```python
 from loggo import Loggo, LoggedException
-#You need to make/import a `dict` object with these attribute names and values
-log_setup = dict(facility='Example', ip='0.0.0.0', port=9999, do_print=True, do_write=True)
-Loggo.setup(log_setup)
+# All setup values are optional
+setup = dict(facility='tester',             # name of program logging the message
+             ip='0.0.0.0',                  # ip for graylog
+             port=9999,                     # port for graylog
+             do_print=True,                 # print to console
+             do_write=True,                 # write to file
+             logfile='mylog.txt',           # custom path to logfile
+             line_length=200,               # line truncation for console logging
+             private_data=['password'],     # list of sensitive args/kwargs
+             obscured='[[[PRIVATE_DATA]]]') # string with which to obscure data
+Loggo = Loggo(setup)
+log = Loggo.make_logger()
+LoggedException.log = log
 ```
 
-### Usage
+What you've done here is instantiated a logger with the given settings, and then attached this specific logger to the `LoggedException`
 
-In other parts of the project, you should then be able to access the configured logger with:
+## Usage
+
+In other parts of the project, you should then be able to access the configured logger components with:
 
 ```python
-from tester import Loggo, LoggedException
+from tester import Loggo, LoggedException, log
 ```
 
-#### Decorate a funtion or method
+### Decorators
 
-Then, you can use it to decorate classes, functions and methods
+You can use `@Loggo` as a decorator on a class, class method or function. On classes, it will log every method (same as `Loggo.everything`), on methods and functions it will log the call signature, return and errors (the same as `Loggo.logme`)
+
+`Loggo` provides a number of specific decorators:
+
+* `@Loggo.logme` will log the call, return and possible errors of a function/method
+* `@Loggo.everything` attaches the `@Loggo.logme` decorator to all methods in a class
+* `@Loggo.ignore` will not log a particular method of a class decorated by `Loggo.everything` 
+* `@Loggo.errors` will only log errors, not function calls and returns
+
+For an example use, let's make a simple class that multiplies two numbers, but only if a password is supplied. We can ignore logging of the boring authentication system.
 
 ```python
-# A decorated function:
 @Loggo
-def multiply(a, b=False):
-    """Raise an error if B not given"""
-    if not isinstance(b, (int, float)):
-        raise TypeError('b needs to be an integer or float!')
-    return a * b
+class Multiplier(object):
+
+    def __init__(self, base):
+        self.base = base
+        
+    def multiply(self, n, password):
+        """
+        Multiply by the number given during initialisation--requires password
+        """
+        self.authenticated = self._do_authentication(password)
+        if not self.authenticated:
+            raise ValueError('Not authenticated!')
+        return self.base * n
+
+    @Loggo.ignore
+    def _do_authentication(self, password):
+        """Not exactly Fort Knox"""
+        return password == 'tOpSeCrEt'
 ```
 
-We can run this function and ensure that it behaved as expected:
+First, let's use it properly, with our secret password passed in:
 
 ```python
-res = multiply(7, b=8)
-assert 56 == res
-```
- d
-Because we enabled printing and logging to file, we can see their contents, which describe the running and returning of a function,
-the log level in these cases `None`, and a dictionary of extra information.
-
-Console output (should be colourised)
-
-```
-03.05 2018 10:34:31 Called app.tester.multiply function with 1 args, 1 kwargs   None    {'facility': 'Example', 'ip': 'None', 'port': 'None', 'do_print': 'True', 'do_write': 'True'}
-03.05 2018 10:34:31 Returned a int (56) from app.tester.multiply function       None    {'facility': 'Example', 'ip': 'None', 'port': 'None', 'do_print': 'True', 'do_write': 'True', 'b': '8'}
+Mult = Multiplier(50)
+result = Mult.multiply(50, 'tOpSeCrEt')
+assert result == 2500 # True
 ```
 
-`log.txt`:
+We'll get some nice green-coloured text in the console:
 
 ```
+11.05 2018 17:14:54 Called tester.multiply method with 2 args, 0 kwargs: n=int(50). 1 private arguments (password) not displayed. None
+11.05 2018 17:14:54 Returned a int (2500) from tester.multiply method None
 ```
 
-#### Error handling
-
-Loggo automatically logs errors before raising them. If we throw an error for the function defined earlier, we can see the error output in both the console and `log.txt`. Note that for the sake of readability, exceptions are printed over numerous lines.
+Notice that our private argument `password` was successfully identified and omitted. Additional information goes into `mylog.txt`, as well, but the `obscure` option `'[[[PRIVATE_DATA]]]'` is used in place of the password. If we use try to use our class with incorrect authentication:
 
 ```python
-# throws an error because it lacks a keyword arg
-res = multiply(7)
+result = Mult.multiply(7, 'password123')
 ```
 
-Console output (when `do_write` is set:
+An error will raise, and we'll get extra info in the console, including a traceback:
 
 ```
+11.05 2018 17:19:43 Called tester.multiply method with 2 args, 0 kwargs: n=int(7). 1 private arguments (password) not displayed.  None
+11.05 2018 17:19:43 Errored with ValueError "Not authenticated! Provide password" when calling tester.multiply method with 2 args, 0 kwargs: n=int(7). 1 private arguments (password) not displayed.  ... -- see below: 
+Traceback (most recent call last):
+  File "/Users/danny/work/loggo/loggo/loggo.py", line 137, in full_decoration
+    response = function(*args, **kwargs)
+  File "tester.py", line 13, in multiply
+    raise ValueError('Not authenticated!')
+ValueError: Not authenticated!
 ```
 
-`log.txt` (when the `do_print` is set):
+### Log function
+
+The standalone `log` function takes three parameters:
 
 ```python
-
+alert_level = 'dev'
+extra_data = dict(some='data', that='will', be='logged')
+log('Message to log', alert_level, extra_data)
+# console: 11.05 2018 17:36:24 Message to log  dev
+# extra_data in log file
 ```
 
+It uses the configuration that has already been defined.
 
-### Decorate all methods in a class
+### LoggedException
 
-You can also use Loggo to automatically log all methods in a given class. All you need to do is use the `@Loggo.everything` pattern:
+`LoggedException` is an `Exception` that will log itself before raising. Like other exceptions, it takes a `message` parameter, but you can also include some extra information:
 
 ```python
-@Loggo.everything
-class DummyClass(object):
-    """
-    A class with regular methods, static methods and errors
-    """
-
-    def add(self, a, b):
-        """Simple case, add two things"""
-        return a + b
-
-    def positive_math(self, a, b, c=False):
-        """Random math that allows an exception, uses keyword argument"""
-        added = a + b
-        if c:
-            added = added - c
-        if added < 0:
-            raise ValueError('Only works with positive outputs!')
-        return added
-
-    @staticmethod
-    def static_method(number):
-        """Works for static/class methods too"""
-        return number*number
+if True:
+    alert_level = 'critical'
+    raise LoggedException('Boom!', alert_level, exception=AttributeError, **kwargs)
+    # 11.05 2018 17:40:05 Boom!   dev
 ```
 
-Each of these methods is now decorated using `Loggo`. So if we run a method, we can see that it still works
+Notably, you can choose the exception type to be raised. Also, any keyword arguments are treated as extra data for the logger.
 
-```python
-res = DummyClass().add(3, 4)
-assert res == 7
+## Tests
+
+```bash
+cd tests
+python tests.py
 ```
-
-Console output (when `do_write` is set:
-
-```
-```
-
-`log.txt` (when the `do_print` is set):
-
-```
-
-```
-
-And for an error log:
-
-```python
-
-```
-
 

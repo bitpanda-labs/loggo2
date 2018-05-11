@@ -15,7 +15,8 @@ def function_with_private_arg(priv, acceptable=True):
 def function_with_private_kwarg(number, a_float=0.0, mnemonic=None):
     return number * a_float
 
-@Loggo.logme
+# we can also use loggo.__call__
+@Loggo
 def test(first, other, kwargs=None):
     """
     A function that may or may not error
@@ -51,6 +52,14 @@ class DummyClass(object):
     def optional_provided(self, kw=None, **kwargs):
         if kw:
             raise ValueError('Should not have provided!')
+
+    @Loggo.ignore
+    def hopefully_ignored(self, n):
+        return n**n
+
+    @Loggo.errors
+    def hopefully_only_errors(self, n):
+        raise ValueError('Bam!')
 
 dummy = DummyClass()
 
@@ -123,6 +132,20 @@ class TestDecoration(unittest.TestCase):
                 self.assertTrue('0 args, 1 kwargs' in logged_msg)
                 (alert, logged_msg), extras = logger.call_args_list[-1]
                 self.assertTrue('Errored with ValueError' in logged_msg)
+
+    def test_loggo_ignore(self):
+        with patch('logging.Logger.log') as logger:
+            result = dummy.hopefully_ignored(5)
+            self.assertEqual(result, 5**5)
+            logger.assert_not_called()
+
+    def test_loggo_errors(self):
+        with patch('logging.Logger.log') as logger:
+            with self.assertRaises(ValueError):
+                result = dummy.hopefully_only_errors(5)
+            all_args = logger.call_args_list
+            self.assertEqual(len(all_args), 1)
+            self.assertTrue('Errored with ValueError' in all_args[0][0][1])
 
     def test_private_keyword_removal(self):
         with patch('logging.Logger.log') as logger:
