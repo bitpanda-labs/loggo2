@@ -17,6 +17,7 @@ setup(
     packages=['loggo', 'tests'],
     long_description=read('README.md'),
     install_requires=['graypy', 'colorama'],
+    python_requires='>=3',
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Topic :: Utilities',
