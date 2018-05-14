@@ -315,10 +315,14 @@ class Loggo(object):
         """
         return self.logfile
 
-    def write_to_file(self, line, logfile):
+    def write_to_file(self, line, logfile=None):
         """
         Very simple log writer, could expand. simple append the line to the file
         """
+
+        if not logfile:
+            logfile = self.logfile
+
         needed_dir = os.path.dirname(logfile)
         if needed_dir and not os.path.isdir(needed_dir):
             os.makedirs(os.path.dirname(logfile))
@@ -417,10 +421,10 @@ class Loggo(object):
             plain_string = self._build_string(message, alert, string_data, colour=False)
             string_data.pop('traceback', None)
 
-            if self.config.get('do_print', False):
+            if self.do_print:
                 print(colour_msg(single_string, alert))
 
-            if self.config.get('do_write', False):
+            if self.do_write:
                 logfile = self.get_logfile(data)
                 self.write_to_file(plain_string, logfile)
 
