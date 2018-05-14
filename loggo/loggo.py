@@ -387,34 +387,6 @@ class Loggo(object):
             out[key] = value
         return out
 
-    def _parse_input(self, alert, log_data, **kwargs):
-        """
-        For compatibility reasons for bitpanda, to be deprecated
-        """
-        if isinstance(alert, str) and alert.lower() == 'none':
-            alert = None
-        if not alert and not log_data:
-            return dict(**kwargs)
-        elif not alert and log_data:
-            if not isinstance(log_data, dict):
-                log_data = dict(log_data=str(log_data), **kwargs)
-            return log_data
-        elif alert and isinstance(log_data, dict):
-            log_data = dict(log_data, **kwargs)
-            log_data['alert'] = alert
-            return log_data
-        elif alert and log_data and not isinstance(log_data, dict):
-            return dict(log_data=log_data, alert=alert, **kwargs)
-        elif isinstance(alert, str) and not log_data:
-            return dict(alert=alert, **kwargs)
-        elif isinstance(alert, dict):
-            kwargs.update(alert)
-            return kwargs
-        # if none of these worked, here's a fallback, but log it
-        meta_data = dict(alert=alert, log_data=log_data, **kwargs)
-        self.log('Issue parsing log input', 'dev', meta_data)
-        return log_data
-
     def sanitise(self, message, data=None):
         """
         Make data safe for logging
@@ -432,10 +404,14 @@ class Loggo(object):
 
     def log(self, message, alert=None, data=None, **kwargs):
         """
-        Main logging method. Takes message string, alert level, a dict
+        Main logging method. Takes message string, alert level, and a data dict
+        that will be logged. anything (accidentally) passed as kwargs will get
+        merged into the data dictionary
         """
         try:
-            data = self._parse_input(alert, data, **kwargs)
+            data = dict() if data is None else data
+            kwargs.update(data)
+            data = kwargs
             message, string_data = self.sanitise(message, data)
             single_string = self._build_string(message, alert, string_data, truncate=self.line_length, include_data=False)
             plain_string = self._build_string(message, alert, string_data, colour=False)
