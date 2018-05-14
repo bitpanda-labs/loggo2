@@ -27,7 +27,7 @@ setup = dict(facility='tester',             # name of program logging the messag
              private_data=['password'],     # list of sensitive args/kwargs
              obscured='[[[PRIVATE_DATA]]]') # string with which to obscure data
 Loggo = Loggo(setup)
-log = Loggo.make_logger()
+log = Loggo.log
 LoggedException.log = log
 ```
 

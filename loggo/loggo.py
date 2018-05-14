@@ -10,6 +10,7 @@ import traceback
 
 LOG_LEVELS = dict(critical='CRITICAL',
                   dev='ERROR',
+                  error='ERROR',
                   minor='WARNING',
                   info='INFO',
                   debug='DEBUG')
@@ -307,14 +308,21 @@ class Loggo(object):
             strung = '{} -- see below: \n{}\n'.format(strung, trace)
         return strung
 
-    def write_to_file(self, line):
+    def get_logfile(self, data):
+        """
+        This method exists so that it can be overwritten for applications requiring
+        more complex logfile choices.
+        """
+        return self.logfile
+
+    def write_to_file(self, line, logfile):
         """
         Very simple log writer, could expand. simple append the line to the file
         """
-        needed_dir = os.path.dirname(self.logfile)
+        needed_dir = os.path.dirname(logfile)
         if needed_dir and not os.path.isdir(needed_dir):
-            os.makedirs(os.path.dirname(self.logfile))
-        with open(self.logfile, 'a') as fo:
+            os.makedirs(os.path.dirname(logfile))
+        with open(logfile, 'a') as fo:
             fo.write(line.rstrip('\n') + '\n')
 
     def add_handler(self):
@@ -437,7 +445,8 @@ class Loggo(object):
                 print(colour_msg(single_string, alert))
 
             if self.config.get('do_write', False):
-                self.write_to_file(plain_string)
+                logfile = self.get_logfile(data)
+                self.write_to_file(plain_string, logfile)
 
             log_level = getattr(logging, LOG_LEVELS.get(alert, 'INFO'))
             self.logger.log(log_level, message, extra=string_data)
