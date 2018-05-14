@@ -81,8 +81,6 @@ class Loggo(object):
         # some default private values, you can use your own instead
         priv = {'token', 'password', 'prv', 'priv', 'xprv', 'secret', 'mnemonic'}
         self.private_data = config.get('private_data', priv)
-        self.log = self.make_logger()
-        # build logger object and add graylog support if possible
         self.logger = logging.getLogger(self.facility) # pylint: disable=no-member
         self.logger.setLevel(logging.DEBUG)
         self.add_handler()
@@ -381,30 +379,31 @@ class Loggo(object):
             out[key] = value
         return out
 
-    def _parse_input(self, alert, log_data):
+    def _parse_input(self, alert, log_data, **kwargs):
         """
         For compatibility reasons for bitpanda, to be deprecated
         """
         if isinstance(alert, str) and alert.lower() == 'none':
             alert = None
         if not alert and not log_data:
-            return dict()
+            return dict(**kwargs)
         elif not alert and log_data:
             if not isinstance(log_data, dict):
-                log_data = dict(log_data=str(log_data))
+                log_data = dict(log_data=str(log_data), **kwargs)
             return log_data
         elif alert and isinstance(log_data, dict):
-            log_data = dict(log_data)
+            log_data = dict(log_data, **kwargs)
             log_data['alert'] = alert
             return log_data
         elif alert and log_data and not isinstance(log_data, dict):
-            return dict(log_data=log_data, alert=alert)
+            return dict(log_data=log_data, alert=alert, **kwargs)
         elif isinstance(alert, str) and not log_data:
-            return dict(alert=alert)
+            return dict(alert=alert, **kwargs)
         elif isinstance(alert, dict):
-            return alert
+            kwargs.update(alert)
+            return kwargs
         # if none of these worked, here's a fallback, but log it
-        meta_data = dict(alert=alert, log_data=log_data)
+        meta_data = dict(alert=alert, log_data=log_data, **kwargs)
         self.log('Issue parsing log input', 'dev', meta_data)
         return log_data
 
@@ -421,37 +420,30 @@ class Loggo(object):
         data = self._remove_private_keys(data)
         data = self._rename_protected_keys(data)
         data = self._stringify_dict(data)
-        #string_data = self._force_string_and_truncate(string_data)
         return message, data
 
-    def make_logger(self):
+    def log(self, message, alert=None, data=None, **kwargs):
         """
-        Dynamically generate a logger. It has to be done this way for reasons.
+        Main logging method. Takes message string, alert level, a dict
         """
-        def generated_log(message, alert=None, data=None, self=self, **kwargs):
-            """
-            Main logging method. Takes message string, alert level, a dict
-            """
-            try:
-                data = self._parse_input(alert, data)
-                message, string_data = self.sanitise(message, data)
-                single_string = self._build_string(message, alert, string_data, truncate=self.line_length, include_data=False)
-                plain_string = self._build_string(message, alert, string_data, colour=False)
-                string_data.pop('traceback', None)
+        try:
+            data = self._parse_input(alert, data, **kwargs)
+            message, string_data = self.sanitise(message, data)
+            single_string = self._build_string(message, alert, string_data, truncate=self.line_length, include_data=False)
+            plain_string = self._build_string(message, alert, string_data, colour=False)
+            string_data.pop('traceback', None)
 
-                if self.config.get('do_print', False):
-                    print(colour_msg(single_string, alert))
+            if self.config.get('do_print', False):
+                print(colour_msg(single_string, alert))
 
-                if self.config.get('do_write', False):
-                    self.write_to_file(plain_string)
+            if self.config.get('do_write', False):
+                self.write_to_file(plain_string)
 
-                log_level = getattr(logging, LOG_LEVELS.get(alert, 'INFO'))
-                self.logger.log(log_level, message, extra=string_data)
+            log_level = getattr(logging, LOG_LEVELS.get(alert, 'INFO'))
+            self.logger.log(log_level, message, extra=string_data)
 
-            except Exception as error:
-                self._emergency_log('General log failure: ' + str(error), message, error)
-
-        return generated_log
+        except Exception as error:
+            self._emergency_log('General log failure: ' + str(error), message, error)
 
     def _emergency_log(self, error_msg, msg, exception):  #  no cover
         """
