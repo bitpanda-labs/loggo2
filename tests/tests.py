@@ -280,7 +280,7 @@ class TestLog(unittest.TestCase):
         with patch('logging.Logger.log') as mock_log:
             with Loggo.pause():
                 Loggo.log('test')
-            mock_log.assert_called()
+            mock_log.assert_not_called()
 
     def test_loggo_pause_error(self):
         with patch('logging.Logger.log') as logger:
