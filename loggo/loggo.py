@@ -150,7 +150,10 @@ class Loggo(object):
                 # if the function failed, you get an error log instead of a return log
                 # the exception is then reraised
                 trace = traceback.format_exc()
+                original_state = bool(self.stop)
+                self.stop = False
                 self.generate_log('error', error, trace, function=function, extra=extra)
+                self.stop = original_state
                 raise error.__class__(str(error))
 
         return full_decoration
