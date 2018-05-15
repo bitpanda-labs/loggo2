@@ -52,6 +52,8 @@ You can use `@Loggo` as a decorator on a class, class method or function. On cla
 * `@Loggo.ignore` will not log a particular method of a class decorated by `Loggo.everything` 
 * `@Loggo.errors` will only log errors, not function calls and returns
 
+You can also start and stop logging with `Loggo.start()` and `Loggo.stop()`, at any point in your code, though error logs will still get through.
+
 For an example use, let's make a simple class that multiplies two numbers, but only if a password is supplied. We can ignore logging of the boring authentication system.
 
 ```python
