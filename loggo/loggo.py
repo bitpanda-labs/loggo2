@@ -166,10 +166,7 @@ class Loggo(object):
                 # if the function failed, you get an error log instead of a return log
                 # the exception is then reraised
                 trace = traceback.format_exc()
-                original_state = bool(self.stopped)
-                self.stopped = False
                 self.generate_log('error', error, trace, function=function, extra=extra)
-                self.stopped = original_state
                 raise error.__class__(str(error))
 
         return full_decoration
@@ -444,8 +441,6 @@ class Loggo(object):
         that will be logged. anything (accidentally) passed as kwargs will get
         merged into the data dictionary
         """
-        if self.stopped:
-            return
         try:
             data = dict() if data is None else data
             kwargs.update(data)
