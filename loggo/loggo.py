@@ -7,6 +7,7 @@ import logging
 import os
 from datetime import datetime
 import traceback
+from contextlib import contextmanager
 
 LOG_LEVELS = dict(critical='CRITICAL',
                   dev='ERROR',
@@ -70,6 +71,7 @@ class Loggo(object):
     """
     def __init__(self, config={}):
         self.stopped = False
+        self.allow_errors = True
         self.config = config
         self.log_data = dict(config)
         self.facility = config.get('facility', 'loggo')
@@ -86,6 +88,18 @@ class Loggo(object):
         self.logger = logging.getLogger(self.facility) # pylint: disable=no-member
         self.logger.setLevel(logging.DEBUG)
         self.add_handler()
+
+    @contextmanager
+    def pause(self, allow_errors=True):
+        """
+        A context manager that prevents loggo from logging in that context. By
+        default, errors will still make it through.
+        """
+        self.allow_errors = allow_errors
+        self.stop()
+        yield self
+        self.start()
+        self.allow_errors = True
 
     def __call__(self, class_or_func):
         """
@@ -223,9 +237,15 @@ class Loggo(object):
 
     def generate_log(self, where, response, trace=False, function=None, extra=None):
         """
-        General logger for before, after or error in function
+        General log string and data for before, after or error in function
         """
+        if not self.allow_errors and where == 'error':
+            return
+        # if we've used Loggo.errors on this method and it's not an error, quit
         if getattr(function, 'just_errors', False) and where != 'error':
+            return
+        # if state is stopped and not an error, quit
+        if self.stopped and where != 'error':
             return
 
         return_value = self.represent_return_value(response)

@@ -175,7 +175,7 @@ class TestLog(unittest.TestCase):
     def setUp(self):
         self.test_setup = dict(facility='LOG_TEST', ip=None, port=None, do_print=True, do_write=True)
         self.loggo = a_loggo(self.test_setup)
-        self.log = self.loggo.make_logger()
+        self.log = self.loggo.log
 
     def test_protected_keys(self):
         """
@@ -276,6 +276,30 @@ class TestLog(unittest.TestCase):
                 (alert, msg), kwargs = printer.call_args
                 self.assertEqual(msg, 'Emergency log exception... gl&hf')
 
+    def test_loggo_pause(self):
+        with patch('logging.Logger.log') as mock_log:
+            with Loggo.pause():
+                Loggo.log('test')
+            mock_log.assert_not_called()
+
+    def test_loggo_pause_error(self):
+        with patch('logging.Logger.log') as logger:
+            with Loggo.pause():
+                with self.assertRaises(ValueError):
+                    test('one', 'two')
+            (alert, msg), kwargs = logger.call_args
+            self.assertTrue('Errored with ValueError' in msg)
+            logger.assert_called()
+
+    def test_loggo_pause_error_suppressed(self):
+        with patch('logging.Logger.log') as logger:
+            with Loggo.pause(allow_errors=False):
+                with self.assertRaises(ValueError):
+                    test('one', 'two')
+            #(alert, msg), kwargs = logger.call_args
+            #print('NOTHING SHOULD BE HERE', alert, msg)
+            #self.assertTrue('Errored with ValueError' in msg)
+            logger.assert_not_called()
 
 if __name__ == '__main__':
     unittest.main()
