@@ -69,7 +69,7 @@ class Loggo(object):
       some sensible defaults are used
     """
     def __init__(self, config={}):
-        self.stop = False
+        self.stopped = False
         self.config = config
         self.log_data = dict(config)
         self.facility = config.get('facility', 'loggo')
@@ -107,10 +107,10 @@ class Loggo(object):
         return sig.bind(*args, **kwargs).arguments
 
     def stop(self):
-        self.stop = True
+        self.stopped = True
 
     def start(self):
-        self.stop = False
+        self.stopped = False
 
     def logme(self, function):
         """
@@ -150,7 +150,7 @@ class Loggo(object):
                 # if the function failed, you get an error log instead of a return log
                 # the exception is then reraised
                 trace = traceback.format_exc()
-                original_state = bool(self.stop)
+                original_state = bool(self.stopped)
                 self.stop = False
                 self.generate_log('error', error, trace, function=function, extra=extra)
                 self.stop = original_state
