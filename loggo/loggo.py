@@ -422,7 +422,7 @@ class Loggo(object):
         that will be logged. anything (accidentally) passed as kwargs will get
         merged into the data dictionary
         """
-        if self.stop:
+        if self.stopped:
             return
         try:
             data = dict() if data is None else data
