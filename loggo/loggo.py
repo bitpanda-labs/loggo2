@@ -69,6 +69,7 @@ class Loggo(object):
       some sensible defaults are used
     """
     def __init__(self, config={}):
+        self.stop = False
         self.config = config
         self.log_data = dict(config)
         self.facility = config.get('facility', 'loggo')
@@ -104,6 +105,12 @@ class Loggo(object):
         """
         sig = inspect.signature(function)
         return sig.bind(*args, **kwargs).arguments
+
+    def stop(self):
+        self.stop = True
+
+    def start(self):
+        self.stop = False
 
     def logme(self, function):
         """
@@ -412,6 +419,8 @@ class Loggo(object):
         that will be logged. anything (accidentally) passed as kwargs will get
         merged into the data dictionary
         """
+        if self.stop:
+            return
         try:
             data = dict() if data is None else data
             kwargs.update(data)
