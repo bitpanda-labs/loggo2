@@ -151,9 +151,9 @@ class Loggo(object):
                 # the exception is then reraised
                 trace = traceback.format_exc()
                 original_state = bool(self.stopped)
-                self.stop = False
+                self.stopped = False
                 self.generate_log('error', error, trace, function=function, extra=extra)
-                self.stop = original_state
+                self.stopped = original_state
                 raise error.__class__(str(error))
 
         return full_decoration
