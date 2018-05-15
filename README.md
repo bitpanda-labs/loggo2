@@ -1,6 +1,6 @@
 # Logging utilities for Python projects
 
-> This module provides ways of logging the input, output and errors in classes and functions It can be hooked uo to graylog, printed to console or saved to a log file. It requires very little configuration.
+> This module provides ways of logging the input, output and errors in classes and functions It can be hooked up to graylog, printed to console or saved to a log file. It requires very little configuration.
 
 ## Install
 
