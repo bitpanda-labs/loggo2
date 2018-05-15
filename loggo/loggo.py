@@ -97,9 +97,11 @@ class Loggo(object):
         """
         self.allow_errors = allow_errors
         self.stopped = True
-        yield self
-        self.allow_errors = True
-        self.stopped = False
+        try:
+            yield self
+        finally:
+            self.allow_errors = True
+            self.stopped = False
 
     def __call__(self, class_or_func):
         """
