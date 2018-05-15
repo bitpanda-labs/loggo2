@@ -96,10 +96,10 @@ class Loggo(object):
         default, errors will still make it through.
         """
         self.allow_errors = allow_errors
-        self.stop(allow_errors)
+        self.stopped = True
         yield self
-        self.start(allow_errors)
         self.allow_errors = True
+        self.stopped = False
 
     def __call__(self, class_or_func):
         """
