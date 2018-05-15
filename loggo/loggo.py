@@ -96,9 +96,9 @@ class Loggo(object):
         default, errors will still make it through.
         """
         self.allow_errors = allow_errors
-        self.stop()
+        self.stop(allow_errors)
         yield self
-        self.start()
+        self.start(allow_errors)
         self.allow_errors = True
 
     def __call__(self, class_or_func):
@@ -120,11 +120,13 @@ class Loggo(object):
         sig = inspect.signature(function)
         return sig.bind(*args, **kwargs).arguments
 
-    def stop(self):
+    def stop(self, allow_errors=True):
         self.stopped = True
+        self.allow_errors = allow_errors
 
-    def start(self):
+    def start(self, allow_errors=True):
         self.stopped = False
+        self.allow_errors = allow_errors
 
     def logme(self, function):
         """
