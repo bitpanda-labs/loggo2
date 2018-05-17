@@ -281,6 +281,8 @@ class TestLog(unittest.TestCase):
             with Loggo.pause():
                 Loggo.log('test')
             mock_log.assert_not_called()
+            Loggo.log('test')
+            mock_log.assert_called()
 
     def test_loggo_pause_error(self):
         with patch('logging.Logger.log') as logger:
@@ -289,17 +291,20 @@ class TestLog(unittest.TestCase):
                     test('one', 'two')
             (alert, msg), kwargs = logger.call_args
             self.assertTrue('Errored with ValueError' in msg)
-            logger.assert_called()
+            logger.assert_called_once()
+            logger.reset()
+            with self.assertRaises(ValueError):
+                test('one', 'two')
+                self.assertEqual(len(logger.call_args_list), 2)
 
-    def test_loggo_pause_error_suppressed(self):
+    def test_loggo_error_suppressed(self):
         with patch('logging.Logger.log') as logger:
             with Loggo.pause(allow_errors=False):
                 with self.assertRaises(ValueError):
                     test('one', 'two')
-            #(alert, msg), kwargs = logger.call_args
-            #print('NOTHING SHOULD BE HERE', alert, msg)
-            #self.assertTrue('Errored with ValueError' in msg)
             logger.assert_not_called()
+            Loggo.log('test')
+            logger.assert_called_once()
 
 if __name__ == '__main__':
     unittest.main()
