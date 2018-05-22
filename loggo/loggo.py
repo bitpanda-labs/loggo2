@@ -339,7 +339,7 @@ class Loggo(object):
         strung = '\t' + '\t'.join([str(s).strip('\n') for s in datapoints])
         if truncate and len(strung) > truncate:
             strung = strung[:truncate] + '...'
-        if trace:
+        if any(i.isalnum() for i in trace):
             strung = '{} -- see below: \n{}\n'.format(strung, trace)
         return strung
 
