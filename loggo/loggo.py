@@ -232,8 +232,8 @@ class Loggo(object):
         Decorator for class, which attaches itself to any methods
         """
         class Decorated(cls):
-            def __getattribute__(self, name):
-                unwrapped = object.__getattribute__(self, name)
+            def __getattribute__(self_or_class, name):
+                unwrapped = object.__getattribute__(self_or_class, name)
                 if callable(unwrapped):
                     return self.logme(unwrapped)
                 return unwrapped
@@ -522,14 +522,17 @@ class Loggo(object):
                 logfile = self.get_logfile(data)
                 self.write_to_file(plain_string, logfile)
 
+            log_level = 20
             if isinstance(alert, str):
                 log_level = getattr(logging, LOG_LEVELS.get(alert, 'INFO'))
             elif isinstance(alert, int):
                 log_level = alert
+
             # correct a bad call signature
             elif isinstance(alert, dict):
                 alert.update(data)
-                return self.log(message, alert.pop('alert', 'INFO'), alert)
+                log_level = alert.pop('alert', 'INFO')
+                return self.log(message, log_level, alert)
 
             self.logger.log(log_level, message, extra=string_data)
 
