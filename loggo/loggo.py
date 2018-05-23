@@ -40,6 +40,7 @@ except ImportError:
 # Strings to be formatted for pre function, post function and error during function
 FORMS = dict(pre='Called {modul}.{function} {callable} with {nargs} args, {nkwargs} kwargs: {kwa}\n',
              post='Returned a {return_type} {return_value} from {modul}.{function} {callable}\n',
+             noreturn='Returned None from {modul}.{function} {callable}\n',
              error='Errored with {error_type} "{error_string}" when calling {modul}.{function} {callable} with {nargs} args, {nkwargs} kwargs: {kwa}\n')
 
 def colour_msg(msg, alert):
@@ -249,6 +250,10 @@ class Loggo(object):
         # if state is stopped and not an error, quit
         if self.stopped and where != 'error':
             return
+
+        # this just stops the annoying 'returned a NoneType (None)'
+        if where == 'post' and response is None:
+            where = 'noreturn'
 
         return_value = self.represent_return_value(response)
         unformatted = FORMS.get(where)
