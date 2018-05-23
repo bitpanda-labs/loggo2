@@ -121,7 +121,7 @@ class TestDecoration(unittest.TestCase):
             (alert, logged_msg), extras = logger.call_args_list[0]
             self.assertTrue('0 args, 0 kwargs' in logged_msg)
             (alert, logged_msg), extras = logger.call_args_list[-1]
-            self.assertTrue('Returned a NoneType' in logged_msg)
+            self.assertTrue('Returned None' in logged_msg)
 
     def test_everything_4(self):
         with patch('logging.Logger.log') as logger:
