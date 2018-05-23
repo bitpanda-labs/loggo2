@@ -332,6 +332,8 @@ class Loggo(object):
         tstamp = datetime.now().strftime('%d.%m %Y %H:%M:%S')
         # if there is a traceback, colour it or not
         trace = log_data.get('traceback', '')
+        if trace in ['False', 'None']:
+            trace = False
         traceback_exists = bool(trace)
         if traceback_exists:
             if colour:

@@ -306,5 +306,14 @@ class TestLog(unittest.TestCase):
             Loggo.log('test')
             logger.assert_called_once()
 
+    def test_see_below(self):
+        with patch('logging.Logger.log') as logger:
+            msg = 'testing only'
+            log_data = {'traceback': False, 'other': 123}
+            msg, log_data = self.loggo.sanitise(msg, log_data)
+            s = self.loggo._build_string(msg, 'dev', log_data, truncate=200, include_data=False)
+            self.assertTrue('-- see below:' not in s)
+
+
 if __name__ == '__main__':
     unittest.main()
