@@ -332,7 +332,8 @@ class Loggo(object):
         tstamp = datetime.now().strftime('%d.%m %Y %H:%M:%S')
         # if there is a traceback, colour it or not
         trace = log_data.get('traceback', '')
-        if trace:
+        traceback_exists = bool(trace)
+        if traceback_exists:
             if colour:
                 end = COLOUR_MAP.get('end', '')
                 trace = '{}{}{}'.format(COLOUR_MAP.get('critical', ''), trace, end)
@@ -344,7 +345,7 @@ class Loggo(object):
         strung = '\t' + '\t'.join([str(s).strip('\n') for s in datapoints])
         if truncate and len(strung) > truncate:
             strung = strung[:truncate] + '...'
-        if any(i.isalnum() for i in trace):
+        if traceback_exists:
             strung = '{} -- see below: \n{}\n'.format(strung, trace)
         return strung
 
