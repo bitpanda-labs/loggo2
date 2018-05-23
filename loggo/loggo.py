@@ -16,6 +16,8 @@ LOG_LEVELS = dict(critical='CRITICAL',
                   info='INFO',
                   debug='DEBUG')
 
+DEFAULT_PRIVATE_KEYS = {'token', 'password', 'prv', 'priv', 'xprv', 'secret', 'mnemonic'}
+
 # you don't need graylog installed, but it is really powerful
 try:
     import graypy
@@ -83,9 +85,7 @@ class Loggo(object):
         self.logfile = config.get('logfile', './logs/logs.txt')
         self.line_length = config.get('line_length', 200)
         self.obscured = config.get('obscure', '[PRIVATE_DATA]')
-        # some default private values, you can use your own instead
-        priv = {'token', 'password', 'prv', 'priv', 'xprv', 'secret', 'mnemonic'}
-        self.private_data = config.get('private_data', priv)
+        self.private_data = config.get('private_data', DEFAULT_PRIVATE_KEYS)
         self.logger = logging.getLogger(self.facility) # pylint: disable=no-member
         self.logger.setLevel(logging.DEBUG)
         self.add_handler()
@@ -106,12 +106,11 @@ class Loggo(object):
 
     def __call__(self, class_or_func):
         """
-        Make Loggo itself a decorator
+        Make Loggo itself a decorator of either a class or a method/function
         """
         if inspect.isclass(class_or_func):
             return self.everything(class_or_func)
-        else:
-            return self.logme(class_or_func)
+        return self.logme(class_or_func)
 
     def kwargify(self, function, *args, **kwargs):
         """
@@ -119,16 +118,18 @@ class Loggo(object):
         and keyword arguments were, so that even positional arguments with
         private names can be censored.
 
-        This is also definitively works out how many args/kwargs were passed in
+        This also definitively works out how many args/kwargs were passed in
         """
+        # pylint: disable=attribute-defined-outside-init
+
         sig = inspect.signature(function)
         bound = sig.bind(*args, **kwargs).arguments
         self.nargs = 0
         self.nkwargs = 0
-        for k, v in sig.parameters.items():
-            if k not in bound:
+        for key, value in sig.parameters.items():
+            if key not in bound:
                 continue
-            is_keyword = int(v.default != inspect._empty)
+            is_keyword = int(value.default != inspect._empty)
             if is_keyword:
                 self.nkwargs += 1
             else:
@@ -136,15 +137,24 @@ class Loggo(object):
         return bound
 
     def stop(self, allow_errors=True):
+        """
+        Manually stop loggo from logging, but by default allow errors through
+        """
         self.stopped = True
         self.allow_errors = allow_errors
 
     def start(self, allow_errors=True):
+        """
+        Manually restart loggo, also allowing errors by default
+        """
         self.stopped = False
         self.allow_errors = allow_errors
 
     @staticmethod
     def get_call_type(inspected):
+        """
+        Find out, by way of signature, what kind of callable we have
+        """
         if not inspected:
             return 'function'
         if list(inspected)[0] == 'self':
@@ -166,6 +176,9 @@ class Loggo(object):
 
         if getattr(function, 'no_log', False):
             def unlogged(*args, **kwargs):
+                """
+                A dummy decorator to be used if no_log is set
+                """
                 return function(*args, **kwargs)
             return unlogged
 
@@ -175,28 +188,23 @@ class Loggo(object):
             """
             extra = self.kwargify(function, *args, **kwargs)
             call_type = self.get_call_type(extra)
-            #self.nargs = len(args)
-            #self.nkwargs = len(kwargs)
-            #if call_type != 'function':
-            #    self.nargs -= 1
-                #self.nkwargs += 1
-            # amazing dict comprehension
             call_args = {k: (v if k not in self.private_data else self.obscured) for k, v in extra.items()}
             self.log_data = dict(loggo=True, call_arguments=call_args)
+
             # pre log tells you what was called  and with what arguments
-            self.generate_log('pre', None, function=function, call_type=call_type, extra=extra)
+            self.generate_log('pre', None, function, call_type, extra=extra)
+
             try:
                 # where the original function is actually run
                 response = function(*args, **kwargs)
-                #kwargs['passed_args'] = args
-                self.generate_log('post', response, function=function, call_type=call_type, extra=extra)
+                # the succesfful return log
+                self.generate_log('post', response, function, call_type, extra=extra)
                 return response
             except Exception as error:
                 # if the function failed, you get an error log instead of a return log
                 # the exception is then reraised
                 trace = traceback.format_exc()
-                self.generate_log('error', error, trace, function=function, call_type=call_type, extra=extra)
-
+                self.generate_log('error', error, function, call_type, trace=trace, extra=extra)
                 raise error.__class__(str(error))
 
         return full_decoration
@@ -213,6 +221,9 @@ class Loggo(object):
 
     @staticmethod
     def errors(function):
+        """
+        Only log errors within a given method
+        """
         function.just_errors = True
         return function
 
@@ -221,19 +232,21 @@ class Loggo(object):
         Decorator for class, which attaches itself to any methods
         """
         class Decorated(cls):
-            def __getattribute__(self_or_class, name):
-                unwrapped = object.__getattribute__(self_or_class, name)
+            def __getattribute__(self, name):
+                unwrapped = object.__getattribute__(self, name)
                 if callable(unwrapped):
                     return self.logme(unwrapped)
                 return unwrapped
         return Decorated
 
-    def represent_return_value(self, response):
+    def _represent_return_value(self, response):
+        """
+        Make a string representation of whatever a method returns
+        """
         representable = (int, float, str, list, set, dict, type(None), bool)
         if isinstance(response, representable):
             return '({})'.format(self._force_string_and_truncate(response, 20))
-        else:
-            return ''
+        return ''
 
     def safe_arg_display(self, kwargs):
         """
@@ -266,12 +279,13 @@ class Loggo(object):
 
         return rep + '.'
 
-    def generate_log(self, where, response, trace=False, call_type=None, function=None, extra=None):
+    def generate_log(self, where, response, function, call_type, trace=False, extra=None):
         """
         General log string and data for before, after or error in function
         """
         if not self.allow_errors and where == 'error':
             return
+
         # if we've used Loggo.errors on this method and it's not an error, quit
         if getattr(function, 'just_errors', False) and where != 'error':
             return
@@ -283,7 +297,7 @@ class Loggo(object):
         if where == 'post' and response is None:
             where = 'noreturn'
 
-        return_value = self.represent_return_value(response)
+        return_value = self._represent_return_value(response)
         unformatted = FORMS.get(where)
 
         modul = getattr(function, '__module__', 'modul')
@@ -293,7 +307,6 @@ class Loggo(object):
         # get all the data to be fed into the strings
         forms = dict(modul=modul,
                      function=getattr(function, '__name__', 'func'),
-                     # todo: the line below always seems to return function
                      callable=call_type,
                      nargs=self.nargs,
                      nkwargs=self.nkwargs,
@@ -353,22 +366,26 @@ class Loggo(object):
             data.update(self.log_data)
         return data
 
+    @staticmethod
+    def _format_traceback(trace, colour=True):
+        """
+        Check if there is a traceback, and format it if need be
+        """
+        if not trace or trace in ['False', 'None']:
+            return False
+        if colour:
+            start = COLOUR_MAP.get('critical', '')
+            end = COLOUR_MAP.get('end', '')
+            trace = '{}{}{}'.format(start, trace, end)
+        return '\t' + trace.replace('\n', '\n\t')
+
     def _build_string(self, msg, level, log_data, truncate=0, colour=True, include_data=True):
         """
         Make a single line string, or multiline if traceback provided, for print
         and file logging
         """
         tstamp = datetime.now().strftime('%d.%m %Y %H:%M:%S')
-        # if there is a traceback, colour it or not
-        trace = log_data.get('traceback', '')
-        if trace in ['False', 'None']:
-            trace = False
-        traceback_exists = bool(trace)
-        if traceback_exists:
-            if colour:
-                end = COLOUR_MAP.get('end', '')
-                trace = '{}{}{}'.format(COLOUR_MAP.get('critical', ''), trace, end)
-            trace = '\t' + trace.replace('\n', '\n\t')
+        trace = self._format_traceback(log_data.get('traceback', ''), colour=colour)
         log_data = {k: v for k, v in log_data.items() if k != 'traceback'}
         datapoints = [tstamp, msg, level]
         if include_data:
@@ -376,7 +393,7 @@ class Loggo(object):
         strung = '\t' + '\t'.join([str(s).strip('\n') for s in datapoints])
         if truncate and len(strung) > truncate:
             strung = strung[:truncate] + '...'
-        if traceback_exists:
+        if trace:
             strung = '{} -- see below: \n{}\n'.format(strung, trace)
         return strung
 
@@ -465,10 +482,9 @@ class Loggo(object):
 
     def sanitise(self, message, data=None):
         """
-        Make data safe for logging
+        Make message and data safe for logging
         """
         message = self._force_string_and_truncate(message)
-
         if data is None:
             data = dict()
         elif not isinstance(data, dict):
@@ -486,12 +502,16 @@ class Loggo(object):
         """
         if self.stopped:
             return
+
+        # data and kwargs together will become the extra dict for the logger
+        data = dict() if data is None else data
+        kwargs.update(data)
+        data = kwargs
+
         try:
-            data = dict() if data is None else data
-            kwargs.update(data)
-            data = kwargs
             message, string_data = self.sanitise(message, data)
-            single_string = self._build_string(message, alert, string_data, truncate=self.line_length, include_data=False)
+            opts = dict(truncate=self.line_length, include_data=False)
+            single_string = self._build_string(message, alert, string_data, **opts)
             plain_string = self._build_string(message, alert, string_data, colour=False)
             string_data.pop('traceback', None)
 
@@ -502,11 +522,19 @@ class Loggo(object):
                 logfile = self.get_logfile(data)
                 self.write_to_file(plain_string, logfile)
 
-            log_level = getattr(logging, LOG_LEVELS.get(alert, 'INFO'))
+            if isinstance(alert, str):
+                log_level = getattr(logging, LOG_LEVELS.get(alert, 'INFO'))
+            elif isinstance(alert, int):
+                log_level = alert
+            # correct a bad call signature
+            elif isinstance(alert, dict):
+                alert.update(data)
+                return self.log(message, alert.pop('alert', 'INFO'), alert)
+
             self.logger.log(log_level, message, extra=string_data)
 
         except Exception as error:
-            self._emergency_log('General log failure: ' + str(error), message, error)
+            self._emergency_log('General log failure: {}'.format(str(error)), message, error)
 
     def _emergency_log(self, error_msg, msg, exception):  #  no cover
         """
@@ -523,6 +551,6 @@ class Loggo(object):
                 error_msg = str(getattr(exception, 'message', exception))
                 quit()
         except Exception as error:
-            print('Emergency log exception... gl&hf')
+            print('Emergency log exception')
             print(str(error))
             quit()
