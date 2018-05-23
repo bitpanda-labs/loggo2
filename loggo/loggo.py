@@ -38,10 +38,10 @@ except ImportError:
     COLOUR_MAP = dict()
 
 # Strings to be formatted for pre function, post function and error during function
-FORMS = dict(pre='Called {modul}.{function} {callable} with {nargs} args, {nkwargs} kwargs: {kwa}\n',
-             post='Returned a {return_type} {return_value} from {modul}.{function} {callable}\n',
-             noreturn='Returned None from {modul}.{function} {callable}\n',
-             error='Errored with {error_type} "{error_string}" when calling {modul}.{function} {callable} with {nargs} args, {nkwargs} kwargs: {kwa}\n')
+FORMS = dict(pre='*Called {modul}.{function} {callable} with {nargs} args, {nkwargs} kwargs: {kwa}\n',
+             post='*Returned a {return_type} {return_value} from {modul}.{function} {callable}\n',
+             noreturn='*Returned None from {modul}.{function} {callable}\n',
+             error='*Errored with {error_type} "{error_string}" when calling {modul}.{function} {callable} with {nargs} args, {nkwargs} kwargs: {kwa}\n')
 
 def colour_msg(msg, alert):
     """
@@ -113,15 +113,27 @@ class Loggo(object):
         else:
             return self.logme(class_or_func)
 
-    @staticmethod
-    def kwargify(function, *args, **kwargs):
+    def kwargify(self, function, *args, **kwargs):
         """
         This uses some weird inspection to figure out what the names of positional
         and keyword arguments were, so that even positional arguments with
         private names can be censored.
+
+        This is also definitively works out how many args/kwargs were passed in
         """
         sig = inspect.signature(function)
-        return sig.bind(*args, **kwargs).arguments
+        bound = sig.bind(*args, **kwargs).arguments
+        self.nargs = 0
+        self.nkwargs = 0
+        for k, v in sig.parameters.items():
+            if k not in bound:
+                continue
+            is_keyword = int(v.default != inspect._empty)
+            if is_keyword:
+                self.nkwargs += 1
+            else:
+                self.nargs += 1
+        return bound
 
     def stop(self, allow_errors=True):
         self.stopped = True
@@ -130,6 +142,16 @@ class Loggo(object):
     def start(self, allow_errors=True):
         self.stopped = False
         self.allow_errors = allow_errors
+
+    @staticmethod
+    def get_call_type(inspected):
+        if not inspected:
+            return 'function'
+        if list(inspected)[0] == 'self':
+            return 'method'
+        elif list(inspected)[0] == 'cls':
+            return 'classmethod'
+        return 'function'
 
     def logme(self, function):
         """
@@ -152,24 +174,28 @@ class Loggo(object):
             This takes the args and kwargs for the decorated function
             """
             extra = self.kwargify(function, *args, **kwargs)
-            self.nargs = len(args)
-            self.nkwargs = len(kwargs)
+            call_type = self.get_call_type(extra)
+            #self.nargs = len(args)
+            #self.nkwargs = len(kwargs)
+            #if call_type != 'function':
+            #    self.nargs -= 1
+                #self.nkwargs += 1
             # amazing dict comprehension
             call_args = {k: (v if k not in self.private_data else self.obscured) for k, v in extra.items()}
             self.log_data = dict(loggo=True, call_arguments=call_args)
             # pre log tells you what was called  and with what arguments
-            self.generate_log('pre', None, function=function, extra=extra)
+            self.generate_log('pre', None, function=function, call_type=call_type, extra=extra)
             try:
                 # where the original function is actually run
                 response = function(*args, **kwargs)
                 #kwargs['passed_args'] = args
-                self.generate_log('post', response, function=function, extra=extra)
+                self.generate_log('post', response, function=function, call_type=call_type, extra=extra)
                 return response
             except Exception as error:
                 # if the function failed, you get an error log instead of a return log
                 # the exception is then reraised
                 trace = traceback.format_exc()
-                self.generate_log('error', error, trace, function=function, extra=extra)
+                self.generate_log('error', error, trace, function=function, call_type=call_type, extra=extra)
 
                 raise error.__class__(str(error))
 
@@ -227,6 +253,8 @@ class Loggo(object):
             rep = '{} private arguments ({}) not displayed'.format(original, priv_names)
         else:
             for k, v in copied.items():
+                if k == 'self':
+                    continue
                 short = self._force_string_and_truncate(v, 10)
                 representation = '{}={}({})'.format(k, type(v).__name__, short)
                 output_list.append(representation)
@@ -238,7 +266,7 @@ class Loggo(object):
 
         return rep + '.'
 
-    def generate_log(self, where, response, trace=False, function=None, extra=None):
+    def generate_log(self, where, response, trace=False, call_type=None, function=None, extra=None):
         """
         General log string and data for before, after or error in function
         """
@@ -265,7 +293,8 @@ class Loggo(object):
         # get all the data to be fed into the strings
         forms = dict(modul=modul,
                      function=getattr(function, '__name__', 'func'),
-                     callable='method' if inspect.ismethod(function) else 'function',
+                     # todo: the line below always seems to return function
+                     callable=call_type,
                      nargs=self.nargs,
                      nkwargs=self.nkwargs,
                      return_value=return_value,
@@ -429,7 +458,7 @@ class Loggo(object):
         protected = {'name', 'message', 'asctime', 'msg', 'module', 'args'}
         for key, value in log_data.items():
             if key in protected:
-                self.log('Should not use key {} in log data'.format(key), 'dev')
+                self.log('WARNING: Should not use key "{}" in log data'.format(key), 'dev')
                 key = 'protected_' + key
             out[key] = value
         return out

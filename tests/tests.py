@@ -74,7 +74,7 @@ class TestDecoration(unittest.TestCase):
                 result = test('astadh', 1331)
             (alert, logged_msg), extras = logger.call_args
             self.assertEqual(alert, 40)
-            self.assertTrue('Errored with ValueError "no good"' in logged_msg)
+            self.assertTrue('Errored with ValueError "no good"' in logged_msg, logged_msg)
 
     def test_logme_0(self):
         """
@@ -85,26 +85,27 @@ class TestDecoration(unittest.TestCase):
             self.assertEqual(res, 5000)
             self.assertTrue(kwa)
             (alert, logged_msg), extras = logger.call_args_list[0]
-            self.assertTrue('2 args, 1 kwargs' in logged_msg)
+            self.assertTrue('2 args, 1 kwargs' in logged_msg, logged_msg)
             (alert, logged_msg), extras = logger.call_args_list[-1]
-            self.assertTrue('Returned a tuple' in logged_msg)
+            self.assertTrue('Returned a tuple' in logged_msg, logged_msg)
 
     def test_logme_1(self):
         with patch('logging.Logger.log') as logger:
             result = dummy.add(1, 2)
             self.assertEqual(result, 3)
             (alert, logged_msg), extras = logger.call_args_list[0]
-            self.assertTrue('2 args' in logged_msg)
+            self.assertTrue('2 args' in logged_msg, logged_msg)
             (alert, logged_msg), extras = logger.call_args_list[-1]
-            self.assertTrue('Returned a int' in logged_msg)
+            self.assertTrue('Returned a int' in logged_msg, logged_msg)
 
     def test_everything_0(self):
         with patch('logging.Logger.log') as logger:
             result = dummy.add_and_maybe_subtract(15, 10, 5)
             (alert, logged_msg), extras = logger.call_args_list[0]
-            self.assertTrue('3 args' in logged_msg)
+            self.assertTrue('2 args' in logged_msg, logged_msg)
+            self.assertTrue('1 kwargs' in logged_msg, logged_msg)
             (alert, logged_msg), extras = logger.call_args_list[-1]
-            self.assertTrue('Returned a int' in logged_msg)
+            self.assertTrue('Returned a int' in logged_msg, logged_msg)
 
     def test_everything_1(self):
         with patch('logging.Logger.log') as logger:
@@ -119,7 +120,7 @@ class TestDecoration(unittest.TestCase):
         with patch('logging.Logger.log') as logger:
             result = dummy.optional_provided()
             (alert, logged_msg), extras = logger.call_args_list[0]
-            self.assertTrue('0 args, 0 kwargs' in logged_msg)
+            self.assertTrue('0 args, 0 kwargs' in logged_msg, logged_msg)
             (alert, logged_msg), extras = logger.call_args_list[-1]
             self.assertTrue('Returned None' in logged_msg)
 
