@@ -315,6 +315,18 @@ class TestLog(unittest.TestCase):
             s = self.loggo._build_string(msg, 'dev', log_data, truncate=200, include_data=False)
             self.assertTrue('-- see below:' not in s)
 
+    def test_compat(self):
+        test = 'a string'
+        with patch('loggo.Loggo.log') as logger:
+            Loggo.log(test, None, None)
+        args = logger.call_args
+        self.assertEqual(args[0][0], test)
+        self.assertIsNone(args[0][1])
+        self.assertIsNone(args[0][2])
+        with patch('logging.Logger.log') as logger:
+            Loggo.log(test)
+        (alert, msg), kwargs = logger.call_args
+        self.assertEqual(test, msg)
 
 if __name__ == '__main__':
     unittest.main()
