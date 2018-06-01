@@ -94,7 +94,7 @@ class Loggo(object):
     def pause(self, allow_errors=True):
         """
         A context manager that prevents loggo from logging in that context. By
-        default, errors will still make it through.
+        default, errors will still make it through, unless allow_errors==False
         """
         self.allow_errors = allow_errors
         self.stopped = True
@@ -245,7 +245,7 @@ class Loggo(object):
         """
         representable = (int, float, str, list, set, dict, type(None), bool)
         if isinstance(response, representable):
-            return '({})'.format(self._force_string_and_truncate(response, 20))
+            return '({})'.format(self._force_string_and_truncate(response, 30))
         return ''
 
     def safe_arg_display(self, kwargs):
@@ -279,7 +279,7 @@ class Loggo(object):
 
         return rep + '.'
 
-    def generate_log(self, where, response, function, call_type, trace=False, extra=None):
+    def generate_log(self, where, returned, function, call_type, trace=False, extra=None):
         """
         General log string and data for before, after or error in function
         """
@@ -294,10 +294,10 @@ class Loggo(object):
             return
 
         # this just stops the annoying 'returned a NoneType (None)'
-        if where == 'post' and response is None:
+        if where == 'post' and returned is None:
             where = 'noreturn'
 
-        return_value = self._represent_return_value(response)
+        return_value = self._represent_return_value(returned)
         unformatted = FORMS.get(where)
 
         modul = getattr(function, '__module__', 'modul')
@@ -312,21 +312,21 @@ class Loggo(object):
                      nkwargs=self.nkwargs,
                      return_value=return_value,
                      kwa=self.safe_arg_display(extra),
-                     return_type=type(response).__name__)
+                     return_type=type(returned).__name__)
 
         # if you got was an initialised exception, put in kwargs:
-        if isinstance(response, Exception):
-            forms['error_type'] = response.__class__.__name__
-            forms['error_string'] = str(response)
+        if isinstance(returned, Exception):
+            forms['error_type'] = returned.__class__.__name__
+            forms['error_string'] = str(returned)
 
         formed = unformatted.format(**forms)
 
         # logs contain three things: a message string, a log level, and a dict of
         # extra data. there are three methods for these, which may be overwritten
         # by subclassing if you want
-        msg = self.get_msg(response, formed)
-        level = self.get_alert(response)
-        log_data = self.get_log_data(response, forms)
+        msg = self.get_msg(returned, formed)
+        level = self.get_alert(returned)
+        log_data = self.get_log_data(returned, forms)
 
         if trace:
             log_data['traceback'] = trace
@@ -336,9 +336,9 @@ class Loggo(object):
         self.log(msg, level, log_data)
         self.stopped = original_state
 
-    def get_msg(self, response, existing):
+    def get_msg(self, returned, existing):
         """
-        Get a message to append to the main omne.
+        Get a message to append to the main one.
         Override/extend this method if you have a different kind of object
         """
         msg = getattr(self, 'msg', None)
@@ -346,22 +346,25 @@ class Loggo(object):
             return existing
         return '{old}: {new}'.format(old=existing, new=msg)
 
-    def get_alert(self, response):
+    def get_alert(self, returned):
         """
-        Get an alert level from either self or response
+        Get an alert level from either self or returned
         Override/extend this method if you have a different kind of object
         """
         first_try = getattr(self, 'alert', -1)
         if first_try != -1:
             return first_try
-        return 'dev' if isinstance(response, Exception) else None
+        return 'dev' if isinstance(returned, Exception) else None
 
-    def get_log_data(self, response, forms):
+    def get_log_data(self, returned, forms):
         """
         Get a dict of log data from either self or pass your own in
         Override/extend this method if you have a different kind of object
         """
         data = dict(forms)
+        data['returned'] = returned
+        if isinstance(returned, dict):
+            data.update(returned)
         if hasattr(self, 'log_data') and isinstance(self.log_data, dict):
             data.update(self.log_data)
         return data
@@ -408,7 +411,6 @@ class Loggo(object):
         """
         Very simple log writer, could expand. simple append the line to the file
         """
-
         if not logfile:
             logfile = self.logfile
 
@@ -503,11 +505,36 @@ class Loggo(object):
         if self.stopped:
             return
 
+        # correct a bad call signature, when an interpretable level was not passed
+        # in as the second argument.
+        if isinstance(alert, dict):
+            alert.update(kwargs)
+            if isinstance(data, dict):
+                alert.update(data)
+            if alert.get('error'):
+                log_level = 'dev'
+            else:
+                log_level = alert.pop('alert', 'INFO')
+            return self.log(message, log_level, alert)
+
         # data and kwargs together will become the extra dict for the logger
+        # kwargs take precedence over data in the case of duplicate keys, because
+        # kwargs are more likely to have been explicitly passed in
         data = dict() if data is None else data
         kwargs.update(data)
         data = kwargs
 
+        # translate log levels to an integer
+        log_level = 20
+        if isinstance(alert, str):
+            log_level = getattr(logging, LOG_LEVELS.get(alert, 'INFO'))
+        elif isinstance(alert, int):
+            log_level = alert
+
+        # do all preprocessing of log data, like casting, truncation, etc.
+        # then do printing, filelogging and actual logging as per options.
+        # all failures will result in emergency log, which falls back to
+        # whatever it can (i.e. print) and which stops infinite loops
         try:
             message, string_data = self.sanitise(message, data)
             opts = dict(truncate=self.line_length, include_data=False)
@@ -522,24 +549,12 @@ class Loggo(object):
                 logfile = self.get_logfile(data)
                 self.write_to_file(plain_string, logfile)
 
-            log_level = 20
-            if isinstance(alert, str):
-                log_level = getattr(logging, LOG_LEVELS.get(alert, 'INFO'))
-            elif isinstance(alert, int):
-                log_level = alert
-
-            # correct a bad call signature
-            elif isinstance(alert, dict):
-                alert.update(data)
-                log_level = alert.pop('alert', 'INFO')
-                return self.log(message, log_level, alert)
-
             self.logger.log(log_level, message, extra=string_data)
 
         except Exception as error:
             self._emergency_log('General log failure: {}'.format(str(error)), message, error)
 
-    def _emergency_log(self, error_msg, msg, exception):  #  no cover
+    def _emergency_log(self, error_msg, msg, exception):
         """
         If there is an exception during logging, log/print it
         """
@@ -552,6 +567,7 @@ class Loggo(object):
                 print(msg)
                 print('Exiting because the system is in infinite loop')
                 error_msg = str(getattr(exception, 'message', exception))
+                print(error_msg)
                 quit()
         except Exception as error:
             print('Emergency log exception')
