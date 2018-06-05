@@ -16,7 +16,7 @@ LOG_LEVELS = dict(critical='CRITICAL',
                   info='INFO',
                   debug='DEBUG')
 
-DEFAULT_PRIVATE_KEYS = {'token', 'password', 'prv', 'priv', 'xprv', 'secret', 'mnemonic'}
+DEFAULT_PRIVATE_KEYS = {'token', 'password', 'prv', 'priv', 'xprv', 'secret', 'mnemonic', 'headers'}
 
 # you don't need graylog installed, but it is really powerful
 try:
