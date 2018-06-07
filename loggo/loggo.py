@@ -8,6 +8,7 @@ import os
 from datetime import datetime
 import traceback
 from contextlib import contextmanager
+import uuid
 
 LOG_LEVELS = dict(critical='CRITICAL',
                   dev='ERROR',
@@ -127,6 +128,7 @@ class Loggo(object):
         self.nargs = 0
         self.nkwargs = 0
         for key, value in sig.parameters.items():
+            self.log_data[key] = value if key not in self.private_data else self.obscured
             if key not in bound:
                 continue
             is_keyword = int(value.default != inspect._empty)
@@ -192,19 +194,20 @@ class Loggo(object):
             self.log_data = dict(loggo=True, call_arguments=call_args)
 
             # pre log tells you what was called  and with what arguments
-            self.generate_log('pre', None, function, call_type, extra=extra)
+            idx = uuid.uuid1()
+            self.generate_log('pre', None, function, call_type, extra=extra, idx=idx)
 
             try:
                 # where the original function is actually run
                 response = function(*args, **kwargs)
                 # the succesfful return log
-                self.generate_log('post', response, function, call_type, extra=extra)
+                self.generate_log('post', response, function, call_type, extra=extra, idx=idx)
                 return response
             except Exception as error:
                 # if the function failed, you get an error log instead of a return log
                 # the exception is then reraised
                 trace = traceback.format_exc()
-                self.generate_log('error', error, function, call_type, trace=trace, extra=extra)
+                self.generate_log('error', error, function, call_type, trace=trace, extra=extra, idx=idx)
                 raise error.__class__(str(error))
 
         return full_decoration
@@ -279,7 +282,7 @@ class Loggo(object):
 
         return rep + '.'
 
-    def generate_log(self, where, returned, function, call_type, trace=False, extra=None):
+    def generate_log(self, where, returned, function, call_type, trace=False, extra=None, idx=None):
         """
         General log string and data for before, after or error in function
         """
@@ -333,6 +336,7 @@ class Loggo(object):
 
         original_state = bool(self.stopped)
         self.stopped = False
+        log_data['deco'] = idx
         self.log(msg, level, log_data)
         self.stopped = original_state
 
