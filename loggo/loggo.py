@@ -500,14 +500,29 @@ class Loggo(object):
         data = self._stringify_dict(data)
         return message, data
 
+    @staticmethod
+    def compatibility_hack(alert, data):
+        """
+        Brief hack to allow tx2 ugly call syntax
+        """
+        if isinstance(alert, dict) and data is None:
+            log_data = dict(alert)
+            alert = alert.get('alert', alert.get('level', None))
+        else:
+            log_data = data
+        return alert, log_data
+
     def log(self, message, alert=None, data=None, **kwargs):
         """
         Main logging method. Takes message string, alert level, and a data dict
         that will be logged. anything (accidentally) passed as kwargs will get
         merged into the data dictionary
         """
+
         if self.stopped:
             return
+
+        alert, data = self.compatibility_hack(alert, data)
 
         # correct a bad call signature, when an interpretable level was not passed
         # in as the second argument.
