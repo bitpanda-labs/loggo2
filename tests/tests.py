@@ -61,9 +61,20 @@ class DummyClass(object):
     def hopefully_only_errors(self, n):
         raise ValueError('Bam!')
 
+@Loggo.errors
+def test_func(number):
+    raise ValueError('Broken!')
+
 dummy = DummyClass()
 
 class TestDecoration(unittest.TestCase):
+
+    def test_errors_on_func(self):
+        with patch('logging.Logger.log') as logger:
+            with self.assertRaises(ValueError):
+                test_func(5)
+            (alert, logged_msg), extras = logger.call_args
+            self.assertTrue('*Errored with ValueError' in logged_msg)
 
     def test_one(self):
         """

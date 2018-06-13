@@ -175,7 +175,6 @@ class Loggo(object):
 
         It will the call, return and errors that occurred during the function/method
         """
-
         if getattr(function, 'no_log', False):
             def unlogged(*args, **kwargs):
                 """
@@ -222,13 +221,16 @@ class Loggo(object):
         function.no_log = True
         return function
 
-    @staticmethod
-    def errors(function):
+    def errors(self, function):
         """
         Only log errors within a given method
         """
         function.just_errors = True
-        return function
+        with Loggo.pause(self, allow_errors=True):
+            # not sure if this causes duplicate calls...
+            if callable(function):
+                return self.logme(function)
+            return function
 
     def everything(self, cls):
         """
