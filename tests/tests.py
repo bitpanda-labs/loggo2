@@ -65,6 +65,9 @@ class DummyClass(object):
 def test_func(number):
     raise ValueError('Broken!')
 
+def test_func2(number):
+    raise ValueError('Broken!')
+
 dummy = DummyClass()
 
 class TestDecoration(unittest.TestCase):
@@ -73,8 +76,16 @@ class TestDecoration(unittest.TestCase):
         with patch('logging.Logger.log') as logger:
             with self.assertRaises(ValueError):
                 test_func(5)
-            (alert, logged_msg), extras = logger.call_args
+            (alert, logged_msg), extras = logger.call_args_list[-1]
             self.assertTrue('*Errored with ValueError' in logged_msg)
+
+    def test_log_errors(self):
+        with patch('logging.Logger.log') as logger:
+            with self.assertRaises(ValueError) as error:
+                with Loggo.log_errors() as loggin:
+                    test_func2(5)
+            #(alert, logged_msg), extras = logger.call_args_list[-1]
+            #self.assertTrue('*Errored with ValueError' in logged_msg)
 
     def test_one(self):
         """
@@ -155,9 +166,8 @@ class TestDecoration(unittest.TestCase):
         with patch('logging.Logger.log') as logger:
             with self.assertRaises(ValueError):
                 result = dummy.hopefully_only_errors(5)
-            all_args = logger.call_args_list
-            self.assertEqual(len(all_args), 1)
-            self.assertTrue('Errored with ValueError' in all_args[0][0][1])
+            (alert, logged_msg), extras = logger.call_args
+            self.assertTrue('Errored with ValueError' in logged_msg)
 
     def test_private_keyword_removal(self):
         with patch('logging.Logger.log') as logger:

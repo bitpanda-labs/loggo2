@@ -97,13 +97,43 @@ class Loggo(object):
         A context manager that prevents loggo from logging in that context. By
         default, errors will still make it through, unless allow_errors==False
         """
-        self.allow_errors = allow_errors
+        original = self.allow_errors, self.stopped
         self.stopped = True
+        self.allow_errors = allow_errors
         try:
             yield self
+        except Exception as error:
+            raise error
         finally:
-            self.allow_errors = True
-            self.stopped = False
+            self.allow_errors, self.stopped = original
+
+    @contextmanager
+    def verbose(self, allow_errors=True):
+        """
+        Context manager that makes, rather than suppresses, msgs
+        """
+        original = self.allow_errors, self.stopped
+        self.stopped = False
+        try:
+            yield self
+        except Exception as error:
+            raise error
+        finally:
+            self.allow_errors, self.stopped = original
+
+    @contextmanager
+    def log_errors(self):
+        """
+        Context manager that logs errors only
+        """
+        original = self.allow_errors, self.stopped
+        try:
+            yield self
+        except Exception as error:
+            raise error
+        finally:
+            self.allow_errors, self.stopped = original
+            #self.stopped = False
 
     def __call__(self, class_or_func):
         """
@@ -221,16 +251,19 @@ class Loggo(object):
         function.no_log = True
         return function
 
+    def decorate_if_possible(self, func):
+        if func.__name__.startswith('__') and func.__name__.endswith('__'):
+            return func
+        if callable(func):
+            return self.logme(func)
+        return func
+
     def errors(self, function):
         """
         Only log errors within a given method
         """
         function.just_errors = True
-        with Loggo.pause(self, allow_errors=True):
-            # not sure if this causes duplicate calls...
-            if callable(function):
-                return self.logme(function)
-            return function
+        return self.decorate_if_possible(function)
 
     def everything(self, cls):
         """
@@ -239,11 +272,7 @@ class Loggo(object):
         class Decorated(cls):
             def __getattribute__(self_or_class, name):
                 unwrapped = object.__getattribute__(self_or_class, name)
-                if name.startswith('__') and name.endswith('__'):
-                    return unwrapped
-                if callable(unwrapped):
-                    return self.logme(unwrapped)
-                return unwrapped
+                return self.decorate_if_possible(unwrapped)
         return Decorated
 
     def _represent_return_value(self, response):
