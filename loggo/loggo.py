@@ -239,6 +239,8 @@ class Loggo(object):
         class Decorated(cls):
             def __getattribute__(self_or_class, name):
                 unwrapped = object.__getattribute__(self_or_class, name)
+                if name.startswith('__') and name.endswith('__'):
+                    return unwrapped
                 if callable(unwrapped):
                     return self.logme(unwrapped)
                 return unwrapped
