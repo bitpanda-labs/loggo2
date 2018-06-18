@@ -5,10 +5,11 @@ Loggo: decorators for logging
 import inspect
 import logging
 import os
-from datetime import datetime
+import sys
 import traceback
-from contextlib import contextmanager
 import uuid
+from contextlib import contextmanager
+from datetime import datetime
 
 LOG_LEVELS = dict(critical='CRITICAL',
                   dev='ERROR',
@@ -233,12 +234,14 @@ class Loggo(object):
                 self.generate_log('post', response, function, call_type, extra=extra, idx=idx)
                 return response
             except Exception as error:
-                # if the function failed, you get an error log instead of a return log
-                # the exception is then reraised
-                trace = traceback.format_exc()
-                self.generate_log('error', error, function, call_type, trace=trace, extra=extra, idx=idx)
-                raise error.__class__(str(error))
-
+                # here, we try to remove the loggo layer from the traceback. will
+                # basically use
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                if exc_traceback.tb_next:
+                    exc_traceback = exc_traceback.tb_next
+                tb = (exc_type, exc_value, exc_traceback)
+                self.generate_log('error', error, function, call_type, trace=tb, extra=extra, idx=idx)
+                raise error.__class__(str(error)).with_traceback(exc_traceback)
         return full_decoration
 
 
@@ -365,7 +368,7 @@ class Loggo(object):
         log_data = self.get_log_data(returned, forms)
 
         if trace:
-            log_data['traceback'] = trace
+            log_data['traceback'] = traceback.format_exception(*trace)
 
         original_state = bool(self.stopped)
         self.stopped = False
