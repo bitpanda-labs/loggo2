@@ -255,7 +255,12 @@ class Loggo(object):
         return function
 
     def decorate_if_possible(self, func):
-        name = getattr(func, '__name__', '')
+        """
+        To be decorable, they func must be callable, and have a non-magic __name__
+        """
+        name = getattr(func, '__name__', False)
+        if name is False:
+            return func
         if name.startswith('__') and name.endswith('__'):
             return func
         if callable(func):
