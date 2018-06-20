@@ -255,7 +255,8 @@ class Loggo(object):
         return function
 
     def decorate_if_possible(self, func):
-        if func.__name__.startswith('__') and func.__name__.endswith('__'):
+        name = getattr(func, '__name__', '')
+        if name.startswith('__') and name.endswith('__'):
             return func
         if callable(func):
             return self.logme(func)
