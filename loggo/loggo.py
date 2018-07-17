@@ -169,7 +169,7 @@ class Loggo(object):
                 self.nkwargs += 1
             else:
                 self.nargs += 1
-        self.log_data = self.obscure_dict(self.log_data)
+        self.log_data = self._obscure_dict(self.log_data)
         return bound
 
     def stop(self, allow_errors=True):
@@ -200,7 +200,7 @@ class Loggo(object):
             return 'classmethod'
         return 'function'
 
-    def obscure_dict(self, dct):
+    def _obscure_dict(self, dct):
         """
         Obscure any private values in a dictionary
         """
@@ -236,7 +236,7 @@ class Loggo(object):
             """
             extra = self.kwargify(function, *args, **kwargs)
             call_type = self.get_call_type(extra)
-            call_args = self.obscure_dict(extra)
+            call_args = self._obscure_dict(extra)
             self.log_data.update(call_args)
 
             # make a unique identifier for this set of logs
@@ -431,6 +431,8 @@ class Loggo(object):
         Override/extend this method if you have a different kind of object
         """
         forms.update(self.log_data)
+        if isinstance(returned, dict):
+            returned = self._obscure_dict(returned)
         ret_val = self._force_string_and_truncate(returned, 10000)
         forms['return_value'] = ret_val
         return forms
