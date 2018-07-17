@@ -312,6 +312,9 @@ class Loggo(object):
         representable = (int, float, str, list, set, dict, type(None), bool, tuple)
         if isinstance(response, representable):
             return '({})'.format(self._force_string_and_truncate(response, 70))
+        content = getattr(response, 'content', False)
+        if content:
+            return '({})'.format(self._force_string_and_truncate(content.decode('utf-8'), 70))
         return ''
 
     def safe_arg_display(self, kwargs):
@@ -387,7 +390,7 @@ class Loggo(object):
             forms['error_type'] = returned.__class__.__name__
             forms['error_string'] = str(returned)
 
-        formed = unformatted.format(**forms)
+        formed = unformatted.format(**forms).replace('  ', ' ')
 
         # logs contain three things: a message string, a log level, and a dict of
         # extra data. there are three methods for these, which may be overwritten
