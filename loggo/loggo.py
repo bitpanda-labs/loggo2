@@ -364,13 +364,13 @@ class Loggo(object):
         if where == 'post' and returned is None:
             where = 'noreturn'
 
-        return_value = self._represent_return_value(returned)
-        unformatted = FORMS.get(where)
-
         modul = getattr(function, '__module__', 'modul')
         # do not log loggo, because why would you ever want that?
         if modul == 'loggo.loggo':
             return
+
+        return_value = self._represent_return_value(returned)
+        unformatted = FORMS.get(where)
 
         # get all the data to be fed into the strings
         forms = dict(modul=modul,
@@ -433,8 +433,8 @@ class Loggo(object):
         forms.update(self.log_data)
         if isinstance(returned, dict):
             returned = self._obscure_dict(returned)
-        ret_val = self._force_string_and_truncate(returned, 10000)
-        forms['return_value'] = ret_val
+        forms['returned'] = self._force_string_and_truncate(returned, 10000)
+        forms.pop('return_value', None)
         return forms
 
     @staticmethod
