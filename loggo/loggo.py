@@ -240,7 +240,7 @@ class Loggo(object):
             self.log_data.update(call_args)
 
             # make a unique identifier for this set of logs
-            self.log_data['deco'] = uuid.uuid1()
+            self.log_data['couplet'] = uuid.uuid1()
 
             # pre log tells you what was called and with what arguments
             self.generate_log('pre', None, function, call_type, extra=extra)
@@ -373,7 +373,9 @@ class Loggo(object):
             return
 
         return_value = self._represent_return_value(returned)
-        unformatted = FORMS.get(where)
+        unformatted_message = FORMS.get(where)
+
+        safe_displayed_kwargs = self.safe_arg_display(extra)
 
         # get all the data to be fed into the strings
         forms = dict(modul=modul,
@@ -382,7 +384,7 @@ class Loggo(object):
                      nargs=self.nargs,
                      nkwargs=self.nkwargs,
                      return_value=return_value,
-                     kwa=self.safe_arg_display(extra),
+                     kwa=safe_displayed_kwargs,
                      return_type=type(returned).__name__)
 
         # if what is returned is an exception, do some special handling:
@@ -390,7 +392,10 @@ class Loggo(object):
             forms['error_type'] = returned.__class__.__name__
             forms['error_string'] = str(returned)
 
-        formed = unformatted.format(**forms).replace('  ', ' ')
+        formed = unformatted_message.format(**forms).replace('  ', ' ')
+        # no colon if there is nothing to go after it
+        if not safe_displayed_kwargs:
+            formed = formed.replace(': \n', '\n')
 
         # logs contain three things: a message string, a log level, and a dict of
         # extra data. there are three methods for these, which may be overwritten
