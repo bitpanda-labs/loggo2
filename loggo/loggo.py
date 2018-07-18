@@ -240,16 +240,16 @@ class Loggo(object):
             self.log_data.update(call_args)
 
             # make a unique identifier for this set of logs
-            self.log_data['couplet'] = uuid.uuid1()
+            uuid = uuid.uuid1()
 
             # pre log tells you what was called and with what arguments
-            self.generate_log('pre', None, function, call_type, extra=extra)
+            self.generate_log('pre', None, function, call_type, extra=extra, uuid=uuid)
 
             try:
                 # where the original function is actually run
                 response = function(*args, **kwargs)
                 # the successful return log
-                self.generate_log('post', response, function, call_type, extra=extra)
+                self.generate_log('post', response, function, call_type, extra=extra, uuid=uuid)
                 return response
             except Exception as error:
                 # here, we try to remove the loggo layer from the traceback. it
@@ -259,7 +259,7 @@ class Loggo(object):
                     exc_traceback = exc_traceback.tb_next
                 trace = (exc_type, exc_value, exc_traceback)
                 self.log_data['traceback'] = traceback.format_exception(*trace)
-                self.generate_log('error', error, function, call_type, extra=extra)
+                self.generate_log('error', error, function, call_type, extra=extra, uuid=uuid)
                 raise error.__class__(str(error)).with_traceback(exc_traceback)
             # always reset the log data at the conclusion of a log cycle
             finally:
@@ -348,7 +348,7 @@ class Loggo(object):
 
         return rep + '.'
 
-    def generate_log(self, where, returned, function, call_type, extra=None):
+    def generate_log(self, where, returned, function, call_type, extra=None, uuid=None):
         """
         General log string and data for before, after or error in function
         """
@@ -409,6 +409,7 @@ class Loggo(object):
         # turn it on just for now, as if we shouldn't log we'd have returned
         self.stopped = False
         # do logging
+        log_data['couplet'] = uuid
         self.log(msg, level, log_data)
         # restore old stopped state
         self.stopped = original_state
