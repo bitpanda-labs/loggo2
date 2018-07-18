@@ -240,16 +240,16 @@ class Loggo(object):
             self.log_data.update(call_args)
 
             # make a unique identifier for this set of logs
-            self.log_data['deco'] = uuid.uuid1()
+            uuid = uuid.uuid1()
 
             # pre log tells you what was called and with what arguments
-            self.generate_log('pre', None, function, call_type, extra=extra)
+            self.generate_log('pre', None, function, call_type, extra=extra, uuid=uuid)
 
             try:
                 # where the original function is actually run
                 response = function(*args, **kwargs)
                 # the successful return log
-                self.generate_log('post', response, function, call_type, extra=extra)
+                self.generate_log('post', response, function, call_type, extra=extra, uuid=uuid)
                 return response
             except Exception as error:
                 # here, we try to remove the loggo layer from the traceback. it
@@ -259,7 +259,7 @@ class Loggo(object):
                     exc_traceback = exc_traceback.tb_next
                 trace = (exc_type, exc_value, exc_traceback)
                 self.log_data['traceback'] = traceback.format_exception(*trace)
-                self.generate_log('error', error, function, call_type, extra=extra)
+                self.generate_log('error', error, function, call_type, extra=extra, uuid=uuid)
                 raise error.__class__(str(error)).with_traceback(exc_traceback)
             # always reset the log data at the conclusion of a log cycle
             finally:
@@ -348,7 +348,7 @@ class Loggo(object):
 
         return rep + '.'
 
-    def generate_log(self, where, returned, function, call_type, extra=None):
+    def generate_log(self, where, returned, function, call_type, extra=None, uuid=None):
         """
         General log string and data for before, after or error in function
         """
@@ -373,7 +373,9 @@ class Loggo(object):
             return
 
         return_value = self._represent_return_value(returned)
-        unformatted = FORMS.get(where)
+        unformatted_message = FORMS.get(where)
+
+        safe_displayed_kwargs = self.safe_arg_display(extra)
 
         # get all the data to be fed into the strings
         forms = dict(modul=modul,
@@ -382,7 +384,7 @@ class Loggo(object):
                      nargs=self.nargs,
                      nkwargs=self.nkwargs,
                      return_value=return_value,
-                     kwa=self.safe_arg_display(extra),
+                     kwa=safe_displayed_kwargs,
                      return_type=type(returned).__name__)
 
         # if what is returned is an exception, do some special handling:
@@ -390,7 +392,10 @@ class Loggo(object):
             forms['error_type'] = returned.__class__.__name__
             forms['error_string'] = str(returned)
 
-        formed = unformatted.format(**forms).replace('  ', ' ')
+        formed = unformatted_message.format(**forms).replace('  ', ' ')
+        # no colon if there is nothing to go after it
+        if not safe_displayed_kwargs:
+            formed = formed.replace(': \n', '\n')
 
         # logs contain three things: a message string, a log level, and a dict of
         # extra data. there are three methods for these, which may be overwritten
@@ -404,6 +409,7 @@ class Loggo(object):
         # turn it on just for now, as if we shouldn't log we'd have returned
         self.stopped = False
         # do logging
+        log_data['couplet'] = uuid
         self.log(msg, level, log_data)
         # restore old stopped state
         self.stopped = original_state
