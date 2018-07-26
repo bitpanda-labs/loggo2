@@ -1,5 +1,8 @@
 # Logging utilities for Python projects
 
+<!--- Don't edit the version line below manually. Let bump2version do it for you. -->
+> Version 1.2.4
+
 > This module provides ways of logging the input, output and errors in classes and functions It can be hooked up to graylog, printed to console or saved to a log file. It requires very little configuration.
 
 ## Install
@@ -157,3 +160,21 @@ cd tests
 python tests.py
 ```
 
+## Bumping version
+
+Version bumps should be done using the `bump2version` utility. Install it with pip:
+```bash
+pip install bump2version
+```
+
+Whenever you need to bump version, in the project root directory do:
+```bash
+bump2version (major | minor | patch)
+git push <remote> <branch> --follow-tags
+```
+
+If you don't want to remember to use the `--follow-tags` flag, you can edit your git config:
+```bash
+git config --global push.followTags true
+```
+After this you can simply push the version bump commit to remote as you would normally, and the tag will also be pushed.
