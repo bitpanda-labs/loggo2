@@ -61,6 +61,10 @@ class DummyClass(object):
     def hopefully_only_errors(self, n):
         raise ValueError('Bam!')
 
+class DummyClass2(object):
+    def add(self, a, b, c):
+        return a + b + c
+
 @Loggo.errors
 def test_func(number):
     raise ValueError('Broken!')
@@ -71,6 +75,10 @@ def test_func2(number):
 dummy = DummyClass()
 
 class TestDecoration(unittest.TestCase):
+
+    def test_inheritance_signature_change(self):
+        d2 = DummyClass2()
+        self.assertEqual(6, d2.add(1,2,3))
 
     def test_errors_on_func(self):
         with patch('logging.Logger.log') as logger:
