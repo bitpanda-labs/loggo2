@@ -78,7 +78,7 @@ class TestDecoration(unittest.TestCase):
 
     def test_inheritance_signature_change(self):
         d2 = DummyClass2()
-        self.assertRequal(6, d2.add(1,2,3))
+        self.assertEqual(6, d2.add(1,2,3))
 
     def test_errors_on_func(self):
         with patch('logging.Logger.log') as logger:
