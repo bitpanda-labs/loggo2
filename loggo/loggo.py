@@ -156,11 +156,20 @@ class Loggo(object):
 
         # get the signature for the function and bind the passed in arguments
         sig = inspect.signature(function)
-        bound = sig.bind(*args, **kwargs).arguments
-        # get number of args and kwargs, and make dict of the safe data
+        try:
+            bound = sig.bind(*args, **kwargs).arguments
+            to_iter = sig.parameters.items()
+            self._bind_errored = False
+        except TypeError as error:
+            self._bind_errored = True
+            self._args_to_use = args
+            self._kwargs_to_use = kwargs
+            self.generate_log('error', error, function, 'callable', extra=None, idx=None)
+            bound = dict()
+            to_iter = []
         self.nargs = 0
         self.nkwargs = 0
-        for key, value in sig.parameters.items():
+        for key, value in to_iter:
             self.log_data[key] = value
             if key not in bound:
                 continue
