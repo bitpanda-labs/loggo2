@@ -91,6 +91,7 @@ class Loggo(object):
         self.logger = logging.getLogger(self.facility) # pylint: disable=no-member
         self.logger.setLevel(logging.DEBUG)
         self.add_handler()
+        self.add_fields = config.get('add_fields', dict()) # can override fields
 
     @contextmanager
     def pause(self, allow_errors=True):
@@ -649,6 +650,9 @@ class Loggo(object):
             if self.do_write:
                 logfile = self.get_logfile(data)
                 self.write_to_file(plain_string, logfile)
+                
+            for field, value in self.add_fields.items():
+                string_data[field] = value
 
             self.logger.log(log_level, message, extra=string_data)
 
