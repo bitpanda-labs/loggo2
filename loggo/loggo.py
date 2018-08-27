@@ -90,8 +90,8 @@ class Loggo(object):
         self.private_data = config.get('private_data', DEFAULT_PRIVATE_KEYS)
         self.logger = logging.getLogger(self.facility) # pylint: disable=no-member
         self.logger.setLevel(logging.DEBUG)
-        self.add_handler()
         self.add_fields = config.get('add_fields', dict()) # can override fields
+        self.add_handler()
 
     @contextmanager
     def pause(self, allow_errors=True):
@@ -327,7 +327,7 @@ class Loggo(object):
             return '({})'.format(self._force_string_and_truncate(content.decode('utf-8'), 70))
         return ''
 
-    def safe_arg_display(self, kwargs):
+    def safe_arg_display(self, kwargs, truncate=True):
         """
         Build a string showing keyword arguments if we can
         """
@@ -347,7 +347,8 @@ class Loggo(object):
             for k, v in copied.items():
                 if k == 'self':
                     continue
-                short = self._force_string_and_truncate(v, 10)
+                trunc = 10 if truncate else 9999
+                short = self._force_string_and_truncate(v, trunc)
                 representation = '{}={}({})'.format(k, type(v).__name__, short)
                 output_list.append(representation)
             rep = ', '.join(output_list)
@@ -394,7 +395,7 @@ class Loggo(object):
                      nargs=self.nargs,
                      nkwargs=self.nkwargs,
                      return_value=return_value,
-                     kwa=safe_displayed_kwargs,
+                     kwa=self.safe_arg_display(extra, truncate=False),
                      return_type=type(returned).__name__)
 
         # if what is returned is an exception, do some special handling:
@@ -650,7 +651,7 @@ class Loggo(object):
             if self.do_write:
                 logfile = self.get_logfile(data)
                 self.write_to_file(plain_string, logfile)
-                
+
             for field, value in self.add_fields.items():
                 string_data[field] = value
 
