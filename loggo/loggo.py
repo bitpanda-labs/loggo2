@@ -47,10 +47,12 @@ FORMS = dict(pre='*Called {modul}.{function} {callable} with {nargs} args, {nkwa
              noreturn='*Returned None from {modul}.{function} {callable}\n',
              error='*Errored with {error_type} "{error_string}" when calling {modul}.{function} {callable} with {nargs} args, {nkwargs} kwargs: {kwa}\n')
 
-def colour_msg(msg, alert):
+def colour_msg(msg, alert, do_colour):
     """
     Try to colour a message if colorama is installed, based on alert level
     """
+    if not do_colour:
+        return msg
     if alert is None:
         alert = COLOUR_MAP.get('greenbright', '')
     else:
@@ -80,6 +82,7 @@ class Loggo(object):
         self.config = config
         self.log_data = dict(loggo=True, loggo_config=dict(config))
         self.facility = config.get('facility', 'loggo')
+        self.do_colour = config.get('colour', True)
         self.ip = config.get('ip', None)
         self.port = config.get('port', None)
         self.do_print = config.get('do_print', True)
@@ -646,7 +649,7 @@ class Loggo(object):
             string_data.pop('traceback', None)
 
             if self.do_print:
-                print(colour_msg(single_string, alert))
+                print(colour_msg(single_string, alert, self.do_colour))
 
             if self.do_write:
                 logfile = self.get_logfile(data)
