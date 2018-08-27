@@ -90,8 +90,8 @@ class Loggo(object):
         self.private_data = config.get('private_data', DEFAULT_PRIVATE_KEYS)
         self.logger = logging.getLogger(self.facility) # pylint: disable=no-member
         self.logger.setLevel(logging.DEBUG)
-        self.add_handler()
         self.add_fields = config.get('add_fields', dict()) # can override fields
+        self.add_handler()
 
     @contextmanager
     def pause(self, allow_errors=True):
