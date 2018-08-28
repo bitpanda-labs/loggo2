@@ -568,7 +568,11 @@ class Loggo(object):
         protected = {'name', 'message', 'asctime', 'msg', 'module', 'args'}
         for key, value in log_data.items():
             if key in protected:
-                self.log('WARNING: Should not use key "{}" in log data'.format(key), 'dev')
+                # as taneli points out, it sucks to get this warning when you
+                # did nothing wrong stylistically or decorated some existing code
+                # so let's forgive the warning on 'args' only
+                if key != 'args':
+                    self.log('WARNING: Should not use key "{}" in log data'.format(key), 'dev')
                 key = 'protected_' + key
             out[key] = value
         return out
