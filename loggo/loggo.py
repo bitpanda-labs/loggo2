@@ -94,6 +94,7 @@ class Loggo(object):
         self.logger = logging.getLogger(self.facility) # pylint: disable=no-member
         self.logger.setLevel(logging.DEBUG)
         self.add_fields = config.get('add_fields', dict()) # can override fields
+        self._bound_kwargs = None
         self.add_handler()
 
     @contextmanager
@@ -183,6 +184,7 @@ class Loggo(object):
             else:
                 self.nargs += 1
         self.log_data = self._obscure_dict(self.log_data)
+        self._bound_kwargs = bound
         return bound
 
     def stop(self, allow_errors=True):
