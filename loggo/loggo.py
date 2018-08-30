@@ -98,11 +98,21 @@ class Loggo(object):
         self.add_handler()
 
     def listen_to(loggo_self, facility):
+        """
+        This method can hook the logger up to anything else that logs using the
+        Python logging module (i.e. another logger) and steals its logs
+        """
         class LoggoHandler(logging.Handler):
             def emit(handler_self, record):
-                attributes = ['msg', 'created', 'msecs', 'stack_info', 'levelname', 'filename', 'module', 'args', 'funcName', 'process', 'relativeCreated', 'exc_info', 'name', 'processName', 'threadName', 'lineno', 'exc_text', 'pathname', 'thread', 'levelno']
-                extra = {key: value for key, value in record.__dict__.items() if key not in attributes}
-                alert = extra['alert'] if 'alert' in extra else None
+                attributes = {'msg', 'created', 'msecs', 'stack_info',
+                              'levelname', 'filename', 'module', 'args',
+                              'funcName', 'process', 'relativeCreated',
+                              'exc_info', 'name', 'processName', 'threadName',
+                              'lineno', 'exc_text', 'pathname', 'thread',
+                              'levelno'}
+                extra = dict(record.__dict__)
+                [extra.pop(attrib, None) for attrib in attributes]
+                alert = extra.get('alert')
                 loggo_self.log(record.msg, alert, data=extra)
         other_loggo = logging.getLogger(facility)
         other_loggo.setLevel(logging.DEBUG)
@@ -264,6 +274,7 @@ class Loggo(object):
             call_type = self.get_call_type(extra)
             call_args = self._obscure_dict(extra)
             self.log_data.update(call_args)
+            exc_traceback = None
 
             # make a unique identifier for this set of logs
             idx = uuid.uuid1()
@@ -278,18 +289,19 @@ class Loggo(object):
                 self.generate_log('post', response, function, call_type, extra=extra, idx=idx)
                 return response
             except Exception as error:
-                # here, we try to remove the loggo layer from the traceback. it
-                # is a little experimental and can be changed if need be
-                exc_type, exc_value, exc_traceback = sys.exc_info()
-                if exc_traceback.tb_next:
-                    exc_traceback = exc_traceback.tb_next
-                trace = (exc_type, exc_value, exc_traceback)
+                trace = sys.exc_info()
+                # these lines *might* strip out loggo info from traceback
+                # may reimplement later after tracebacks appear in graylog
+                # exc_type, exc_value, exc_traceback = sys.exc_info()
+                # if exc_traceback.tb_next:
+                #    exc_traceback = exc_traceback.tb_next
                 self.log_data['traceback'] = traceback.format_exception(*trace)
                 self.generate_log('error', error, function, call_type, extra=extra, idx=idx)
-                raise error.__class__(str(error)).with_traceback(exc_traceback)
-            # always reset the log data at the conclusion of a log cycle
+                raise error.__class__(str(error)).with_traceback(trace[-1])
+            # always reset the log data and traceback at the conclusion of a log cycle
             finally:
                 self.log_data = dict(loggo=True, loggo_config=dict(self.config))
+                del exc_traceback
         return full_decoration
 
     @staticmethod
@@ -483,7 +495,7 @@ class Loggo(object):
         if colour:
             start = COLOUR_MAP.get('critical', '')
             end = COLOUR_MAP.get('end', '')
-            trace = '{}{}{}'.format(start, trace, end)
+            trace = '{}{}{}\n'.format(start, trace, end)
         return '\t' + trace.replace('\n', '\n\t')
 
     def _build_string(self, msg, level, log_data, truncate=0, colour=True, include_data=True):
@@ -493,7 +505,7 @@ class Loggo(object):
         """
         tstamp = datetime.now().strftime('%d.%m %Y %H:%M:%S')
         trace = self._format_traceback(log_data.get('traceback', ''), colour=colour)
-        log_data = {k: v for k, v in log_data.items() if k != 'traceback'}
+        #log_data = {k: v for k, v in log_data.items() if k != 'traceback'}
         datapoints = [tstamp, msg, level]
         if include_data:
             datapoints.append(log_data)
@@ -622,10 +634,11 @@ class Loggo(object):
         that will be logged. anything (accidentally) passed as kwargs will get
         merged into the data dictionary
         """
-
+        # don't log in a stopped state
         if self.stopped:
             return
 
+        # bitpanda internal hack, to remove after some modernising of our code
         alert, data = self.compatibility_hack(alert, data)
 
         # correct a bad call signature, when an interpretable level was not passed
@@ -647,7 +660,7 @@ class Loggo(object):
         kwargs.update(data)
         data = kwargs
 
-        # translate log levels to an integer
+        # translate log levels to an integer --- things to fix here still
         log_level = 20
         if isinstance(alert, str):
             log_level = getattr(logging, LOG_LEVELS.get(alert, 'INFO'))
@@ -661,22 +674,23 @@ class Loggo(object):
         try:
             message, string_data = self.sanitise(message, data)
             opts = dict(truncate=self.line_length, include_data=False)
-            single_string = self._build_string(message, alert, string_data, **opts)
-            plain_string = self._build_string(message, alert, string_data, colour=False)
-            string_data.pop('traceback', None)
 
             if self.do_print:
+                single_string = self._build_string(message, alert, string_data, **opts)
                 print(colour_msg(single_string, alert, self.do_colour))
 
             if self.do_write:
+                plain_string = self._build_string(message, alert, string_data, colour=False)
                 logfile = self.get_logfile(data)
                 self.write_to_file(plain_string, logfile)
 
+            # add in any post-hoc data --- skips sanitisation, so must be 1337
             for field, value in self.add_fields.items():
                 string_data[field] = value
 
             if alert:
                 string_data['alert'] = alert
+
             self.logger.log(log_level, message, extra=string_data)
 
         except Exception as error:
