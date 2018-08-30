@@ -97,6 +97,17 @@ class Loggo(object):
         self._bound_kwargs = None
         self.add_handler()
 
+    def listen_to(loggo_self, facility):
+        class LoggoHandler(logging.Handler):
+            def emit(handler_self, record):
+                attributes = ['msg', 'created', 'msecs', 'stack_info', 'levelname', 'filename', 'module', 'args', 'funcName', 'process', 'relativeCreated', 'exc_info', 'name', 'processName', 'threadName', 'lineno', 'exc_text', 'pathname', 'thread', 'levelno']
+                extra = {key: value for key, value in record.__dict__.items() if key not in attributes}
+                alert = extra['alert'] if 'alert' in extra else None
+                loggo_self.log(record.msg, alert, data=extra)
+        other_loggo = logging.getLogger(facility)
+        other_loggo.setLevel(logging.DEBUG)
+        other_loggo.addHandler(LoggoHandler())
+
     @contextmanager
     def pause(self, allow_errors=True):
         """
@@ -664,6 +675,8 @@ class Loggo(object):
             for field, value in self.add_fields.items():
                 string_data[field] = value
 
+            if alert:
+                string_data['alert'] = alert
             self.logger.log(log_level, message, extra=string_data)
 
         except Exception as error:
