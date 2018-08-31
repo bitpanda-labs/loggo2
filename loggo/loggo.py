@@ -651,7 +651,8 @@ class Loggo(object):
                 log_level = 'dev'
             else:
                 log_level = alert.pop('alert', 'INFO')
-            return self.log(message, log_level, alert)
+            self.log(message, log_level, alert)
+            return
 
         # data and kwargs together will become the extra dict for the logger
         # kwargs take precedence over data in the case of duplicate keys, because
