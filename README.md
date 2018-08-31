@@ -178,3 +178,7 @@ If you don't want to remember to use the `--follow-tags` flag, you can edit your
 git config --global push.followTags true
 ```
 After this you can simply push the version bump commit to remote as you would normally, and the tag will also be pushed.
+
+## Limitations
+
+`Loggo` uses Python's standard library (`logging`) to ultimately generate a log. There are some gotchas when using it: for instance, in terms of the extra data that can be passed in, key names for this extra data cannot clash with some internal names used within the `logging` module (`message`, `args`, etc.). To get around this, you'll get a warning that your data contains a bad key name, and it will be changed (i.e. from `message` to `protected_message`).
