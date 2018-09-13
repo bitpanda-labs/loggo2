@@ -357,5 +357,13 @@ class TestLog(unittest.TestCase):
         (alert, msg), kwargs = logger.call_args
         self.assertEqual(test, msg)
 
+    def test_bad_args(self):
+
+        @Loggo.logme
+        def dummy(needed):
+            return needed
+        with self.assertRaises(TypeError):
+            dummy()
+
 if __name__ == '__main__':
     unittest.main()

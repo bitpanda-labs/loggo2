@@ -359,7 +359,7 @@ class Loggo(object):
         """
         Build a string showing keyword arguments if we can
         """
-        original = len(kwargs)
+        original = len(kwargs) if kwargs is not None else 0
         output_list = list()
 
         if not original:

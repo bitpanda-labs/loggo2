@@ -1,7 +1,7 @@
 # Logging utilities for Python projects
 
 <!--- Don't edit the version line below manually. Let bump2version do it for you. -->
-> Version 1.2.11
+> Version 1.2.12
 
 > This module provides ways of logging the input, output and errors in classes and functions It can be hooked up to graylog, printed to console or saved to a log file. It requires very little configuration.
 
@@ -151,7 +151,7 @@ if True:
     # 11.05 2018 17:40:05 Boom!   dev
 ```
 
-Notably, you can choose the exception type to be raised. Also, any keyword arguments are treated as extra data for the logger.
+Notably, you can choose the exception type to be raised. Also, any keyword arguments are treated as extra data for the logger. Also bear in mind that if a class or function is decorated with `Loggo`, errors are automatically logged, so `LoggedException` is best used when you aren't already relying on `Loggo` for generally.
 
 ## Tests
 
