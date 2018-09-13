@@ -151,7 +151,7 @@ if True:
     # 11.05 2018 17:40:05 Boom!   dev
 ```
 
-Notably, you can choose the exception type to be raised. Also, any keyword arguments are treated as extra data for the logger.
+Notably, you can choose the exception type to be raised. Also, any keyword arguments are treated as extra data for the logger. Also bear in mind that if a class or function is decorated with `Loggo`, errors are automatically logged, so `LoggedException` is best used when you aren't already relying on `Loggo` for generally.
 
 ## Tests
 
