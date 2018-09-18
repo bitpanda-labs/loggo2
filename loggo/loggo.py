@@ -97,11 +97,12 @@ class Loggo(object):
         self._bound_kwargs = None
         self.add_handler()
 
-    def listen_to(loggo_self, facility):
+    def listen_to(loggo_self, facility, no_graylog_disable_log=False):
         """
         This method can hook the logger up to anything else that logs using the
         Python logging module (i.e. another logger) and steals its logs
         """
+        loggo_self.no_graylog_disable_log = no_graylog_disable_log
         class LoggoHandler(logging.Handler):
             def emit(handler_self, record):
                 attributes = {'msg', 'created', 'msecs', 'stack_info',
@@ -540,7 +541,7 @@ class Loggo(object):
         """
         Add a handler for Graylog
         """
-        if not self.ip or not self.port or not graypy: # pylint: disable=no-member
+        if not self.ip or not self.port or not graypy and not self.no_graylog_disable_log: # pylint: disable=no-member
             self.log('Graylog not configured! Disabling it', 'dev')
             return
         handler = graypy.GELFHandler(self.ip, self.port, debugging_fields=False) # pylint: disable=no-member
