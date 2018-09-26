@@ -80,7 +80,8 @@ class Loggo(object):
         self.stopped = False
         self.allow_errors = True
         self.config = config
-        self.log_data = dict(loggo=True, loggo_config=dict(config))
+        self.sublogger = None
+        self.log_data = dict(loggo=True, loggo_config=dict(config), sublogger=self.sublogger)
         self.facility = config.get('facility', 'loggo')
         self.do_colour = config.get('colour', True)
         self.ip = config.get('ip', None)
@@ -114,6 +115,8 @@ class Loggo(object):
                 extra = dict(record.__dict__)
                 [extra.pop(attrib, None) for attrib in attributes]
                 alert = extra.get('alert')
+                loggo_self.log_data['sublogger'] = facility
+                self.sublogger = facility
                 loggo_self.log(record.msg, alert, data=extra)
         other_loggo = logging.getLogger(facility)
         other_loggo.setLevel(logging.DEBUG)
@@ -301,7 +304,7 @@ class Loggo(object):
                 raise error.__class__(str(error)).with_traceback(trace[-1])
             # always reset the log data and traceback at the conclusion of a log cycle
             finally:
-                self.log_data = dict(loggo=True, loggo_config=dict(self.config))
+                self.log_data = dict(loggo=True, loggo_config=dict(self.config), sublogger=self.sublogger)
                 del exc_traceback
         return full_decoration
 
@@ -630,6 +633,7 @@ class Loggo(object):
         return alert, log_data
 
     def log(self, message, alert=None, data=None, **kwargs):
+
         """
         Main logging method. Takes message string, alert level, and a data dict
         that will be logged. anything (accidentally) passed as kwargs will get
