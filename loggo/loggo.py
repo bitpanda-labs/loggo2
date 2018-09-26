@@ -116,7 +116,8 @@ class Loggo(object):
                 [extra.pop(attrib, None) for attrib in attributes]
                 alert = extra.get('alert')
                 loggo_self.log_data['sublogger'] = facility
-                self.sublogger = facility
+                loggo_self.sublogger = facility
+                extra['sublogger'] = facility
                 loggo_self.log(record.msg, alert, data=extra)
         other_loggo = logging.getLogger(facility)
         other_loggo.setLevel(logging.DEBUG)
