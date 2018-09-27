@@ -81,6 +81,8 @@ class Loggo(object):
         self.allow_errors = True
         self.config = config
         self.sublogger = None
+        self.nargs = 0
+        self.nkwargs = 0
         self.log_data = dict(loggo=True, loggo_config=dict(config), sublogger=self.sublogger)
         self.facility = config.get('facility', 'loggo')
         self.do_colour = config.get('colour', True)
@@ -175,7 +177,7 @@ class Loggo(object):
             return self.everything(class_or_func)
         return self.logme(class_or_func)
 
-    def kwargify(self, function, *args, **kwargs):
+    def kwargify(self, function, *args, tricky_kwargs=None, **kwargs):
         """
         This uses some weird inspection to figure out what the names of positional
         and keyword arguments were, so that even positional arguments with
@@ -188,6 +190,9 @@ class Loggo(object):
         # get the signature for the function and bind the passed in arguments
         sig = inspect.signature(function)
         try:
+            if tricky_kwargs:
+                tricky_kwargs.pop('self', None)
+                kwargs = tricky_kwargs
             bound = sig.bind(*args, **kwargs).arguments
             to_iter = sig.parameters.items()
             self._bind_errored = False
@@ -646,10 +651,31 @@ class Loggo(object):
         # crazy bit of code to get things from the parent function
         outer = inspect.getouterframes(inspect.currentframe())[1]
         frame = outer.frame
+        func_name = inspect.stack()[1][3]
 
-        self.log_data['callable'] = inspect.stack()[1][3]
-        func = frame.f_globals[frame.f_code.co_name]
-        kwa = inspect.getargvalues(frame).locals
+        if func_name == 'add_handler':
+            return
+
+        args, _, _, local_dict = inspect.getargvalues(frame)
+        kwa = {a: local_dict[a] for a in args}
+
+        if not args:
+            # static method? :(
+            return
+
+        classy = local_dict[args[0]]
+        func = getattr(classy, func_name, None)
+        if func is None:
+            # no func name
+            return
+
+        class_name = classy.__class__.__name__
+
+        joined = '{}.{}'.format(class_name, func_name)
+
+        self.log_data['callable'] = joined
+
+        kwa = self.kwargify(func, tricky_kwargs=kwa)
         _, kwa = self.sanitise(kwa)
 
         kwargs.update(kwa)
@@ -722,11 +748,8 @@ class Loggo(object):
         """
         If there is an exception during logging, log/print it
         """
-        print('FATALITY')
-        import sys
-        traceback.format_exc()
-        sys.exc_info()
         try:
+            print(msg, error_msg)
             if msg != error_msg:
                 self.log(error_msg, 'dev')
                 last_chance = getattr(exception, 'message', 'Unknown error in emergency log')
@@ -736,8 +759,8 @@ class Loggo(object):
                 print('Exiting because the system is in infinite loop')
                 error_msg = str(getattr(exception, 'message', exception))
                 print(error_msg)
-                quit()
+                raise SystemExit(1)
         except Exception as error:
             print('Emergency log exception')
             print(str(error))
-            quit()
+            raise SystemExit(1)
