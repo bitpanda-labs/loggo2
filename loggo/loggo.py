@@ -606,8 +606,8 @@ class Loggo(object):
                 # as taneli points out, it sucks to get this warning when you
                 # did nothing wrong stylistically or decorated some existing code
                 # so let's forgive the warning on 'args' only
-                if key != 'args':
-                    self.log('WARNING: Should not use key "{}" in log data'.format(key), 'dev')
+                #if key != 'args':
+                #    self.log('WARNING: Should not use key "{}" in log data'.format(key), 'dev')
                 key = 'protected_' + key
             out[key] = value
         return out
