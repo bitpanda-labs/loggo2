@@ -634,7 +634,6 @@ class Loggo(object):
         return alert, log_data
 
     def log(self, message, alert=None, data=None, **kwargs):
-
         """
         Main logging method. Takes message string, alert level, and a data dict
         that will be logged. anything (accidentally) passed as kwargs will get
@@ -643,6 +642,22 @@ class Loggo(object):
         # don't log in a stopped state
         if self.stopped:
             return
+
+        # crazy bit of code to get things from the parent function
+        outer = inspect.getouterframes(inspect.currentframe())[1]
+        frame = outer.frame
+
+        self.log_data['callable'] = inspect.stack()[1][3]
+        func = frame.f_globals[frame.f_code.co_name]
+        kwa = inspect.getargvalues(frame).locals
+        _, kwa = self.sanitise(kwa)
+
+        kwargs.update(kwa)
+
+        # check for errors (can there even be any?)
+        if sys.exc_info() != (None, None, None):
+            trace = sys.exc_info()
+            self.log_data['traceback'] = traceback.format_exception(*trace)
 
         # bitpanda internal hack, to remove after some modernising of our code
         alert, data = self.compatibility_hack(alert, data)
@@ -707,6 +722,10 @@ class Loggo(object):
         """
         If there is an exception during logging, log/print it
         """
+        print('FATALITY')
+        import sys
+        traceback.format_exc()
+        sys.exc_info()
         try:
             if msg != error_msg:
                 self.log(error_msg, 'dev')
