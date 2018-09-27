@@ -246,11 +246,22 @@ class Loggo(object):
             return 'classmethod'
         return 'function'
 
-    def _obscure_dict(self, dct):
+    def _obscure_dict(self, dictionary):
         """
         Obscure any private values in a dictionary
         """
-        return {k: (v if k not in self.private_data else self.obscured) for k, v in dct.items()}
+        keys_set = set(self.private_data)  # Just an optimization for the "if key in keys" lookup.
+
+        modified_dict = {}
+        for key, value in dictionary.items():
+            if key not in keys_set:
+                if isinstance(value, dict):
+                    modified_dict[key] = self._obscure_dict(value)
+                else:
+                    modified_dict[key] = value
+            else:
+                modified_dict[key] = self.obscured
+        return modified_dict
 
     def logme(self, function):
         """
@@ -592,7 +603,16 @@ class Loggo(object):
         """
         names that could have sensitive data need to be removed
         """
-        return {k: v for k, v in dictionary.items() if k not in self.private_data}
+        keys_set = set(self.private_data)  # Just an optimization for the "if key in keys" lookup.
+
+        modified_dict = {}
+        for key, value in dictionary.items():
+            if key not in keys_set:
+                if isinstance(value, dict):
+                    modified_dict[key] = self._remove_private_keys(value)
+                else:
+                    modified_dict[key] = value
+        return modified_dict
 
     def _rename_protected_keys(self, log_data):
         """
