@@ -1,7 +1,7 @@
 # Logging utilities for Python projects
 
 <!--- Don't edit the version line below manually. Let bump2version do it for you. -->
-> Version 1.5.4
+> Version 1.5.5
 
 
 > This module provides ways of logging the input, output and errors in classes and functions It can be hooked up to graylog, printed to console or saved to a log file. It requires very little configuration.
