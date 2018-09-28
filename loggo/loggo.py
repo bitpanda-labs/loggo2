@@ -603,6 +603,10 @@ class Loggo(object):
         """
         names that could have sensitive data need to be removed
         """
+        return {k: (v if k not in self.private_data else self.obscured) for k, v in dct.items()}
+
+        #todo: fail on recursive dict
+
         keys_set = set(self.private_data)  # Just an optimization for the "if key in keys" lookup.
 
         modified_dict = {}
