@@ -599,7 +599,7 @@ class Loggo(object):
             string_data[string_key] = string_value
         return string_data
 
-    def _remove_private_keys(self, dictionary):
+    def _remove_private_keys(self, dct):
         """
         names that could have sensitive data need to be removed
         """
