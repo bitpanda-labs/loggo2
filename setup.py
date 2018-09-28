@@ -9,7 +9,7 @@ def read(fname):
 
 setup(
     name='loggo',
-    version='1.5.5',  # DO NOT EDIT THIS LINE MANUALLY. LET bump2version UTILITY DO IT
+    version='1.5.6',  # DO NOT EDIT THIS LINE MANUALLY. LET bump2version UTILITY DO IT
     author='Danny McDonald',
     author_email='daniel.mcdonald@bitpanda.com',
     description=('Python logging tools'),
