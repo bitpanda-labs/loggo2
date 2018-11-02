@@ -247,7 +247,7 @@ class Loggo(object):
             return 'classmethod'
         return 'function'
 
-    def _obscure_dict(self, dictionary, dict_depth):
+    def _obscure_dict(self, dictionary, dict_depth=0):
         """
         Obscure any private values in a dictionary
         """
