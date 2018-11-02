@@ -19,6 +19,7 @@ LOG_LEVELS = dict(critical='CRITICAL',
                   debug='DEBUG')
 
 DEFAULT_PRIVATE_KEYS = {'token', 'password', 'prv', 'priv', 'xprv', 'secret', 'mnemonic', 'headers'}
+MAX_DICT_DEPTH = 5
 
 # you don't need graylog installed, but it is really powerful
 try:
@@ -246,7 +247,7 @@ class Loggo(object):
             return 'classmethod'
         return 'function'
 
-    def _obscure_dict(self, dictionary):
+    def _obscure_dict(self, dictionary, dict_depth):
         """
         Obscure any private values in a dictionary
         """
@@ -255,8 +256,8 @@ class Loggo(object):
         modified_dict = {}
         for key, value in dictionary.items():
             if key not in keys_set:
-                if isinstance(value, dict):
-                    modified_dict[key] = self._obscure_dict(value)
+                if isinstance(value, dict) and dict_depth < MAX_DICT_DEPTH:
+                    modified_dict[key] = self._obscure_dict(value, dict_depth+1)
                 else:
                     modified_dict[key] = value
             else:
@@ -599,21 +600,18 @@ class Loggo(object):
             string_data[string_key] = string_value
         return string_data
 
-    def _remove_private_keys(self, dct):
+    def _remove_private_keys(self, dictionary, dict_depth=0):
         """
         names that could have sensitive data need to be removed
         """
-        return {k: (v if k not in self.private_data else self.obscured) for k, v in dct.items()}
-
-        #todo: fail on recursive dict
 
         keys_set = set(self.private_data)  # Just an optimization for the "if key in keys" lookup.
 
         modified_dict = {}
         for key, value in dictionary.items():
             if key not in keys_set:
-                if isinstance(value, dict):
-                    modified_dict[key] = self._remove_private_keys(value)
+                if isinstance(value, dict) and dict_depth < MAX_DICT_DEPTH:
+                    modified_dict[key] = self._remove_private_keys(value, dict_depth+1)
                 else:
                     modified_dict[key] = value
         return modified_dict
