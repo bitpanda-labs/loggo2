@@ -178,6 +178,13 @@ class Loggo(object):
             return self.everything(class_or_func)
         return self.logme(class_or_func)
 
+    def _handle_error(self, function, error, args, kwargs):
+        self._bind_errored = True
+        self._args_to_use = args
+        self._kwargs_to_use = kwargs
+        self.generate_log('error', error, function, 'callable', extra=None, idx=None)
+        return dict(), list()
+
     def kwargify(self, function, *args, tricky_kwargs=None, **kwargs):
         """
         This uses some weird inspection to figure out what the names of positional
@@ -189,7 +196,10 @@ class Loggo(object):
         # pylint: disable=attribute-defined-outside-init
 
         # get the signature for the function and bind the passed in arguments
-        sig = inspect.signature(function)
+        try:
+            sig = inspect.signature(function)
+        except ValueError as error:
+            bound, to_iter = self._handle_error(function, error, args, kwargs)
         try:
             if tricky_kwargs:
                 tricky_kwargs.pop('self', None)
@@ -198,12 +208,7 @@ class Loggo(object):
             to_iter = sig.parameters.items()
             self._bind_errored = False
         except TypeError as error:
-            self._bind_errored = True
-            self._args_to_use = args
-            self._kwargs_to_use = kwargs
-            self.generate_log('error', error, function, 'callable', extra=None, idx=None)
-            bound = dict()
-            to_iter = []
+            bound, to_iter = self._handle_error(function, error, args, kwargs)
         self.nargs = 0
         self.nkwargs = 0
         for key, value in to_iter:
