@@ -302,6 +302,7 @@ class Loggo(object):
             call_args = self._obscure_dict(extra)
             self.log_data.update(call_args)
             exc_traceback = None
+            trace = None
 
             # make a unique identifier for this set of logs
             idx = uuid.uuid1()
@@ -312,6 +313,8 @@ class Loggo(object):
             try:
                 # where the original function is actually run
                 response = function(*args, **kwargs)
+                # make sure traceback hasn't persisted
+                extra.pop('traceback', None)
                 # the successful return log
                 self.generate_log('post', response, function, call_type, extra=extra, idx=idx)
                 return response
@@ -324,11 +327,13 @@ class Loggo(object):
                 #    exc_traceback = exc_traceback.tb_next
                 self.log_data['traceback'] = traceback.format_exception(*trace)
                 self.generate_log('error', error, function, call_type, extra=extra, idx=idx)
+                del self.log_data['traceback']
                 raise error.__class__(str(error)).with_traceback(trace[-1])
             # always reset the log data and traceback at the conclusion of a log cycle
             finally:
                 self.log_data = dict(loggo=True, loggo_config=dict(self.config), sublogger=self.sublogger)
                 del exc_traceback
+                del trace
         return full_decoration
 
     @staticmethod

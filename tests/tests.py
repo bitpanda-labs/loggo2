@@ -1,6 +1,6 @@
 import os
 import unittest
-from unittest.mock import mock_open, patch, ANY
+from unittest.mock import mock_open, patch, ANY, Mock
 
 from loggo import Loggo as a_loggo
 
@@ -71,6 +71,18 @@ def test_func(number):
 
 def test_func2(number):
     raise ValueError('Broken!')
+
+@Loggo.logme
+def test_func3(number):
+    raise ValueError('Broken!')
+
+@Loggo.logme
+def test_inner():
+    try:
+        test_func3(1)
+    except Exception as error:
+        pass
+    return 1
 
 dummy = DummyClass()
 
@@ -365,6 +377,20 @@ class TestLog(unittest.TestCase):
             return needed
         with self.assertRaises(TypeError):
             dummy()
+
+    # taneli error that hasn't been reproduced yet
+    # point is that inspect sig can fail with ValueError (e.g. for print)
+    #def test_uninspectable(self):
+    #    with patch('loggo.Loggo.log') as logger:
+    #        mock = Mock(autospec=True)
+    #        self.loggo._handle_error = Mock()
+    #        Loggo.log(print)
+    #        arg = mock.call_args_list[-1]
+    #        print(arg)
+
+
+
+
 
 if __name__ == '__main__':
     unittest.main()
