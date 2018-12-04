@@ -8,8 +8,8 @@ jobs:
   include:
     - stage: build
       script:
-        - pip install -r requirements.txt
         - python setup.py install
     - stage: test
       script:
+        - python setup.py install
         - python tests/tests.py
