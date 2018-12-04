@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/bitpanda-labs/loggo.svg?branch=master)](https://travis-ci.org/bitpanda-labs/loggo)
+
 # Logging utilities for Python projects
 
 <!--- Don't edit the version line below manually. Let bump2version do it for you. -->
