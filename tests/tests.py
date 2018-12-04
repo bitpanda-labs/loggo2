@@ -1,6 +1,6 @@
 import os
 import unittest
-from unittest.mock import mock_open, patch, ANY
+from unittest.mock import mock_open, patch, ANY, Mock
 
 from loggo import Loggo as a_loggo
 
@@ -72,6 +72,18 @@ def first_test_func(number):
 @Loggo.errors
 def second_test_func(number):
     raise ValueError('Broken!')
+
+@Loggo.logme
+def test_func3(number):
+    raise ValueError('Broken!')
+
+@Loggo.logme
+def test_inner():
+    try:
+        test_func3(1)
+    except Exception as error:
+        pass
+    return 1
 
 dummy = DummyClass()
 
@@ -292,20 +304,21 @@ class TestLog(unittest.TestCase):
                 patch('loggo.Loggo._stringify_dict') as stringer, \
                 patch('builtins.print') as printer:
             stringer.side_effect = Exception('Bam!')
-            with self.assertRaises(SystemExit):
+            with self.assertRaises(Exception):
                 self.log('Otherwise', None, dict(reasonable='message'))
-                (alert, msg), kwargs = printer.call_args
-                self.assertEqual(msg, 'General log failure: Bam!')
+                print_args = printer.call_args
+                self.assertEqual(print_args, 'General log failure: Bam!')
                 self.assertEqual(kwargs, dict())
 
     def test_emergency_megafail(self):
-        with patch('logging.Logger.log') as mock_log, \
-                patch('builtins.print') as printer:
+        with patch('logging.Logger.log') as mock_log:#, \
+                #patch('builtins.print') as printer:
+            msg = 'General log failure: Really dead.'
             mock_log.side_effect = Exception('Really dead.')
             with self.assertRaises(SystemExit):
                 self.loggo._emergency_log('an error', 'different error', ValueError)
-                (alert, msg), kwargs = printer.call_args
-                self.assertEqual(msg, 'Emergency log exception... gl&hf')
+                print_args = printer.call_args
+                self.assertTrue(msg in print_args)
 
     def test_loggo_pause(self):
         with patch('logging.Logger.log') as mock_log:
@@ -365,6 +378,20 @@ class TestLog(unittest.TestCase):
             return needed
         with self.assertRaises(TypeError):
             dummy()
+
+    # taneli error that hasn't been reproduced yet
+    # point is that inspect sig can fail with ValueError (e.g. for print)
+    #def test_uninspectable(self):
+    #    with patch('loggo.Loggo.log') as logger:
+    #        mock = Mock(autospec=True)
+    #        self.loggo._handle_error = Mock()
+    #        Loggo.log(print)
+    #        arg = mock.call_args_list[-1]
+    #        print(arg)
+
+
+
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -109,3 +109,4 @@ tests/logs/
 
 # JetBrains IDEs
 .idea/
+logs/

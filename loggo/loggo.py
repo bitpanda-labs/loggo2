@@ -19,6 +19,7 @@ LOG_LEVELS = dict(critical='CRITICAL',
                   debug='DEBUG')
 
 DEFAULT_PRIVATE_KEYS = {'token', 'password', 'prv', 'priv', 'xprv', 'secret', 'mnemonic', 'headers'}
+MAX_DICT_DEPTH = 5
 
 # you don't need graylog installed, but it is really powerful
 try:
@@ -81,13 +82,15 @@ class Loggo(object):
         self.allow_errors = True
         self.config = config
         self.sublogger = None
+        self.nargs = 0
+        self.nkwargs = 0
         self.log_data = dict(loggo=True, loggo_config=dict(config), sublogger=self.sublogger)
         self.facility = config.get('facility', 'loggo')
         self.do_colour = config.get('colour', True)
         self.ip = config.get('ip', None)
         self.port = config.get('port', None)
-        self.do_print = config.get('do_print', True)
-        self.do_write = config.get('do_write', True)
+        self.do_print = config.get('do_print', False)
+        self.do_write = config.get('do_write', False)
         self.logfile = config.get('logfile', './logs/logs.txt')
         self.line_length = config.get('line_length', 200)
         self.obscured = config.get('obscure', '[PRIVATE_DATA]')
@@ -175,7 +178,14 @@ class Loggo(object):
             return self.everything(class_or_func)
         return self.logme(class_or_func)
 
-    def kwargify(self, function, *args, **kwargs):
+    def _handle_error(self, function, error, args, kwargs):
+        self._bind_errored = True
+        self._args_to_use = args
+        self._kwargs_to_use = kwargs
+        self.generate_log('error', error, function, 'callable', extra=None, idx=None)
+        return dict(), list()
+
+    def kwargify(self, function, *args, tricky_kwargs=None, **kwargs):
         """
         This uses some weird inspection to figure out what the names of positional
         and keyword arguments were, so that even positional arguments with
@@ -186,18 +196,19 @@ class Loggo(object):
         # pylint: disable=attribute-defined-outside-init
 
         # get the signature for the function and bind the passed in arguments
-        sig = inspect.signature(function)
         try:
+            sig = inspect.signature(function)
+        except ValueError as error:
+            bound, to_iter = self._handle_error(function, error, args, kwargs)
+        try:
+            if tricky_kwargs:
+                tricky_kwargs.pop('self', None)
+                kwargs = tricky_kwargs
             bound = sig.bind(*args, **kwargs).arguments
             to_iter = sig.parameters.items()
             self._bind_errored = False
         except TypeError as error:
-            self._bind_errored = True
-            self._args_to_use = args
-            self._kwargs_to_use = kwargs
-            self.generate_log('error', error, function, 'callable', extra=None, idx=None)
-            bound = dict()
-            to_iter = []
+            bound, to_iter = self._handle_error(function, error, args, kwargs)
         self.nargs = 0
         self.nkwargs = 0
         for key, value in to_iter:
@@ -241,7 +252,7 @@ class Loggo(object):
             return 'classmethod'
         return 'function'
 
-    def _obscure_dict(self, dictionary):
+    def _obscure_dict(self, dictionary, dict_depth=0):
         """
         Obscure any private values in a dictionary
         """
@@ -250,8 +261,8 @@ class Loggo(object):
         modified_dict = {}
         for key, value in dictionary.items():
             if key not in keys_set:
-                if isinstance(value, dict):
-                    modified_dict[key] = self._obscure_dict(value)
+                if isinstance(value, dict) and dict_depth < MAX_DICT_DEPTH:
+                    modified_dict[key] = self._obscure_dict(value, dict_depth+1)
                 else:
                     modified_dict[key] = value
             else:
@@ -291,6 +302,7 @@ class Loggo(object):
             call_args = self._obscure_dict(extra)
             self.log_data.update(call_args)
             exc_traceback = None
+            trace = None
 
             # make a unique identifier for this set of logs
             idx = uuid.uuid1()
@@ -301,6 +313,8 @@ class Loggo(object):
             try:
                 # where the original function is actually run
                 response = function(*args, **kwargs)
+                # make sure traceback hasn't persisted
+                extra.pop('traceback', None)
                 # the successful return log
                 self.generate_log('post', response, function, call_type, extra=extra, idx=idx)
                 return response
@@ -313,11 +327,13 @@ class Loggo(object):
                 #    exc_traceback = exc_traceback.tb_next
                 self.log_data['traceback'] = traceback.format_exception(*trace)
                 self.generate_log('error', error, function, call_type, extra=extra, idx=idx)
+                del self.log_data['traceback']
                 raise error.__class__(str(error)).with_traceback(trace[-1])
             # always reset the log data and traceback at the conclusion of a log cycle
             finally:
                 self.log_data = dict(loggo=True, loggo_config=dict(self.config), sublogger=self.sublogger)
                 del exc_traceback
+                del trace
         return full_decoration
 
     @staticmethod
@@ -594,17 +610,18 @@ class Loggo(object):
             string_data[string_key] = string_value
         return string_data
 
-    def _remove_private_keys(self, dictionary):
+    def _remove_private_keys(self, dictionary, dict_depth=0):
         """
         names that could have sensitive data need to be removed
         """
+
         keys_set = set(self.private_data)  # Just an optimization for the "if key in keys" lookup.
 
         modified_dict = {}
         for key, value in dictionary.items():
             if key not in keys_set:
-                if isinstance(value, dict):
-                    modified_dict[key] = self._remove_private_keys(value)
+                if isinstance(value, dict) and dict_depth < MAX_DICT_DEPTH:
+                    modified_dict[key] = self._remove_private_keys(value, dict_depth+1)
                 else:
                     modified_dict[key] = value
         return modified_dict
@@ -621,8 +638,8 @@ class Loggo(object):
                 # as taneli points out, it sucks to get this warning when you
                 # did nothing wrong stylistically or decorated some existing code
                 # so let's forgive the warning on 'args' only
-                if key != 'args':
-                    self.log('WARNING: Should not use key "{}" in log data'.format(key), 'dev')
+                #if key != 'args':
+                #    self.log('WARNING: Should not use key "{}" in log data'.format(key), 'dev')
                 key = 'protected_' + key
             out[key] = value
         return out
@@ -666,10 +683,31 @@ class Loggo(object):
         # crazy bit of code to get things from the parent function
         outer = inspect.getouterframes(inspect.currentframe())[1]
         frame = outer.frame
+        func_name = inspect.stack()[1][3]
 
-        self.log_data['callable'] = inspect.stack()[1][3]
-        func = frame.f_globals[frame.f_code.co_name]
-        kwa = inspect.getargvalues(frame).locals
+        if func_name == 'add_handler':
+            return
+
+        args, _, _, local_dict = inspect.getargvalues(frame)
+        kwa = {a: local_dict[a] for a in args}
+
+        if not args:
+            # static method? :(
+            return
+
+        classy = local_dict[args[0]]
+        func = getattr(classy, func_name, None)
+        if func is None:
+            # no func name
+            return
+
+        class_name = classy.__class__.__name__
+
+        joined = '{}.{}'.format(class_name, func_name)
+
+        self.log_data['callable'] = joined
+
+        kwa = self.kwargify(func, tricky_kwargs=kwa)
         _, kwa = self.sanitise(kwa)
 
         kwargs.update(kwa)
@@ -742,11 +780,8 @@ class Loggo(object):
         """
         If there is an exception during logging, log/print it
         """
-        print('FATALITY')
-        import sys
-        traceback.format_exc()
-        sys.exc_info()
         try:
+            print(msg, error_msg)
             if msg != error_msg:
                 self.log(error_msg, 'dev')
                 last_chance = getattr(exception, 'message', 'Unknown error in emergency log')
@@ -756,8 +791,8 @@ class Loggo(object):
                 print('Exiting because the system is in infinite loop')
                 error_msg = str(getattr(exception, 'message', exception))
                 print(error_msg)
-                quit()
+                raise SystemExit(1)
         except Exception as error:
             print('Emergency log exception')
             print(str(error))
-            quit()
+            raise SystemExit(1)
