@@ -17,7 +17,7 @@ def function_with_private_kwarg(number, a_float=0.0, mnemonic=None):
 
 # we can also use loggo.__call__
 @Loggo
-def test(first, other, kwargs=None):
+def may_or_may_not_error_test(first, other, kwargs=None):
     """
     A function that may or may not error
     """
@@ -66,10 +66,11 @@ class DummyClass2(object):
         return a + b + c
 
 @Loggo.errors
-def test_func(number):
+def first_test_func(number):
     raise ValueError('Broken!')
 
-def test_func2(number):
+@Loggo.errors
+def second_test_func(number):
     raise ValueError('Broken!')
 
 @Loggo.logme
@@ -95,7 +96,7 @@ class TestDecoration(unittest.TestCase):
     def test_errors_on_func(self):
         with patch('logging.Logger.log') as logger:
             with self.assertRaises(ValueError):
-                test_func(5)
+                first_test_func(5)
             (alert, logged_msg), extras = logger.call_args_list[-1]
             self.assertTrue('*Errored with ValueError' in logged_msg)
 
@@ -103,7 +104,7 @@ class TestDecoration(unittest.TestCase):
         with patch('logging.Logger.log') as logger:
             with self.assertRaises(ValueError) as error:
                 with Loggo.log_errors() as loggin:
-                    test_func2(5)
+                    second_test_func(5)
             #(alert, logged_msg), extras = logger.call_args_list[-1]
             #self.assertTrue('*Errored with ValueError' in logged_msg)
 
@@ -113,7 +114,7 @@ class TestDecoration(unittest.TestCase):
         """
         with patch('logging.Logger.log') as logger:
             with self.assertRaisesRegex(ValueError, 'no good'):
-                result = test('astadh', 1331)
+                result = may_or_may_not_error_test('astadh', 1331)
             (alert, logged_msg), extras = logger.call_args
             self.assertEqual(alert, 40)
             self.assertTrue('Errored with ValueError "no good"' in logged_msg, logged_msg)
@@ -123,7 +124,7 @@ class TestDecoration(unittest.TestCase):
         Test correct result
         """
         with patch('logging.Logger.log') as logger:
-            res, kwa = test(2534, 2466, kwargs=True)
+            res, kwa = may_or_may_not_error_test(2534, 2466, kwargs=True)
             self.assertEqual(res, 5000)
             self.assertTrue(kwa)
             (alert, logged_msg), extras = logger.call_args_list[0]
@@ -331,20 +332,20 @@ class TestLog(unittest.TestCase):
         with patch('logging.Logger.log') as logger:
             with Loggo.pause():
                 with self.assertRaises(ValueError):
-                    test('one', 'two')
+                    may_or_may_not_error_test('one', 'two')
             (alert, msg), kwargs = logger.call_args
             self.assertTrue('Errored with ValueError' in msg)
             logger.assert_called_once()
             logger.reset()
             with self.assertRaises(ValueError):
-                test('one', 'two')
+                may_or_may_not_error_test('one', 'two')
                 self.assertEqual(len(logger.call_args_list), 2)
 
     def test_loggo_error_suppressed(self):
         with patch('logging.Logger.log') as logger:
             with Loggo.pause(allow_errors=False):
                 with self.assertRaises(ValueError):
-                    test('one', 'two')
+                    may_or_may_not_error_test('one', 'two')
             logger.assert_not_called()
             Loggo.log('test')
             logger.assert_called_once()
