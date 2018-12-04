@@ -4,4 +4,4 @@ python:
 install:
   - pip install -r requirements.txt
 script:
-  - pytest tests/tests.py
+  - python -m pytest tests/tests.py
