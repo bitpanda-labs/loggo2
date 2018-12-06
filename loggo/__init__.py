@@ -1,6 +1,8 @@
 """
 Simpler namespace
 """
+
+# flake8: noqa
 from .exception import LoggedException
 from .loggo import Loggo
 

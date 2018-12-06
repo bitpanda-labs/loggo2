@@ -1,0 +1,17 @@
+language: python
+python:
+  - '3.6'
+stages:
+  - build
+  - test
+jobs:
+  include:
+    - stage: build
+      script:
+        - python setup.py install
+    - stage: test
+      script:
+        - pip install flake8
+        - flake8 loggo
+        - python setup.py install
+        - python tests/tests.py
