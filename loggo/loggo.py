@@ -86,7 +86,7 @@ class Loggo(object):
         self.nkwargs = 0
         self.log_data = dict(loggo=True, loggo_config=dict(config), sublogger=self.sublogger)
         self.facility = config.get('facility', 'loggo')
-        self.do_colour = config.get('colour', True)
+        self.do_colour = config.get('colour', False)
         self.ip = config.get('ip', None)
         self.port = config.get('port', None)
         self.do_print = config.get('do_print', False)
