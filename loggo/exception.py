@@ -6,6 +6,7 @@ try:
 except ImportError:
     init = None
 
+
 class LoggedException(Exception):
 
     log = None

@@ -48,6 +48,7 @@ FORMS = dict(pre='*Called {modul}.{function} {callable} with {nargs} args, {nkwa
              noreturn='*Returned None from {modul}.{function} {callable}\n',
              error='*Errored with {error_type} "{error_string}" when calling {modul}.{function} {callable} with {nargs} args, {nkwargs} kwargs: {kwa}\n')
 
+
 def colour_msg(msg, alert, do_colour):
     """
     Try to colour a message if colorama is installed, based on alert level
@@ -59,6 +60,7 @@ def colour_msg(msg, alert, do_colour):
     else:
         alert = COLOUR_MAP.get(alert, '')
     return '{colour}{msg}\x1b[0m'.format(colour=alert, msg=msg)
+
 
 class Loggo(object):
     """
@@ -95,9 +97,9 @@ class Loggo(object):
         self.line_length = config.get('line_length', 200)
         self.obscured = config.get('obscure', '[PRIVATE_DATA]')
         self.private_data = config.get('private_data', DEFAULT_PRIVATE_KEYS)
-        self.logger = logging.getLogger(self.facility) # pylint: disable=no-member
+        self.logger = logging.getLogger(self.facility)  # pylint: disable=no-member
         self.logger.setLevel(logging.DEBUG)
-        self.add_fields = config.get('add_fields', dict()) # can override fields
+        self.add_fields = config.get('add_fields', dict())  # can override fields
         self._bound_kwargs = None
         self.add_handler()
 
@@ -107,6 +109,7 @@ class Loggo(object):
         Python logging module (i.e. another logger) and steals its logs
         """
         loggo_self.no_graylog_disable_log = no_graylog_disable_log
+
         class LoggoHandler(logging.Handler):
             def emit(handler_self, record):
                 attributes = {'msg', 'created', 'msecs', 'stack_info',
@@ -262,7 +265,7 @@ class Loggo(object):
         for key, value in dictionary.items():
             if key not in keys_set:
                 if isinstance(value, dict) and dict_depth < MAX_DICT_DEPTH:
-                    modified_dict[key] = self._obscure_dict(value, dict_depth+1)
+                    modified_dict[key] = self._obscure_dict(value, dict_depth + 1)
                 else:
                     modified_dict[key] = value
             else:
@@ -414,7 +417,7 @@ class Loggo(object):
             rep = ', '.join(output_list)
 
         if copied and len(copied) != original:
-            num_priv = original-len(copied)
+            num_priv = original - len(copied)
             rep += '. {} private arguments ({}) not displayed'.format(num_priv, priv_names)
 
         return rep + '.'
@@ -537,7 +540,6 @@ class Loggo(object):
         """
         tstamp = datetime.now().strftime('%d.%m %Y %H:%M:%S')
         trace = self._format_traceback(log_data.get('traceback', ''), colour=colour)
-        #log_data = {k: v for k, v in log_data.items() if k != 'traceback'}
         datapoints = [tstamp, msg, level]
         if include_data:
             datapoints.append(log_data)
@@ -572,10 +574,10 @@ class Loggo(object):
         """
         Add a handler for Graylog
         """
-        if not self.ip or not self.port or not graypy and not self.no_graylog_disable_log: # pylint: disable=no-member
+        if not self.ip or not self.port or not graypy and not self.no_graylog_disable_log:  # pylint: disable=no-member
             self.log('Graylog not configured! Disabling it', 'dev')
             return
-        handler = graypy.GELFHandler(self.ip, self.port, debugging_fields=False) # pylint: disable=no-member
+        handler = graypy.GELFHandler(self.ip, self.port, debugging_fields=False)  # pylint: disable=no-member
         self.logger.addHandler(handler)
 
     def _force_string_and_truncate(self, obj, max_length=30000):
@@ -621,7 +623,7 @@ class Loggo(object):
         for key, value in dictionary.items():
             if key not in keys_set:
                 if isinstance(value, dict) and dict_depth < MAX_DICT_DEPTH:
-                    modified_dict[key] = self._remove_private_keys(value, dict_depth+1)
+                    modified_dict[key] = self._remove_private_keys(value, dict_depth + 1)
                 else:
                     modified_dict[key] = value
         return modified_dict
@@ -638,7 +640,7 @@ class Loggo(object):
                 # as taneli points out, it sucks to get this warning when you
                 # did nothing wrong stylistically or decorated some existing code
                 # so let's forgive the warning on 'args' only
-                #if key != 'args':
+                # if key != 'args':
                 #    self.log('WARNING: Should not use key "{}" in log data'.format(key), 'dev')
                 key = 'protected_' + key
             out[key] = value

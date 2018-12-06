@@ -1,2 +1,3 @@
 graypy
 colorama
+flake8
