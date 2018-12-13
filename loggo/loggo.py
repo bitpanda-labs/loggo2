@@ -10,6 +10,7 @@ import traceback
 import uuid
 from contextlib import contextmanager
 from datetime import datetime
+from functools import wraps
 
 LOG_LEVELS = dict(critical='CRITICAL',
                   dev='ERROR',
@@ -285,6 +286,7 @@ class Loggo(object):
 
         # if logging has been turned off, just do nothing
         if getattr(function, 'no_log', False):
+            @wraps(function)
             def unlogged(*args, **kwargs):
                 """
                 A dummy decorator to be used if no_log is set
@@ -292,6 +294,7 @@ class Loggo(object):
                 return function(*args, **kwargs)
             return unlogged
 
+        @wraps(function)
         def full_decoration(*args, **kwargs):
             """
             Main decorator logic. Generate a log before running the callable,
@@ -412,7 +415,10 @@ class Loggo(object):
                     continue
                 trunc = 10 if truncate else 9999
                 short = self._force_string_and_truncate(v, trunc)
-                representation = '{}={}({})'.format(k, type(v).__name__, short)
+                if k in {'args', 'kwargs'}:
+                    representation = '{}={}'.format(k, short)
+                else:
+                    representation = '{}={}({})'.format(k, type(v).__name__, short)
                 output_list.append(representation)
             rep = ', '.join(output_list)
 
@@ -477,6 +483,9 @@ class Loggo(object):
         msg = self.get_msg(returned, formed)
         level = self.get_alert(returned)
         log_data = self.get_log_data(returned, forms)
+        # perhaps not the ideal place for this?
+        custom_log_data = self.add_custom_log_data()
+        log_data.update(custom_log_data)
 
         # record if logging was on or off
         original_state = bool(self.stopped)
@@ -487,6 +496,12 @@ class Loggo(object):
         self.log(msg, level, log_data)
         # restore old stopped state
         self.stopped = original_state
+
+    def add_custom_log_data(self):
+        """
+        An overwritable method useful for adding custom log data
+        """
+        return dict()
 
     def get_msg(self, returned, existing):
         """
@@ -510,8 +525,7 @@ class Loggo(object):
 
     def get_log_data(self, returned, forms):
         """
-        Get a dict of log data from either self or pass your own in
-        Override/extend this method if you have a different kind of object
+        Get any possible log data and make a single dictionary
         """
         forms.update(self.log_data)
         if isinstance(returned, dict):
