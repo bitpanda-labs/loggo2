@@ -44,15 +44,17 @@ except ImportError:
     COLOUR_MAP = dict()
 
 # Strings to be formatted for pre function, post function and error during function
-FORMS = dict(pre='*Called {modul}.{function} {callable} with {nargs} args, {nkwargs} kwargs: {kwa}\n',
+FORMS = dict(pre='*Called {modul}.{function} {callable} with {nparams} parameters: {kwa}\n',
              post='*Returned a {return_type} {return_value} from {modul}.{function} {callable}\n',
              noreturn='*Returned None from {modul}.{function} {callable}\n',
-             error='*Errored with {error_type} "{error_string}" when calling {modul}.{function} {callable} with {nargs} args, {nkwargs} kwargs: {kwa}\n')
+             error='*Errored with {error_type} "{error_string}" when calling {modul}.{function} {callable} with {nparams} parameters: {kwa}\n')
 
 
 def colour_msg(msg, alert, do_colour):
     """
-    Try to colour a message if colorama is installed, based on alert level
+    Try to colour a message if colorama is installed, and do_colour is True.
+
+    Colours are based on alert levels
     """
     if not do_colour:
         return msg
@@ -76,6 +78,7 @@ class Loggo(object):
     - logfile: path to a file to which logs will be written
     - do_print: print logs to console
     - do_write: write logs to file
+    - do_colour: try to colour console text
     - line_length: max length for console printed string
     - private_data: key names that should be filtered out of logging. if not set,
       some sensible defaults are used
@@ -85,23 +88,20 @@ class Loggo(object):
         self.allow_errors = True
         self.config = config
         self.sublogger = None
-        self.nargs = 0
-        self.nkwargs = 0
+        # these things should always end up in the extra data provided to logger
         self.log_data = dict(loggo=True, loggo_config=dict(config), sublogger=self.sublogger)
         self.facility = config.get('facility', 'loggo')
-        self.do_colour = config.get('colour', False)
         self.ip = config.get('ip', None)
         self.port = config.get('port', None)
         self.do_print = config.get('do_print', False)
         self.do_write = config.get('do_write', False)
+        self.do_colour = config.get('do_colour', False)
         self.logfile = config.get('logfile', './logs/logs.txt')
         self.line_length = config.get('line_length', 200)
         self.obscured = config.get('obscure', '[PRIVATE_DATA]')
         self.private_data = config.get('private_data', DEFAULT_PRIVATE_KEYS)
         self.logger = logging.getLogger(self.facility)  # pylint: disable=no-member
         self.logger.setLevel(logging.DEBUG)
-        self.add_fields = config.get('add_fields', dict())  # can override fields
-        self._bound_kwargs = None
         self.add_handler()
 
     def listen_to(loggo_self, facility, no_graylog_disable_log=False):
@@ -182,52 +182,6 @@ class Loggo(object):
             return self.everything(class_or_func)
         return self.logme(class_or_func)
 
-    def _handle_error(self, function, error, args, kwargs):
-        self._bind_errored = True
-        self._args_to_use = args
-        self._kwargs_to_use = kwargs
-        self.generate_log('error', error, function, 'callable', extra=None, idx=None)
-        return dict(), list()
-
-    def kwargify(self, function, *args, tricky_kwargs=None, **kwargs):
-        """
-        This uses some weird inspection to figure out what the names of positional
-        and keyword arguments were, so that even positional arguments with
-        private names can be censored.
-
-        This also definitively works out how many args/kwargs were passed in
-        """
-        # pylint: disable=attribute-defined-outside-init
-
-        # get the signature for the function and bind the passed in arguments
-        try:
-            sig = inspect.signature(function)
-        except ValueError as error:
-            bound, to_iter = self._handle_error(function, error, args, kwargs)
-        try:
-            if tricky_kwargs:
-                tricky_kwargs.pop('self', None)
-                kwargs = tricky_kwargs
-            bound = sig.bind(*args, **kwargs).arguments
-            to_iter = sig.parameters.items()
-            self._bind_errored = False
-        except TypeError as error:
-            bound, to_iter = self._handle_error(function, error, args, kwargs)
-        self.nargs = 0
-        self.nkwargs = 0
-        for key, value in to_iter:
-            self.log_data[key] = value
-            if key not in bound:
-                continue
-            is_keyword = int(value.default != inspect._empty)
-            if is_keyword:
-                self.nkwargs += 1
-            else:
-                self.nargs += 1
-        self.log_data = self._obscure_dict(self.log_data)
-        self._bound_kwargs = bound
-        return bound
-
     def stop(self, allow_errors=True):
         """
         Manually stop loggo from logging, but by default allow errors through
@@ -241,6 +195,23 @@ class Loggo(object):
         """
         self.stopped = False
         self.allow_errors = allow_errors
+
+    def params_to_log_data(self, function, *args, **kwargs):
+        """
+        This uses some weird inspection to figure out what the names of positional
+        and keyword arguments were, so that even positional arguments with
+        private names can be censored.
+
+        If anything fails here, which it can, then log the error and empty params
+        """
+        try:
+            sig = inspect.signature(function)
+            bound = sig.bind(*args, **kwargs).arguments
+            bound.pop('self', None)
+            bound.pop('cls', None)
+            return self.sanitise_dict(bound)
+        except (ValueError, TypeError) as error:
+            self.generate_log('error', error, function, 'callable')
 
     @staticmethod
     def get_call_type(inspected):
@@ -256,21 +227,22 @@ class Loggo(object):
             return 'classmethod'
         return 'function'
 
-    def _obscure_dict(self, dictionary, dict_depth=0):
+    def _obscure_private_keys(self, dictionary, dict_depth=0):
         """
-        Obscure any private values in a dictionary
+        Obscure any private values in a dictionary recursively
         """
         keys_set = set(self.private_data)  # Just an optimization for the "if key in keys" lookup.
 
-        modified_dict = {}
+        modified_dict = dict()
         for key, value in dictionary.items():
-            if key not in keys_set:
+            if key in keys_set:
+                modified_dict[key] = self.obscured
+            else:
+                # recursive for embedded dictionaries
                 if isinstance(value, dict) and dict_depth < MAX_DICT_DEPTH:
-                    modified_dict[key] = self._obscure_dict(value, dict_depth + 1)
+                    modified_dict[key] = self._obscure_private_keys(value, dict_depth + 1)
                 else:
                     modified_dict[key] = value
-            else:
-                modified_dict[key] = self.obscured
         return modified_dict
 
     def logme(self, function):
@@ -301,45 +273,43 @@ class Loggo(object):
             then try to run it. If it errors, log the error. If it doesn't,
             log the return value.
 
-            Args and kwargs are for the decorated function
+            Args and kwargs are for/from the decorated function
             """
-            extra = self.kwargify(function, *args, **kwargs)
+            # turn all passed parameters into a dict of loggable extras
+            extra = self.params_to_log_data(function, *args, **kwargs)
+            
+            # add a unique identifier for this set of logs
+            extra['couplet'] = uuid.uuid1()
+            extra['number_of_params'] = len(args) + len(kwargs)
+
+            # function, method or classmethod?
             call_type = self.get_call_type(extra)
-            call_args = self._obscure_dict(extra)
-            self.log_data.update(call_args)
-            exc_traceback = None
+
+            # make 100% sure we destroy tracebacks from earlier runs
             trace = None
 
-            # make a unique identifier for this set of logs
-            idx = uuid.uuid1()
-
             # pre log tells you what was called and with what arguments
-            self.generate_log('pre', None, function, call_type, extra=extra, idx=idx)
+            self.generate_log('pre', None, function, call_type, extra=extra)
 
             try:
                 # where the original function is actually run
                 response = function(*args, **kwargs)
-                # make sure traceback hasn't persisted
+                # make extra sure traceback hasn't persisted
                 extra.pop('traceback', None)
                 # the successful return log
-                self.generate_log('post', response, function, call_type, extra=extra, idx=idx)
+                self.generate_log('post', response, function, call_type, extra=extra)
+                # return whatever the original callable did
                 return response
+            # handle any possible error
             except Exception as error:
                 trace = sys.exc_info()
-                # these lines *might* strip out loggo info from traceback
-                # may reimplement later after tracebacks appear in graylog
-                # exc_type, exc_value, exc_traceback = sys.exc_info()
-                # if exc_traceback.tb_next:
-                #    exc_traceback = exc_traceback.tb_next
-                self.log_data['traceback'] = traceback.format_exception(*trace)
-                self.generate_log('error', error, function, call_type, extra=extra, idx=idx)
-                del self.log_data['traceback']
+                extra['traceback'] = traceback.format_exception(*trace)
+                self.generate_log('error', error, function, call_type, extra=extra)
                 raise error.__class__(str(error)).with_traceback(trace[-1])
-            # always reset the log data and traceback at the conclusion of a log cycle
+            # always kill traceback at the conclusion of a log cycle
             finally:
-                self.log_data = dict(loggo=True, loggo_config=dict(self.config), sublogger=self.sublogger)
-                del exc_traceback
                 del trace
+
         return full_decoration
 
     @staticmethod
@@ -353,10 +323,10 @@ class Loggo(object):
 
     def decorate_if_possible(self, func):
         """
-        To be decorable, they func must be callable, and have a non-magic __name__
+        To be decorable, the func must be callable, and have a non-magic __name__
         """
         name = getattr(func, '__name__', False)
-        if name is False:
+        if not name:
             return func
         if name.startswith('__') and name.endswith('__'):
             return func
@@ -373,7 +343,7 @@ class Loggo(object):
 
     def everything(self, cls):
         """
-        Decorator for class, which attaches itself to any methods
+        Decorator for class, which attaches itself to any (non-dunder) methods
         """
         class Decorated(cls):
             def __getattribute__(self_or_class, name):
@@ -388,23 +358,25 @@ class Loggo(object):
         representable = (int, float, str, list, set, dict, type(None), bool, tuple)
         if isinstance(response, representable):
             return '({})'.format(self._force_string_and_truncate(response, 70))
+        # some custom handling for request response objects
         content = getattr(response, 'content', False)
         if content:
             return '({})'.format(self._force_string_and_truncate(content.decode('utf-8'), 70))
+        # fallback, should not happen
         return ''
 
-    def safe_arg_display(self, kwargs, truncate=True):
+    def safe_param_display(self, kwargs, truncate=True):
         """
         Build a string showing keyword arguments if we can
         """
-        original = len(kwargs) if kwargs is not None else 0
+        original = len(kwargs)
         output_list = list()
 
         if not original:
             return ''
 
         copied = dict(kwargs)
-        copied = self._remove_private_keys(copied)
+        copied = self._obscure_private_keys(copied)
         priv_names = ', '.join([i for i in kwargs if i not in copied])
 
         if not copied:
@@ -428,7 +400,7 @@ class Loggo(object):
 
         return rep + '.'
 
-    def generate_log(self, where, returned, function, call_type, extra=None, idx=None):
+    def generate_log(self, where, returned, function, call_type, extra={}):
         """
         General log string and data for before, after or error in function
         """
@@ -439,6 +411,7 @@ class Loggo(object):
         # if we've used Loggo.errors on this method and it's not an error, quit
         if getattr(function, 'just_errors', False) and where != 'error':
             return
+
         # if state is stopped and not an error, quit
         if self.stopped and where != 'error':
             return
@@ -447,24 +420,23 @@ class Loggo(object):
         if where == 'post' and returned is None:
             where = 'noreturn'
 
-        modul = getattr(function, '__module__', 'modul')
         # do not log loggo, because why would you ever want that?
-        if modul == 'loggo.loggo':
+        if getattr(function, '__module__', 'modul') == 'loggo.loggo':
             return
 
-        return_value = self._represent_return_value(returned)
+        # get the correct message
         unformatted_message = FORMS.get(where)
 
-        safe_displayed_kwargs = self.safe_arg_display(extra)
+        # return value for log message
+        return_value = self._represent_return_value(returned)
 
         # get all the data to be fed into the strings
         forms = dict(modul=modul,
                      function=getattr(function, '__name__', 'func'),
                      callable=call_type,
-                     nargs=self.nargs,
-                     nkwargs=self.nkwargs,
+                     nparams=extra.get('number_of_params', '?'),
                      return_value=return_value,
-                     kwa=self.safe_arg_display(extra, truncate=False),
+                     kwa=self.safe_param_display(extra, truncate=False),
                      return_type=type(returned).__name__)
 
         # if what is returned is an exception, do some special handling:
@@ -472,17 +444,22 @@ class Loggo(object):
             forms['error_type'] = returned.__class__.__name__
             forms['error_string'] = str(returned)
 
+        # add exception info for errors
+        extra['exc_info'] = True if where == 'error' else False
+
+        # make the message from the template and info
         formed = unformatted_message.format(**forms).replace('  ', ' ')
-        # no colon if there is nothing to go after it
-        if not safe_displayed_kwargs:
+
+        # no colon in message if there is nothing to go after it
+        if not extra:
             formed = formed.replace(': \n', '\n')
 
         # logs contain three things: a message string, a log level, and a dict of
         # extra data. there are three methods for these, which may be overwritten
-        # by subclassing if you want
+        # by subclassing the methods used below if you want
         msg = self.get_msg(returned, formed)
         level = self.get_alert(returned)
-        log_data = self.get_log_data(returned, forms)
+        log_data = self.get_log_data(returned, forms, extra)
         # perhaps not the ideal place for this?
         custom_log_data = self.add_custom_log_data()
         log_data.update(custom_log_data)
@@ -492,7 +469,6 @@ class Loggo(object):
         # turn it on just for now, as if we shouldn't log we'd have returned
         self.stopped = False
         # do logging
-        log_data['couplet'] = idx
         self.log(msg, level, log_data)
         # restore old stopped state
         self.stopped = original_state
@@ -508,38 +484,33 @@ class Loggo(object):
         Get a message to append to the main one.
         Override/extend this method if you have a different kind of object
         """
-        msg = getattr(self, 'msg', None)
-        if not msg:
-            return existing
-        return '{old}: {new}'.format(old=existing, new=msg)
+        return existing
 
     def get_alert(self, returned):
         """
         Get an alert level from either self or returned
         Override/extend this method if you have a different kind of object
         """
-        first_try = getattr(self, 'alert', -1)
-        if first_try != -1:
-            return first_try
         return 'dev' if isinstance(returned, Exception) else None
 
-    def get_log_data(self, returned, forms):
+    def get_log_data(self, returned, forms, extra):
         """
         Get any possible log data and make a single dictionary
+
+        Priority should be: extra, log_data, forms, returned
         """
-        forms.update(self.log_data)
         if isinstance(returned, dict):
-            returned = self._obscure_dict(returned)
+            returned = self.sanitise_dict(returned)
         forms['returned'] = self._force_string_and_truncate(returned, 10000)
         forms.pop('return_value', None)
-        return forms
+        return {**forms, **self.log_data, **extra}
 
     @staticmethod
     def _format_traceback(trace, colour=True):
         """
         Check if there is a traceback, and format it if need be
         """
-        if not trace or trace in ['False', 'None']:
+        if not trace:
             return False
         if colour:
             start = COLOUR_MAP.get('critical', '')
@@ -547,13 +518,13 @@ class Loggo(object):
             trace = '{}{}{}\n'.format(start, trace, end)
         return '\t' + trace.replace('\n', '\n\t')
 
-    def _build_string(self, msg, level, log_data, truncate=0, colour=True, include_data=True):
+    def _build_string(self, msg, level, log_data, truncate=0, colour=False, include_data=True):
         """
         Make a single line string, or multiline if traceback provided, for print
         and file logging
         """
         tstamp = datetime.now().strftime('%d.%m %Y %H:%M:%S')
-        trace = self._format_traceback(log_data.get('traceback', ''), colour=colour)
+        trace = self._format_traceback(log_data.get('traceback'), colour=colour)
         datapoints = [tstamp, msg, level]
         if include_data:
             datapoints.append(log_data)
@@ -598,49 +569,24 @@ class Loggo(object):
         """
         Return stringified and truncated obj, or log alert if not possible
         """
-        typ = type(obj).__name__
-        if isinstance(obj, (list, set, tuple)):
-            obj = ', '.join([str(i) for i in obj])
-            obj = '{typ}({obj})'.format(typ=typ, obj=obj)
         try:
             obj = str(obj)
         except Exception as error:
-            log_data = dict(error=error)
-            # if it wasn't made into string, let's log and ignore
-            self.log('Object could not be cast to string', 'dev', log_data)
+            self.log('Object could not be cast to string', 'dev', dict(error=error))
             return '<<Unstringable input>>'
-        if len(obj) > max_length:
-            obj = obj[:max_length] + '...'
-        return obj
+        # truncate and return
+        return (obj[:max_length] + '...') if len(obj) > (max_length + 3) else obj
 
     def _stringify_dict(self, input_data):
         """
         Ensure that keys and values in a dict are strings
         """
         string_data = dict()
-        if not isinstance(input_data, dict):
-            input_data = dict(data=input_data)
         for key, value in input_data.items():
             string_key = self._force_string_and_truncate(key)
             string_value = self._force_string_and_truncate(value)
             string_data[string_key] = string_value
         return string_data
-
-    def _remove_private_keys(self, dictionary, dict_depth=0):
-        """
-        names that could have sensitive data need to be removed
-        """
-
-        keys_set = set(self.private_data)  # Just an optimization for the "if key in keys" lookup.
-
-        modified_dict = {}
-        for key, value in dictionary.items():
-            if key not in keys_set:
-                if isinstance(value, dict) and dict_depth < MAX_DICT_DEPTH:
-                    modified_dict[key] = self._remove_private_keys(value, dict_depth + 1)
-                else:
-                    modified_dict[key] = value
-        return modified_dict
 
     def _rename_protected_keys(self, log_data):
         """
@@ -651,28 +597,22 @@ class Loggo(object):
         protected = {'name', 'message', 'asctime', 'msg', 'module', 'args'}
         for key, value in log_data.items():
             if key in protected:
-                # as taneli points out, it sucks to get this warning when you
-                # did nothing wrong stylistically or decorated some existing code
-                # so let's forgive the warning on 'args' only
-                # if key != 'args':
-                #    self.log('WARNING: Should not use key "{}" in log data'.format(key), 'dev')
                 key = 'protected_' + key
             out[key] = value
         return out
 
-    def sanitise(self, message, data=None):
+    def sanitise_dict(self, log_data):
         """
-        Make message and data safe for logging
+        Ensure that log data is safe to log:
+
+        - No private keys
+        - Rename protected keys
+        - Everthing strings
         """
-        message = self._force_string_and_truncate(message)
-        if data is None:
-            data = dict()
-        elif not isinstance(data, dict):
-            data = dict(data=data)
-        data = self._remove_private_keys(data)
-        data = self._rename_protected_keys(data)
-        data = self._stringify_dict(data)
-        return message, data
+        log_data = self._obscure_private_keys(log_data)
+        log_data = self._rename_protected_keys(log_data)
+        log_data = self._stringify_dict(log_data)
+        return message, log_data
 
     @staticmethod
     def compatibility_hack(alert, data):
@@ -686,7 +626,16 @@ class Loggo(object):
             log_data = data
         return alert, log_data
 
-    def log(self, message, alert=None, data=None, **kwargs):
+    @staticmethod
+    def _get_log_level(alert):
+        if isinstance(alert, str):
+            return getattr(logging, LOG_LEVELS.get(alert, 'INFO'))
+        elif isinstance(alert, int):
+            return alert
+        return 20
+
+
+    def log(self, message, alert=None, extra=None, **kwargs):
         """
         Main logging method. Takes message string, alert level, and a data dict
         that will be logged. anything (accidentally) passed as kwargs will get
@@ -718,13 +667,10 @@ class Loggo(object):
             return
 
         class_name = classy.__class__.__name__
-
         joined = '{}.{}'.format(class_name, func_name)
-
         self.log_data['callable'] = joined
 
-        kwa = self.kwargify(func, tricky_kwargs=kwa)
-        _, kwa = self.sanitise(kwa)
+        kwa = self.params_to_log_data(func, **kwa)
 
         kwargs.update(kwa)
 
@@ -736,42 +682,19 @@ class Loggo(object):
         # bitpanda internal hack, to remove after some modernising of our code
         alert, data = self.compatibility_hack(alert, data)
 
-        # correct a bad call signature, when an interpretable level was not passed
-        # in as the second argument.
-        if isinstance(alert, dict):
-            alert.update(kwargs)
-            if isinstance(data, dict):
-                alert.update(data)
-            if alert.get('error'):
-                log_level = 'dev'
-            else:
-                log_level = alert.pop('alert', 'INFO')
-            self.log(message, log_level, alert)
-            return
-
-        # data and kwargs together will become the extra dict for the logger
-        # kwargs take precedence over data in the case of duplicate keys, because
-        # kwargs are more likely to have been explicitly passed in
-        data = dict() if data is None else data
-        kwargs.update(data)
-        data = kwargs
-
         # translate log levels to an integer --- things to fix here still
-        log_level = 20
-        if isinstance(alert, str):
-            log_level = getattr(logging, LOG_LEVELS.get(alert, 'INFO'))
-        elif isinstance(alert, int):
-            log_level = alert
+        log_level = self._get_log_level(alert)
 
         # do all preprocessing of log data, like casting, truncation, etc.
         # then do printing, filelogging and actual logging as per options.
         # all failures will result in emergency log, which falls back to
         # whatever it can (i.e. print) and which stops infinite loops
         try:
-            message, string_data = self.sanitise(message, data)
-            opts = dict(truncate=self.line_length, include_data=False)
-
+            message = self._force_string_and_truncate(message)
+            string_data = self.sanitise_dict(data)
+            string_data['alert'] = alert
             if self.do_print:
+                opts = dict(truncate=self.line_length, include_data=False, colour=self.do_colour)
                 single_string = self._build_string(message, alert, string_data, **opts)
                 print(colour_msg(single_string, alert, self.do_colour))
 
@@ -779,13 +702,6 @@ class Loggo(object):
                 plain_string = self._build_string(message, alert, string_data, colour=False)
                 logfile = self.get_logfile(data)
                 self.write_to_file(plain_string, logfile)
-
-            # add in any post-hoc data --- skips sanitisation, so must be 1337
-            for field, value in self.add_fields.items():
-                string_data[field] = value
-
-            if alert:
-                string_data['alert'] = alert
 
             self.logger.log(log_level, message, extra=string_data)
 
