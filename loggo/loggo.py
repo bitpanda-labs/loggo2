@@ -333,7 +333,10 @@ class Loggo(object):
                 #    exc_traceback = exc_traceback.tb_next
                 self.log_data['traceback'] = traceback.format_exception(*trace)
                 self.generate_log('error', error, function, call_type, extra=extra, idx=idx)
-                del self.log_data['traceback']
+                try:
+                    del self.log_data['traceback']
+                except KeyError:
+                    pass
                 raise error.__class__(str(error)).with_traceback(trace[-1])
             # always reset the log data and traceback at the conclusion of a log cycle
             finally:
