@@ -19,7 +19,6 @@ LOG_LEVELS = dict(critical='CRITICAL',
                   info='INFO',
                   debug='DEBUG')
 
-DEFAULT_PRIVATE_KEYS = {'token', 'password', 'prv', 'priv', 'xprv', 'secret', 'mnemonic', 'headers'}
 MAX_DICT_DEPTH = 5
 
 # you don't need graylog installed, but it is really powerful
@@ -80,7 +79,7 @@ class Loggo(object):
     - do_write: write logs to file
     - do_colour: try to colour console text
     - line_length: max length for console printed string
-    - private_data: key names that should be filtered out of logging. if not set,
+    - private_data: key names that should be filtered out of logging
       some sensible defaults are used
     """
     def __init__(self, config={}):
@@ -99,7 +98,7 @@ class Loggo(object):
         self.logfile = config.get('logfile', './logs/logs.txt')
         self.line_length = config.get('line_length', 200)
         self.obscured = config.get('obscure', '[PRIVATE_DATA]')
-        self.private_data = config.get('private_data', DEFAULT_PRIVATE_KEYS)
+        self.private_data = config.get('private_data')
         self.logger = logging.getLogger(self.facility)  # pylint: disable=no-member
         self.logger.setLevel(logging.DEBUG)
         self.add_handler()
@@ -231,6 +230,9 @@ class Loggo(object):
         """
         Obscure any private values in a dictionary recursively
         """
+        if not self.private_data:
+            return dictionary
+            
         keys_set = set(self.private_data)  # Just an optimization for the "if key in keys" lookup.
 
         modified_dict = dict()
