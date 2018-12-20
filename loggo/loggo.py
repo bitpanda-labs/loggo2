@@ -28,10 +28,10 @@ except ImportError:
     graypy = None
 
 # Strings to be formatted for pre function, post function and error during function
-FORMS = dict(pre='*Called {call_signature}\n',
-             post='*Returned a {return_type} {return_value} from {call_signature}\n',
-             noreturn='*Returned None from {call_signature}\n',
-             error='*Errored with {error_type} "{error_string}" when calling {call_signature}: {traceback}\n')
+FORMS = dict(pre='*Called {call_signature}',
+             post='*Returned from {call_signature} with {return_type} {return_value}',
+             noreturn='*Returned None from {call_signature}',
+             error='*Errored during {call_signature} with {error_type} "{error_string}"')
 
 
 class Loggo(object):
@@ -416,7 +416,7 @@ class Loggo(object):
         strung = '\t' + '\t'.join([str(s).strip('\n') for s in datapoints])
         if traceback:
             strung = '{} -- see below: \n{}\n'.format(strung, traceback)
-        return strung
+        return strung.strip('\n') + '\n'
 
     def get_logfile(self):
         """
