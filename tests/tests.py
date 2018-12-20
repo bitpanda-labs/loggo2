@@ -208,11 +208,11 @@ class TestDecoration(unittest.TestCase):
             (alert, logged_msg), extras = logger.call_args_list[0]
             self.assertEqual(extras['extra']['priv'], "'[PRIVATE_DATA]'")
 
-class NoString(object):
+class NoRepr(object):
     """
-    An object that really hates being cast to string
+    An object that really hates being repr'd
     """
-    def __str__(self):
+    def __repr__(self):
         raise Exception('No.')
 
 class TestLog(unittest.TestCase):
@@ -274,22 +274,18 @@ class TestLog(unittest.TestCase):
         If something cannot be cast to string, we need to know about it
         """
         with patch('logging.Logger.log') as mock_log:
-            no_string_rep = NoString()
+            no_string_rep = NoRepr()
             result = self.loggo._force_string_and_truncate(no_string_rep)
             self.assertEqual(result, '<<Unstringable input>>')
             (alert, msg), kwargs = mock_log.call_args
             self.assertEqual('Object could not be cast to string', msg)
 
-    def test_stringify_non_dict(self):
-        example = 123
-        with self.assertRaises(AttributeError):
-            self.loggo._stringify_dict(example)
 
     def test_fail_to_add_entry(self):
         with patch('logging.Logger.log') as mock_log:
-            no_string_rep = NoString()
+            no_string_rep = NoRepr()
             sample = dict(fine=123, not_fine=no_string_rep)
-            result = self.loggo._stringify_dict(sample)
+            result = self.loggo.sanitise(sample)
             (alert, msg), kwargs = mock_log.call_args
             self.assertEqual('Object could not be cast to string', msg)
             self.assertEqual(result['not_fine'], '<<Unstringable input>>')
@@ -303,7 +299,7 @@ class TestLog(unittest.TestCase):
 
     def test_emergency_log_infinite(self):
         with patch('logging.Logger.log') as mock_log, \
-                patch('loggo.Loggo._stringify_dict') as stringer, \
+                patch('loggo.Loggo.sanitise') as stringer, \
                 patch('builtins.print') as printer:
             stringer.side_effect = Exception('Bam!')
             with self.assertRaises(Exception):
