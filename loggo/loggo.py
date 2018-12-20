@@ -284,20 +284,6 @@ class Loggo(object):
             self._generate_log('error', error, function, 'callable')
             return dict()
 
-    @staticmethod
-    def _get_call_type(inspected):
-        """
-        Find out, by way of signature, what kind of callable we have. Currently
-        does not distinguish between staticmethods and functions!
-        """
-        if not inspected:
-            return 'function'
-        if list(inspected)[0] == 'self':
-            return 'method'
-        elif list(inspected)[0] == 'cls':
-            return 'classmethod'
-        return 'function'
-
     def _obscure_private_keys(self, dictionary, dict_depth=0):
         """
         Obscure any private values in a dictionary recursively
@@ -457,17 +443,6 @@ class Loggo(object):
             return '<<Unstringable input>>'
         # truncate and return
         return (obj[:max_length] + '...') if len(obj) > (max_length + 3) else obj
-
-    def _stringify_dict(self, input_data):
-        """
-        Ensure that keys and values in a dict are strings
-        """
-        string_data = dict()
-        for key, value in input_data.items():
-            string_key = self._force_string_and_truncate(key)
-            string_value = self._force_string_and_truncate(value)
-            string_data[string_key] = string_value
-        return string_data
 
     def _rename_protected_keys(self, log_data):
         """
