@@ -776,7 +776,7 @@ class Loggo(object):
 
             if self.do_print:
                 single_string = self._build_string(message, alert, string_data, **opts)
-                #print(colour_msg(single_string, alert, self.do_colour))
+                print(colour_msg(single_string, alert, self.do_colour))
 
             if self.do_write:
                 plain_string = self._build_string(message, alert, string_data, colour=False)
