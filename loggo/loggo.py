@@ -5,7 +5,6 @@ Loggo: decorators for logging
 import inspect
 import logging
 import os
-import sys
 import traceback
 import uuid
 from contextlib import contextmanager
