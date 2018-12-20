@@ -223,7 +223,6 @@ class Loggo(object):
                 formatters['traceback'] = traceback.format_exc()
                 self._generate_log('error', error, formatters, param_strings)
                 raise
-
         return full_decoration
 
     def _string_params(self, non_private_params):
