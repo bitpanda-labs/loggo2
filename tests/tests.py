@@ -4,7 +4,12 @@ from unittest.mock import mock_open, patch, ANY, Mock
 
 from loggo import Loggo as a_loggo
 
-test_setup = dict(facility='LOGGO_TEST', ip=None, port=None, do_print=True, do_write=True)
+test_setup = dict(facility='LOGGO_TEST',
+                  ip=None,
+                  port=None,
+                  do_print=True,
+                  do_write=True,
+                  private_data=['mnemonic', 'priv'])
 Loggo = a_loggo(test_setup)
 
 @Loggo.logme
@@ -128,7 +133,7 @@ class TestDecoration(unittest.TestCase):
             self.assertEqual(res, 5000)
             self.assertTrue(kwa)
             (alert, logged_msg), extras = logger.call_args_list[0]
-            self.assertTrue('2 args, 1 kwargs' in logged_msg, logged_msg)
+            self.assertEqual(logged_msg, '*Called __main__.may_or_may_not_error_test(first=2534, other=2466, kwargs=True)\n')
             (alert, logged_msg), extras = logger.call_args_list[-1]
             self.assertTrue('Returned a tuple' in logged_msg, logged_msg)
 
@@ -137,16 +142,15 @@ class TestDecoration(unittest.TestCase):
             result = dummy.add(1, 2)
             self.assertEqual(result, 3)
             (alert, logged_msg), extras = logger.call_args_list[0]
-            self.assertTrue('2 args' in logged_msg, logged_msg)
+            self.assertEqual(logged_msg, '*Called __main__.add(a=1, b=2)\n')
             (alert, logged_msg), extras = logger.call_args_list[-1]
             self.assertTrue('Returned a int' in logged_msg, logged_msg)
 
     def test_everything_0(self):
         with patch('logging.Logger.log') as logger:
-            result = dummy.add_and_maybe_subtract(15, 10, 5)
+            dummy.add_and_maybe_subtract(15, 10, 5)
             (alert, logged_msg), extras = logger.call_args_list[0]
-            self.assertTrue('2 args' in logged_msg, logged_msg)
-            self.assertTrue('1 kwargs' in logged_msg, logged_msg)
+            self.assertEqual(logged_msg, '*Called __main__.add_and_maybe_subtract(a=15, b=10, c=5)\n')
             (alert, logged_msg), extras = logger.call_args_list[-1]
             self.assertTrue('Returned a int' in logged_msg, logged_msg)
 
@@ -154,8 +158,6 @@ class TestDecoration(unittest.TestCase):
         with patch('logging.Logger.log') as logger:
             result = dummy.static_method(10)
             self.assertEqual(result, 100)
-            (alert, logged_msg), extras = logger.call_args_list[0]
-            self.assertTrue('1 args' in logged_msg)
             (alert, logged_msg), extras = logger.call_args_list[-1]
             self.assertTrue('Returned a int' in logged_msg)
 
@@ -163,7 +165,7 @@ class TestDecoration(unittest.TestCase):
         with patch('logging.Logger.log') as logger:
             result = dummy.optional_provided()
             (alert, logged_msg), extras = logger.call_args_list[0]
-            self.assertTrue('0 args, 0 kwargs' in logged_msg, logged_msg)
+            self.assertEqual(logged_msg, '*Called __main__.optional_provided()\n')
             (alert, logged_msg), extras = logger.call_args_list[-1]
             self.assertTrue('Returned None' in logged_msg)
 
@@ -196,7 +198,8 @@ class TestDecoration(unittest.TestCase):
             res = function_with_private_kwarg(10, a_float=5.5, mnemonic=mnem)
             self.assertEqual(res, 10*5.5)
             (alert, logged_msg), extras = logger.call_args_list[0]
-            self.assertTrue('1 private arguments (mnemonic) not displayed' in logged_msg)
+            print('EXTRAAAAA', extras)
+            self.assertEqual(extras['extra']['mnemonic'], "'[PRIVATE_DATA]'")
 
     def test_private_positional_removal(self):
         with patch('logging.Logger.log') as logger:
@@ -204,7 +207,7 @@ class TestDecoration(unittest.TestCase):
             res = function_with_private_arg('should not log', False)
             self.assertFalse(res)
             (alert, logged_msg), extras = logger.call_args_list[0]
-            self.assertTrue('1 private arguments (priv) not displayed' in logged_msg)
+            self.assertEqual(extras['extra']['priv'], "'[PRIVATE_DATA]'")
 
 class NoString(object):
     """
@@ -228,8 +231,8 @@ class TestLog(unittest.TestCase):
         with patch('logging.Logger.log') as mock_log:
             self.log('fine', None, dict(name='bad', other='good'))
             (alert, msg), kwargs = mock_log.call_args
-            self.assertEqual(kwargs['extra']['protected_name'], 'bad')
-            self.assertEqual(kwargs['extra']['other'], 'good')
+            self.assertEqual(kwargs['extra']['protected_name'], "'bad'")
+            self.assertEqual(kwargs['extra']['other'], "'good'")
 
     def test_can_log(self):
         with patch('logging.Logger.log') as logger:
@@ -241,7 +244,7 @@ class TestLog(unittest.TestCase):
                 (alert, logged_msg), extras = logger.call_args
                 self.assertEqual(alert, num)
                 self.assertEqual(msg, logged_msg)
-                self.assertEqual(extras['extra']['extra'], 'data')
+                self.assertEqual(extras['extra']['extra'], "'data'")
 
     def test_write_to_file(self):
         """
@@ -264,7 +267,7 @@ class TestLog(unittest.TestCase):
             self.log(msg, None, log_data)
             mock_log.assert_called_with(20, msg, extra=ANY)
             logger_was_passed = mock_log.call_args[1]['extra']['key']
-            done_by_hand = str(large_number)[:30000] + '...'
+            done_by_hand = str(large_number)[:1000] + '...'
             self.assertEqual(logger_was_passed, done_by_hand)
 
     def test_string_truncation_fail(self):
@@ -280,8 +283,8 @@ class TestLog(unittest.TestCase):
 
     def test_stringify_non_dict(self):
         example = 123
-        result = self.loggo._stringify_dict(example)
-        self.assertEqual(result['data'], str(example))
+        with self.assertRaises(AttributeError):
+            self.loggo._stringify_dict(example)
 
     def test_fail_to_add_entry(self):
         with patch('logging.Logger.log') as mock_log:
@@ -353,9 +356,7 @@ class TestLog(unittest.TestCase):
     def test_see_below(self):
         with patch('logging.Logger.log') as logger:
             msg = 'testing only'
-            log_data = {'traceback': False, 'other': 123}
-            msg, log_data = self.loggo.sanitise(msg, log_data)
-            s = self.loggo._build_string(msg, 'dev', log_data, truncate=200, include_data=False)
+            s = self.loggo._build_string(msg, 'dev', traceback=False)
             self.assertTrue('-- see below:' not in s)
 
     def test_compat(self):

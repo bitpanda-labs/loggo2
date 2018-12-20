@@ -196,13 +196,14 @@ class Loggo(object):
             Args and kwargs are for/from the decorated function
             """
             bound = self._params_to_dict(function, *args, **kwargs)
-            safe_bound = self._obscure_private_keys(bound)
-            param_strings = self._string_params(safe_bound)
+            param_strings = self.sanitise(bound)
             signature, formatters = self._make_call_signature(function, param_strings)
+            privates = [key for key in param_strings if key not in bound]
 
             # add an id and number of params for this couplet
             formatters['couplet'] = uuid.uuid1()
             formatters['number_of_params'] = len(args) + len(kwargs)
+            formatters['private_keys'] = ', '.join(privates)
 
             # pre log tells you what was called and with what arguments
             if not getattr(function, 'just_errors', False):
@@ -219,13 +220,9 @@ class Loggo(object):
                 return response
             # handle any possible error
             except Exception as error:
-                trace = sys.exc_info()
-                formatters['traceback'] = traceback.format_exception(*trace)
+                formatters['traceback'] = traceback.format_exc()
                 self._generate_log('error', error, formatters, param_strings)
-                raise error.__class__(str(error)).with_traceback(trace[-1])
-            # always kill traceback at the conclusion of a log cycle
-            finally:
-                del trace
+                raise
 
         return full_decoration
 
@@ -233,6 +230,7 @@ class Loggo(object):
         params = dict()
         for key, val in non_private_params.items():
             safe_key = self._force_string_and_truncate(key, 50)
+
             safe_val = self._force_string_and_truncate(val, 1000, use_repr=True)
             params[safe_key] = safe_val
         return params
@@ -243,7 +241,9 @@ class Loggo(object):
         format_strings = dict(module=getattr(function, '__module__', 'unknown_module'),
                               callable=getattr(function, '__name__', 'unknown_callable'),
                               params=param_str)
-        return signature.format(**format_strings), format_strings
+        formatted = signature.format(**format_strings)
+        format_strings['call_signature'] = formatted
+        return formatted, format_strings
 
     def listen_to(loggo_self, facility, no_graylog_disable_log=False):
         """
@@ -406,26 +406,16 @@ class Loggo(object):
         """
         return dict()
 
-    @staticmethod
-    def _format_traceback(traceback):
-        """
-        Check if there is a traceback, and format it if need be
-        """
-        if not traceback:
-            return False
-        return '\t' + traceback.replace('\n', '\n\t')
-
     def _build_string(self, msg, level, traceback=None):
         """
         Make a single line string, or multiline if traceback provided, for print
         and file logging
         """
         tstamp = datetime.now().strftime('%d.%m %Y %H:%M:%S')
-        trace = self._format_traceback(traceback)
         datapoints = [tstamp, msg, level]
         strung = '\t' + '\t'.join([str(s).strip('\n') for s in datapoints])
-        if trace:
-            strung = '{} -- see below: \n{}\n'.format(strung, trace)
+        if traceback:
+            strung = '{} -- see below: \n{}\n'.format(strung, traceback)
         return strung
 
     def get_logfile(self):
@@ -494,7 +484,7 @@ class Loggo(object):
             out[key] = value
         return out
 
-    def sanitise_dict(self, log_data):
+    def sanitise(self, unsafe_dict):
         """
         Ensure that log data is safe to log:
 
@@ -502,10 +492,9 @@ class Loggo(object):
         - Rename protected keys
         - Everthing strings
         """
-        log_data = self._obscure_private_keys(log_data)
-        log_data = self._rename_protected_keys(log_data)
-        log_data = self._stringify_dict(log_data)
-        return log_data
+        obscured = self._obscure_private_keys(unsafe_dict)
+        no_protected = self._rename_protected_keys(obscured)
+        return self._string_params(no_protected)
 
     @staticmethod
     def _get_log_level(alert):
@@ -537,9 +526,9 @@ class Loggo(object):
             return
 
         # check for errors (can there even be any?)
-        if sys.exc_info() != (None, None, None):
-            trace = sys.exc_info()
-            log_data['trace'] = traceback.format_exception(*trace)
+        trace = extra.get('traceback')
+        if trace:
+            log_data['traceback'] = trace
 
         # translate log levels to an integer --- things to fix here still
         log_level = self._get_log_level(alert)
@@ -549,17 +538,17 @@ class Loggo(object):
 
         log_data['alert'] = alert
 
+        # print or write log lines
         line = None
         if self.do_print or self.do_write:
-            line = self._build_string(message, alert, traceback=log_data.get('trace'))
-
+            line = self._build_string(message, alert, traceback=trace)
         if self.do_print:
             print(line)
-
         if self.do_write:
             logfile = self.get_logfile()
             self.write_to_file(line, logfile)
 
+        # the only actual call to logging module!
         try:
             self.logger.log(log_level, message, extra=log_data)
         except Exception as error:
