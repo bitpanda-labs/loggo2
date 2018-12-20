@@ -318,17 +318,17 @@ class Loggo(object):
             return self.logme(func)
         return func
 
-    def _represent_return_value(self, response):
+    def _represent_return_value(self, response, truncate=140):
         """
         Make a string representation of whatever a method returns
         """
         representable = (int, float, str, list, set, dict, type(None), bool, tuple)
         if isinstance(response, representable):
-            return '({})'.format(self._force_string_and_truncate(response, 70))
+            return '({})'.format(self._force_string_and_truncate(response, truncate, use_repr=True))
         # some custom handling for request response objects
         content = getattr(response, 'content', False)
         if content:
-            return '({})'.format(self._force_string_and_truncate(content.decode('utf-8'), 70))
+            return '({})'.format(self._force_string_and_truncate(content.decode('utf-8'), truncate, use_repr=True))
         # fallback, should not happen
         return ''
 
@@ -368,6 +368,9 @@ class Loggo(object):
 
         msg = unformatted_message.format(**formatters).replace('  ', ' ')
         level = 'dev' if where == 'error' else None
+
+        if where == 'post':
+            formatters['return_value'] = self._represent_return_value(returned, truncate=False)
 
         # make the log data
         log_data = {**formatters, **safe_log_data}
