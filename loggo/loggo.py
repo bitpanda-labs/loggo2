@@ -800,18 +800,18 @@ class Loggo(object):
         If there is an exception during logging, log/print it
         """
         try:
-            #print(msg, error_msg)
+            print(msg, error_msg)
             if msg != error_msg:
                 self.log(error_msg, 'dev')
                 last_chance = getattr(exception, 'message', 'Unknown error in emergency log')
                 self.log(str(last_chance), 'dev')
             else:
-                #print(msg)
-                #print('Exiting because the system is in infinite loop')
+                print(msg)
+                print('Exiting because the system is in infinite loop')
                 error_msg = str(getattr(exception, 'message', exception))
-                #print(error_msg)
+                print(error_msg)
                 raise SystemExit(1)
         except Exception as error:
-            #print('Emergency log exception')
-            #print(str(error))
+            print('Emergency log exception')
+            print(str(error))
             raise SystemExit(1)
