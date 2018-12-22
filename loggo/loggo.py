@@ -481,7 +481,8 @@ class Loggo(object):
         extra: dict of extra fields to log
         safe: do we need to sanitise extra?
         """
-        log_data = {k: v for k, v in extra.items()}
+        log_data = {k: v for k, v in self.log_data.items()}
+        log_data.update(extra)
 
         # don't log in a stopped state
         if self.stopped:
