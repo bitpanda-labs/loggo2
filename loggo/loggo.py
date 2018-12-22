@@ -177,7 +177,7 @@ class Loggo(object):
 
         # if logging has been turned off, just do nothing
         if getattr(function, '_do_not_log_this_callable', False):
-            return function(*args, **kwargs)
+            return function
 
         @wraps(function)
         def full_decoration(*args, **kwargs):
