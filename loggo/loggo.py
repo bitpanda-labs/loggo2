@@ -60,12 +60,13 @@ class Loggo(object):
         self.config = config
         self.sublogger = None
         # these things should always end up in the extra data provided to logger
-        self.log_data = dict(loggo=True, loggo_config=dict(config), sublogger=self.sublogger)
+        self.log_data = dict(loggo=True, loggo_config=dict(config))
         self.facility = config.get('facility', 'loggo')
         self.ip = config.get('ip')
         self.port = config.get('port')
         self.do_print = config.get('do_print')
         self.do_write = config.get('do_write')
+        self.raise_logging_errors = config.get('raise_logging_errors', False)
         self.logfile = config.get('logfile', './logs/logs.txt')
         self.line_length = config.get('line_length', 200)
         self.obscured = config.get('obscure', '[PRIVATE_DATA]')
@@ -187,6 +188,11 @@ class Loggo(object):
             Args and kwargs are for/from the decorated function
             """
             bound = self._params_to_dict(function, *args, **kwargs)
+            # bound will be none if inspect signature binding failed. in this
+            # case, error log was created, raised if self.raise_logging_errors
+            if bound is None:
+                return function(*args, **kwargs)
+
             param_strings = self.sanitise(bound)
             signature, formatters = self._make_call_signature(function, param_strings)
             privates = [key for key in param_strings if key not in bound]
@@ -253,8 +259,6 @@ class Loggo(object):
                 extra = dict(record.__dict__)
                 [extra.pop(attrib, None) for attrib in attributes]
                 alert = extra.get('alert')
-                loggo_self.log_data['sublogger'] = facility
-                loggo_self.sublogger = facility
                 extra['sublogger'] = facility
                 loggo_self.log(record.msg, alert, extra)
         other_loggo = logging.getLogger(facility)
@@ -273,8 +277,16 @@ class Loggo(object):
             bound.pop('cls', None)
             return bound
         except (ValueError, TypeError) as error:
-            self._generate_log('error', error, function, 'callable')
-            return dict()
+            modul = getattr(function, '__module__', 'unknown_module')
+            call = getattr(function, '__name__', 'unknown_callable')
+            call_sig = '{}.{}(<logging-error>)'.format(modul, call)
+            formatters = dict(call_signature=call_sig,
+                              error_type=str(type(error)),
+                              error_string=str(error),
+                              modul=modul)
+            self._generate_log('error', error, formatters, dict())
+            if self.raise_logging_errors:
+                raise error
 
     def _obscure_private_keys(self, dictionary, dict_depth=0):
         """
