@@ -60,7 +60,7 @@ class Loggo(object):
         self.config = config
         self.sublogger = None
         # these things should always end up in the extra data provided to logger
-        self.log_data = dict(loggo=True, loggo_config=dict(config))
+        self.log_data = dict(loggo=True, loggo_config=dict(config), sublogger=self.sublogger)
         self.facility = config.get('facility', 'loggo')
         self.ip = config.get('ip')
         self.port = config.get('port')
