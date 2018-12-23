@@ -58,9 +58,8 @@ class Loggo(object):
         self.stopped = False
         self.allow_errors = True
         self.config = config
-        self.sublogger = None
         # these things should always end up in the extra data provided to logger
-        self.log_data = dict(loggo=True, loggo_config=dict(config), sublogger=self.sublogger)
+        self.log_data = dict(loggo=True, loggo_config=dict(config))
         self.facility = config.get('facility', 'loggo')
         self.ip = config.get('ip')
         self.port = config.get('port')
@@ -71,6 +70,8 @@ class Loggo(object):
         self.line_length = config.get('line_length', 200)
         self.obscured = config.get('obscure', '[PRIVATE_DATA]')
         self.private_data = set(config.get('private_data', set()))
+        self.no_graylog_disable_log = False
+
         self.logger = logging.getLogger(self.facility)  # pylint: disable=no-member
         self.logger.setLevel(logging.DEBUG)
         self.add_handler()
@@ -259,8 +260,6 @@ class Loggo(object):
                 extra = dict(record.__dict__)
                 [extra.pop(attrib, None) for attrib in attributes]
                 alert = extra.get('alert')
-                loggo_self.log_data['sublogger'] = facility
-                loggo_self.sublogger = facility
                 extra['sublogger'] = facility
                 loggo_self.log(record.msg, alert, extra)
         other_loggo = logging.getLogger(facility)
