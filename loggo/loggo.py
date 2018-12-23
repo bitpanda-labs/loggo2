@@ -364,7 +364,7 @@ class Loggo(object):
 
         # make the log data
         log_data = {**formatters, **safe_log_data}
-        log_data['exc_info'] = True if where == 'error' else False
+        log_data['except'] = True if where == 'error' else False
         custom_log_data = self.add_custom_log_data()
         log_data.update(custom_log_data)
 
@@ -443,7 +443,7 @@ class Loggo(object):
         """
         out = dict()
         # names that logger will not like
-        protected = {'name', 'message', 'asctime', 'msg', 'module', 'args'}
+        protected = {'name', 'message', 'asctime', 'msg', 'module', 'args', 'exc_info'}
         for key, value in log_data.items():
             if key in protected:
                 key = 'protected_' + key
