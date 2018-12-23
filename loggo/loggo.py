@@ -256,7 +256,7 @@ class Loggo(object):
                 loggo_self.log_data['sublogger'] = facility
                 loggo_self.sublogger = facility
                 extra['sublogger'] = facility
-                loggo_self.log(record.msg, alert, data=extra)
+                loggo_self.log(record.msg, alert, extra)
         other_loggo = logging.getLogger(facility)
         other_loggo.setLevel(logging.DEBUG)
         other_loggo.addHandler(LoggoHandler())
