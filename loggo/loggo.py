@@ -51,7 +51,10 @@ class Loggo(object):
     provided, nothing is censored
       some sensible defaults are used
     """
-    def __init__(self, config={}):
+    def __init__(self, config=None):
+        if config is None:
+            config = {}
+
         self.stopped = False
         self.allow_errors = True
         self.config = config
@@ -91,8 +94,6 @@ class Loggo(object):
         self.allow_errors = allow_errors
         try:
             yield self
-        except Exception as error:
-            raise error
         finally:
             self.allow_errors, self.stopped = original
 
@@ -103,10 +104,9 @@ class Loggo(object):
         """
         original = self.allow_errors, self.stopped
         self.stopped = False
+        self.allow_errors = allow_errors
         try:
             yield self
-        except Exception as error:
-            raise error
         finally:
             self.allow_errors, self.stopped = original
 
@@ -118,8 +118,6 @@ class Loggo(object):
         original = self.allow_errors, self.stopped
         try:
             yield self
-        except Exception as error:
-            raise error
         finally:
             self.allow_errors, self.stopped = original
 
@@ -472,7 +470,7 @@ class Loggo(object):
             return alert
         return 20
 
-    def log(self, message, alert=None, extra={}, safe=False):
+    def log(self, message, alert=None, extra=None, safe=False):
         """
         Main logging method, called both in auto logs and manually by user
 
@@ -481,6 +479,9 @@ class Loggo(object):
         extra: dict of extra fields to log
         safe: do we need to sanitise extra?
         """
+        if extra is None:
+            extra = {}
+
         log_data = {k: v for k, v in self.log_data.items()}
         log_data.update(extra)
 
