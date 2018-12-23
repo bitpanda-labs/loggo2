@@ -3,7 +3,7 @@
 # Logging utilities for Python projects
 
 <!--- Don't edit the version line below manually. Let bump2version do it for you. -->
-> Version 1.6.1
+> Version 2.0.0
 
 
 > This module provides ways of logging the input, output and errors in classes and functions It can be hooked up to graylog, printed to console or saved to a log file. It requires very little configuration.
@@ -21,7 +21,7 @@ python setup.py install
 Setting up the tool as you like requires a small amount of configuration. Put this in the main `__init__.py`, or in a file called `log.py`. so you can import the same, ready-set-up logger easily. Let's call our app `tester`, so you would use `tester/__init__.py`:
 
 ```python
-from loggo import Loggo, LoggedException
+from loggo import Loggo
 # All setup values are optional
 setup = dict(facility='tester',             # name of program logging the message
              ip='0.0.0.0',                  # ip for graylog
@@ -34,17 +34,14 @@ setup = dict(facility='tester',             # name of program logging the messag
              obscured='[[[PRIVATE_DATA]]]') # string with which to obscure data
 Loggo = Loggo(setup)
 log = Loggo.log
-LoggedException.log = log
 ```
-
-What you've done here is instantiated a logger with the given settings, and then attached this specific logger to the `LoggedException`
 
 ## Usage
 
 In other parts of the project, you should then be able to access the configured logger components with:
 
 ```python
-from tester import Loggo, LoggedException, log
+from tester import Loggo, log
 ```
 
 ### Decorators
@@ -142,19 +139,6 @@ You can suppresss logs using a context manager. Errors are allowed here by defau
 with Loggo.pause(allow_errors=False):
     do_something()
 ```
-
-### LoggedException
-
-`LoggedException` is an `Exception` that will log itself before raising. Like other exceptions, it takes a `message` parameter, but you can also include some extra information:
-
-```python
-if True:
-    alert_level = 'dev'
-    raise LoggedException('Boom!', alert_level, exception=AttributeError, **kwargs)
-    # 11.05 2018 17:40:05 Boom!   dev
-```
-
-Notably, you can choose the exception type to be raised. Also, any keyword arguments are treated as extra data for the logger. Also bear in mind that if a class or function is decorated with `Loggo`, errors are automatically logged, so `LoggedException` is best used when you aren't already relying on `Loggo` decorators already.
 
 ## Tests
 
