@@ -47,10 +47,14 @@ class Loggo(object):
     - do_print: print logs to console
     - do_write: write logs to file
     - line_length: max length for console printed string
-    - private_data: key names that should be filtered out of logging
+    - private_data: key names that should be filtered out of logging. when not
+    provided, nothing is censored
       some sensible defaults are used
     """
-    def __init__(self, config={}):
+    def __init__(self, config=None):
+        if config is None:
+            config = {}
+
         self.stopped = False
         self.allow_errors = True
         self.config = config
@@ -58,14 +62,14 @@ class Loggo(object):
         # these things should always end up in the extra data provided to logger
         self.log_data = dict(loggo=True, loggo_config=dict(config), sublogger=self.sublogger)
         self.facility = config.get('facility', 'loggo')
-        self.ip = config.get('ip', None)
-        self.port = config.get('port', None)
-        self.do_print = config.get('do_print', False)
-        self.do_write = config.get('do_write', False)
+        self.ip = config.get('ip')
+        self.port = config.get('port')
+        self.do_print = config.get('do_print')
+        self.do_write = config.get('do_write')
         self.logfile = config.get('logfile', './logs/logs.txt')
         self.line_length = config.get('line_length', 200)
         self.obscured = config.get('obscure', '[PRIVATE_DATA]')
-        self.private_data = config.get('private_data')
+        self.private_data = set(config.get('private_data', set()))
         self.logger = logging.getLogger(self.facility)  # pylint: disable=no-member
         self.logger.setLevel(logging.DEBUG)
         self.add_handler()
@@ -90,8 +94,6 @@ class Loggo(object):
         self.allow_errors = allow_errors
         try:
             yield self
-        except Exception as error:
-            raise error
         finally:
             self.allow_errors, self.stopped = original
 
@@ -102,10 +104,9 @@ class Loggo(object):
         """
         original = self.allow_errors, self.stopped
         self.stopped = False
+        self.allow_errors = allow_errors
         try:
             yield self
-        except Exception as error:
-            raise error
         finally:
             self.allow_errors, self.stopped = original
 
@@ -117,8 +118,6 @@ class Loggo(object):
         original = self.allow_errors, self.stopped
         try:
             yield self
-        except Exception as error:
-            raise error
         finally:
             self.allow_errors, self.stopped = original
 
@@ -176,14 +175,7 @@ class Loggo(object):
 
         # if logging has been turned off, just do nothing
         if getattr(function, '_do_not_log_this_callable', False):
-
-            @wraps(function)
-            def unlogged(*args, **kwargs):
-                """
-                A dummy decorator to be used if _do_not_log_this_callable is set
-                """
-                return function(*args, **kwargs)
-            return unlogged
+            return function
 
         @wraps(function)
         def full_decoration(*args, **kwargs):
@@ -291,11 +283,9 @@ class Loggo(object):
         if not self.private_data:
             return dictionary
 
-        keys_set = set(self.private_data)  # Just an optimization for the "if key in keys" lookup.
-
         modified_dict = dict()
         for key, value in dictionary.items():
-            if key in keys_set:
+            if key in self.private_data:
                 modified_dict[key] = self.obscured
             else:
                 # recursive for embedded dictionaries
@@ -480,7 +470,7 @@ class Loggo(object):
             return alert
         return 20
 
-    def log(self, message, alert=None, extra={}, safe=False):
+    def log(self, message, alert=None, extra=None, safe=False):
         """
         Main logging method, called both in auto logs and manually by user
 
@@ -489,7 +479,11 @@ class Loggo(object):
         extra: dict of extra fields to log
         safe: do we need to sanitise extra?
         """
-        log_data = {k: v for k, v in extra.items()}
+        if extra is None:
+            extra = {}
+
+        log_data = {k: v for k, v in self.log_data.items()}
+        log_data.update(extra)
 
         # don't log in a stopped state
         if self.stopped:
