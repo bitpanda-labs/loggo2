@@ -6,7 +6,8 @@ This log should always be updated when doing backwards incompatible changes, res
 2.0.0
 -----
 - Changed
-    - Major refactor
+    - Major refactor, affecting numerous call signatures
 
 - Removed
     - LoggedException
+    - colours

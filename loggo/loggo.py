@@ -1,5 +1,5 @@
 """
-Loggo: decorators for logging
+Loggo: safe and automatable logging
 """
 
 import inspect
