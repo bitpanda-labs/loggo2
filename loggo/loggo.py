@@ -496,8 +496,7 @@ class Loggo(object):
         if extra is None:
             extra = {}
 
-        log_data = {k: v for k, v in self.log_data.items()}
-        log_data.update(extra)
+        log_data = {**self.log_data, **extra}
 
         # don't log in a stopped state
         if self.stopped:
@@ -508,11 +507,6 @@ class Loggo(object):
 
         if callable_name in {'add_handler', 'log'}:
             return
-
-        # check for errors (can there even be any?)
-        trace = extra.get('traceback')
-        if trace:
-            log_data['traceback'] = trace
 
         # translate log levels to an integer --- things to fix here still
         log_level = self._get_log_level(alert)
@@ -525,7 +519,7 @@ class Loggo(object):
         # print or write log lines
         line = None
         if self.do_print or self.do_write:
-            line = self._build_string(message, alert, traceback=trace)
+            line = self._build_string(message, alert, traceback=extra.get('traceback'))
         if self.do_print:
             print(line)
         if self.do_write:
