@@ -259,6 +259,8 @@ class Loggo(object):
                 extra = dict(record.__dict__)
                 [extra.pop(attrib, None) for attrib in attributes]
                 alert = extra.get('alert')
+                loggo_self.log_data['sublogger'] = facility
+                loggo_self.sublogger = facility
                 extra['sublogger'] = facility
                 loggo_self.log(record.msg, alert, extra)
         other_loggo = logging.getLogger(facility)
