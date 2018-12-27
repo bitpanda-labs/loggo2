@@ -58,9 +58,8 @@ class Loggo(object):
         self.stopped = False
         self.allow_errors = True
         self.config = config
-        self.sublogger = None
         # these things should always end up in the extra data provided to logger
-        self.log_data = dict(loggo=True, loggo_config=dict(config), sublogger=self.sublogger)
+        self.log_data = dict(loggo=True, loggo_config=dict(config))
         self.facility = config.get('facility', 'loggo')
         self.ip = config.get('ip')
         self.port = config.get('port')
@@ -71,6 +70,8 @@ class Loggo(object):
         self.line_length = config.get('line_length', 200)
         self.obscured = config.get('obscure', '[PRIVATE_DATA]')
         self.private_data = set(config.get('private_data', set()))
+        self.no_graylog_disable_log = False
+
         self.logger = logging.getLogger(self.facility)  # pylint: disable=no-member
         self.logger.setLevel(logging.DEBUG)
         self.add_handler()
@@ -259,8 +260,6 @@ class Loggo(object):
                 extra = dict(record.__dict__)
                 [extra.pop(attrib, None) for attrib in attributes]
                 alert = extra.get('alert')
-                loggo_self.log_data['sublogger'] = facility
-                loggo_self.sublogger = facility
                 extra['sublogger'] = facility
                 loggo_self.log(record.msg, alert, extra)
         other_loggo = logging.getLogger(facility)
@@ -496,8 +495,7 @@ class Loggo(object):
         if extra is None:
             extra = {}
 
-        log_data = {k: v for k, v in self.log_data.items()}
-        log_data.update(extra)
+        log_data = {**self.log_data, **extra}
 
         # don't log in a stopped state
         if self.stopped:
@@ -508,11 +506,6 @@ class Loggo(object):
 
         if callable_name in {'add_handler', 'log'}:
             return
-
-        # check for errors (can there even be any?)
-        trace = extra.get('traceback')
-        if trace:
-            log_data['traceback'] = trace
 
         # translate log levels to an integer --- things to fix here still
         log_level = self._get_log_level(alert)
@@ -525,7 +518,7 @@ class Loggo(object):
         # print or write log lines
         line = None
         if self.do_print or self.do_write:
-            line = self._build_string(message, alert, traceback=trace)
+            line = self._build_string(message, alert, traceback=extra.get('traceback'))
         if self.do_print:
             print(line)
         if self.do_write:
