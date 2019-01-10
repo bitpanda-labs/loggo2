@@ -474,6 +474,9 @@ class Loggo(object):
         no_protected = self._rename_protected_keys(obscured)
         return self._string_params(no_protected)
 
+    def sanitise_msg(self, msg):
+        return msg
+
     @staticmethod
     def _get_log_level(alert):
         if isinstance(alert, str):
@@ -510,6 +513,7 @@ class Loggo(object):
 
         if not safe:
             log_data = self.sanitise(log_data)
+            message = self.sanitise_msg(message)
 
         log_data['alert'] = alert
 
