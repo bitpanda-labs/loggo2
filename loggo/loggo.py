@@ -408,7 +408,7 @@ class Loggo(object):
             strung = '{} -- see below: \n{}\n'.format(strung, traceback)
         return strung.strip('\n') + '\n'
 
-    def get_logfile(self):
+    def get_logfile(self, **kwargs):
         """
         This method exists so that it can be overwritten for applications requiring
         more complex logfile choices.
@@ -419,8 +419,7 @@ class Loggo(object):
         """
         Very simple log writer, could expand. simple append the line to the file
         """
-        if not logfile:
-            logfile = self.logfile
+        logfile = logfile or self.logfile
 
         needed_dir = os.path.dirname(logfile)
         if needed_dir and not os.path.isdir(needed_dir):
@@ -492,8 +491,7 @@ class Loggo(object):
         extra: dict of extra fields to log
         safe: do we need to sanitise extra?
         """
-        if extra is None:
-            extra = {}
+        extra = extra or dict()
 
         log_data = {**self.log_data, **extra}
 
@@ -522,7 +520,7 @@ class Loggo(object):
         if self.do_print:
             print(line)
         if self.do_write:
-            logfile = self.get_logfile()
+            logfile = self.get_logfile(log_data)
             self.write_to_file(line, logfile)
 
         # the only actual call to logging module!
