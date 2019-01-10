@@ -505,7 +505,7 @@ class Loggo(object):
         # get parent function
         callable_name = inspect.stack()[1][3]
 
-        if callable_name in {'add_handler', 'log'}:
+        if callable_name in {'add_handler'}:
             return
 
         # translate log levels to an integer --- things to fix here still
