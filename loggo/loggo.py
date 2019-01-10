@@ -520,7 +520,7 @@ class Loggo(object):
         if self.do_print:
             print(line)
         if self.do_write:
-            logfile = self.get_logfile(log_data)
+            logfile = self.get_logfile(**log_data)
             self.write_to_file(line, logfile)
 
         # the only actual call to logging module!
