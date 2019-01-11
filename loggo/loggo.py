@@ -147,21 +147,23 @@ class Loggo(object):
         function._do_not_log_this_callable = True
         return function
 
-    def errors(self, function):
+    def errors(self, class_or_func):
         """
         Decorator: only log errors within a given method
         """
-        function.just_errors = True
-        return self._decorate_if_possible(function)
+        if inspect.isclass(class_or_func):
+            return self.everything(class_or_func, just_errors=True)
+        class_or_func.just_errors = True
+        return self.logme(class_or_func)
 
-    def everything(self, cls):
+    def everything(self, cls, just_errors=False):
         """
         Decorator for class, which attaches itself to any (non-dunder) methods
         """
         class Decorated(cls):
             def __getattribute__(self_or_class, name):
                 unwrapped = object.__getattribute__(self_or_class, name)
-                return self._decorate_if_possible(unwrapped)
+                return self._decorate_if_possible(unwrapped, just_errors=just_errors)
         return Decorated
 
     def logme(self, function):
@@ -226,7 +228,7 @@ class Loggo(object):
     def _string_params(self, non_private_params, use_repr=True):
         params = dict()
         for key, val in non_private_params.items():
-            safe_key = self._force_string_and_truncate(key, 50)
+            safe_key = self._force_string_and_truncate(key, 50, use_repr=False)
             safe_val = self._force_string_and_truncate(val, 1000, use_repr=use_repr)
             params[safe_key] = safe_val
         return params
@@ -307,7 +309,7 @@ class Loggo(object):
                     modified_dict[key] = value
         return modified_dict
 
-    def _decorate_if_possible(self, func):
+    def _decorate_if_possible(self, func, just_errors=False):
         """
         To be decorable, the func must be callable, and have a non-magic __name__
         """
@@ -317,6 +319,7 @@ class Loggo(object):
         if name.startswith('__') and name.endswith('__'):
             return func
         if callable(func):
+            func.just_errors = just_errors
             return self.logme(func)
         return func
 
