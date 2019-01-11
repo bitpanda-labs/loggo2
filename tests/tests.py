@@ -198,7 +198,7 @@ class TestDecoration(unittest.TestCase):
             res = function_with_private_kwarg(10, a_float=5.5, mnemonic=mnem)
             self.assertEqual(res, 10*5.5)
             (alert, logged_msg), extras = logger.call_args_list[0]
-            self.assertEqual(extras['extra']['mnemonic'], "'[PRIVATE_DATA]'")
+            self.assertEqual(extras['extra']['mnemonic'], '[PRIVATE_DATA]')
 
     def test_private_positional_removal(self):
         with patch('logging.Logger.log') as logger:
@@ -206,7 +206,7 @@ class TestDecoration(unittest.TestCase):
             res = function_with_private_arg('should not log', False)
             self.assertFalse(res)
             (alert, logged_msg), extras = logger.call_args_list[0]
-            self.assertEqual(extras['extra']['priv'], "'[PRIVATE_DATA]'")
+            self.assertEqual(extras['extra']['priv'], '[PRIVATE_DATA]')
 
 class NoRepr(object):
     """
@@ -230,8 +230,8 @@ class TestLog(unittest.TestCase):
         with patch('logging.Logger.log') as mock_log:
             self.log('fine', None, dict(name='bad', other='good'))
             (alert, msg), kwargs = mock_log.call_args
-            self.assertEqual(kwargs['extra']['protected_name'], "'bad'")
-            self.assertEqual(kwargs['extra']['other'], "'good'")
+            self.assertEqual(kwargs['extra']['protected_name'], 'bad')
+            self.assertEqual(kwargs['extra']['other'], 'good')
 
     def test_can_log(self):
         with patch('logging.Logger.log') as logger:
@@ -243,7 +243,7 @@ class TestLog(unittest.TestCase):
                 (alert, logged_msg), extras = logger.call_args
                 self.assertEqual(alert, num)
                 self.assertEqual(msg, logged_msg)
-                self.assertEqual(extras['extra']['extra'], "'data'")
+                self.assertEqual(extras['extra']['extra'], 'data')
 
     def test_write_to_file(self):
         """
@@ -306,7 +306,6 @@ class TestLog(unittest.TestCase):
                 self.log('Otherwise', None, dict(reasonable='message'))
                 print_args = printer.call_args
                 self.assertEqual(print_args, 'General log failure: Bam!')
-                self.assertEqual(kwargs, dict())
 
     def test_emergency_megafail(self):
         with patch('logging.Logger.log') as mock_log:#, \
@@ -315,8 +314,6 @@ class TestLog(unittest.TestCase):
             mock_log.side_effect = Exception('Really dead.')
             with self.assertRaises(SystemExit):
                 self.loggo._emergency_log('an error', 'different error', ValueError)
-                print_args = printer.call_args
-                self.assertTrue(msg in print_args)
 
     def test_loggo_pause(self):
         with patch('logging.Logger.log') as mock_log:
@@ -374,19 +371,6 @@ class TestLog(unittest.TestCase):
             return needed
         with self.assertRaises(TypeError):
             dummy()
-
-    # taneli error that hasn't been reproduced yet
-    # point is that inspect sig can fail with ValueError (e.g. for print)
-    #def test_uninspectable(self):
-    #    with patch('loggo.Loggo.log') as logger:
-    #        mock = Mock(autospec=True)
-    #        self.loggo._handle_error = Mock()
-    #        Loggo.log(print)
-    #        arg = mock.call_args_list[-1]
-    #        print(arg)
-
-
-
 
 
 if __name__ == '__main__':

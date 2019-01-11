@@ -223,12 +223,11 @@ class Loggo(object):
                 raise
         return full_decoration
 
-    def _string_params(self, non_private_params):
+    def _string_params(self, non_private_params, use_repr=True):
         params = dict()
         for key, val in non_private_params.items():
             safe_key = self._force_string_and_truncate(key, 50)
-
-            safe_val = self._force_string_and_truncate(val, 1000, use_repr=True)
+            safe_val = self._force_string_and_truncate(val, 1000, use_repr=use_repr)
             params[safe_key] = safe_val
         return params
 
@@ -462,7 +461,7 @@ class Loggo(object):
             out[key] = value
         return out
 
-    def sanitise(self, unsafe_dict):
+    def sanitise(self, unsafe_dict, use_repr=True):
         """
         Ensure that log data is safe to log:
 
@@ -472,7 +471,7 @@ class Loggo(object):
         """
         obscured = self._obscure_private_keys(unsafe_dict)
         no_protected = self._rename_protected_keys(obscured)
-        return self._string_params(no_protected)
+        return self._string_params(no_protected, use_repr=use_repr)
 
     def sanitise_msg(self, msg):
         return msg
@@ -512,7 +511,7 @@ class Loggo(object):
         log_level = self._get_log_level(alert)
 
         if not safe:
-            log_data = self.sanitise(log_data)
+            log_data = self.sanitise(log_data, use_repr=False)
             message = self.sanitise_msg(message)
 
         log_data['alert'] = alert
