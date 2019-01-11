@@ -198,7 +198,7 @@ class TestDecoration(unittest.TestCase):
             res = function_with_private_kwarg(10, a_float=5.5, mnemonic=mnem)
             self.assertEqual(res, 10*5.5)
             (alert, logged_msg), extras = logger.call_args_list[0]
-            self.assertEqual(extras['extra']['mnemonic'], '[PRIVATE_DATA]')
+            self.assertEqual(extras['extra']['mnemonic'], "'[PRIVATE_DATA]'")
 
     def test_private_positional_removal(self):
         with patch('logging.Logger.log') as logger:
@@ -206,7 +206,7 @@ class TestDecoration(unittest.TestCase):
             res = function_with_private_arg('should not log', False)
             self.assertFalse(res)
             (alert, logged_msg), extras = logger.call_args_list[0]
-            self.assertEqual(extras['extra']['priv'], '[PRIVATE_DATA]')
+            self.assertEqual(extras['extra']['priv'], "'[PRIVATE_DATA]'")
 
 class NoRepr(object):
     """
