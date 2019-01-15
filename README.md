@@ -113,6 +113,22 @@ Traceback (most recent call last):
 ValueError: Not authenticated!
 ```
 
+### Other decorators
+
+* `@loggo.errors` will only log exceptions
+* `@Loggo.events` allows you to pass in messages for particular events:
+
+```python
+@Loggo.events(
+              called='Log string for method call',
+              errored='Log string on exception',
+              returned='Log string for return',
+              error_alert='critical'  # alert level for errors
+              )
+def test():
+    pass
+```
+
 ### Log function
 
 The standalone `log` function takes three parameters:
@@ -122,7 +138,7 @@ alert_level = 'dev'
 extra_data = dict(some='data', that='will', be='logged')
 log('Message to log', alert_level, extra_data)
 # console: 11.05 2018 17:36:24 Message to log  dev
-# extra_data in log file
+# extra_data in log file if `do_print` setting is True
 ```
 
 It uses the configuration that has already been defined.
@@ -133,7 +149,7 @@ You can also start and stop logging with `Loggo.start()` and `Loggo.stop()`, at 
 
 ### Context manager
 
-You can suppresss logs using a context manager. Errors are allowed here by default too
+You can suppress logs using a context manager. Errors are allowed here by default too:
 
 ```python
 with Loggo.pause(allow_errors=False):
@@ -150,22 +166,40 @@ python tests.py
 ## Bumping version
 
 Version bumps should be done using the `bump2version` utility. Install it with pip:
+
 ```bash
 pip install bump2version
 ```
 
 Whenever you need to bump version, in the project root directory do:
+
 ```bash
 bump2version (major | minor | patch)
 git push <remote> <branch> --follow-tags
 ```
 
 If you don't want to remember to use the `--follow-tags` flag, you can edit your git config:
+
 ```bash
 git config --global push.followTags true
 ```
+
 After this you can simply push the version bump commit to remote as you would normally, and the tag will also be pushed.
 
 ## Limitations
 
 `Loggo` uses Python's standard library (`logging`) to ultimately generate a log. There are some gotchas when using it: for instance, in terms of the extra data that can be passed in, key names for this extra data cannot clash with some internal names used within the `logging` module (`message`, `args`, etc.). To get around this, you'll get a warning that your data contains a bad key name, and it will be changed (i.e. from `message` to `protected_message`).
+
+Another current limitation is that Loggo when used as class decorator may not correctly handle static methods on uninstantiated classes. To get around this, decorate the method itself:
+
+```python
+class NeverInstantiate(object):
+
+    @staticmethod
+    @Loggo
+    def static_process():
+        return True
+
+# this will log ok
+assert NeverInstantiate.static_process()
+```
