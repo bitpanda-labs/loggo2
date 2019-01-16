@@ -12,15 +12,17 @@ test_setup = dict(facility='LOGGO_TEST',
                   private_data=['mnemonic', 'priv'])
 Loggo = a_loggo(test_setup)
 
+
 @Loggo.logme
 def function_with_private_arg(priv, acceptable=True):
     return acceptable
+
 
 @Loggo.logme
 def function_with_private_kwarg(number, a_float=0.0, mnemonic=None):
     return number * a_float
 
-# we can also use loggo.__call__
+
 @Loggo
 def may_or_may_not_error_test(first, other, kwargs=None):
     """
@@ -30,6 +32,7 @@ def may_or_may_not_error_test(first, other, kwargs=None):
         raise ValueError('no good')
     else:
         return (first+other, kwargs)
+
 
 @Loggo.logme
 def aaa():
@@ -383,56 +386,56 @@ class TestLog(unittest.TestCase):
             dummy()
 
 
-class TestDecoration(unittest.TestCase):
+class TestMethods(unittest.TestCase):
 
-    def test_methods_0(self):
+    def test_methods_secret_not_called(self):
         with patch('logging.Logger.log') as logger:
             method_name = '__secret__'
             result = getattr(all_method_types, method_name)()
             self.assertTrue(result)
             logger.assert_not_called()
 
-    def test_methods_2(self):
+    def test_methods_public_instance(self):
         with patch('logging.Logger.log') as logger:
             method_name = 'public'
             result = getattr(all_method_types, method_name)()
             self.assertTrue(result)
-            logger.assert_called_once()
+            self.assertEqual(logger.call_count, 2)
 
-    def test_methods_4(self):
+    def test_methods_classmethod_instance(self):
         with patch('logging.Logger.log') as logger:
             method_name = 'cl'
             result = getattr(all_method_types, method_name)()
             self.assertTrue(result)
-            logger.assert_not_called()
+            self.assertEqual(logger.call_count, 2)
 
-    def test_methods_5(self):
+    def test_methods_classmethod_class(self):
         with patch('logging.Logger.log') as logger:
             method_name = 'cl'
             result = getattr(AllMethodTypes, method_name)()
             self.assertTrue(result)
-            logger.assert_called_once()
+            self.assertEqual(logger.call_count, 2)
 
-    def test_methods_6(self):
+    def test_methods_staticmethod_instance(self):
         with patch('logging.Logger.log') as logger:
             method_name = 'st'
             result = getattr(all_method_types, method_name)()
             self.assertTrue(result)
-            logger.assert_not_called()
+            self.assertEqual(logger.call_count, 2)
 
-    def test_methods_7(self):
+    def test_methods_staticmethod_class(self):
         with patch('logging.Logger.log') as logger:
             method_name = 'st'
             result = getattr(AllMethodTypes, method_name)()
             self.assertTrue(result)
-            logger.assert_called_once()
+            self.assertEqual(logger.call_count, 2)
 
-    def test_methods_8(self):
+    def test_methods_double_logged_instance(self):
         with patch('logging.Logger.log') as logger:
             method_name = 'doubled'
             result = getattr(all_method_types, method_name)()
             self.assertTrue(result)
-            logger.assert_not_called()
+            self.assertEqual(logger.call_count, 2)
 
 
 if __name__ == '__main__':

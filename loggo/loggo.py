@@ -74,13 +74,13 @@ class Loggo(object):
         self.logger.setLevel(logging.DEBUG)
         self.add_handler()
 
-    def _can_decorate(self, candidate):
+    def _can_decorate(self, candidate, name=None):
         """
         Decide if we can decorate a given object
 
         Must have non private name and be callable
         """
-        name = getattr('candidate', '__name__', None)
+        name = name or getattr(candidate, '__name__', None)
         if not name:
             return False
         if name.startswith('__') and name.endswith('__'):
@@ -95,10 +95,16 @@ class Loggo(object):
         """
         assert inspect.isclass(cls)
         members = inspect.getmembers(cls)
-        members = {k: v for k, v in members if self._can_decorate(v)}
-        for name, candidate in members.items():
+        members = [(k, v) for k, v in members if self._can_decorate(v, name=k)]
+        for name, candidate in members:
             try:
-                setattr(cls, name, decorator(candidate, just_errors=just_errors))
+                # somehow, decorating classmethods as staticmethods is
+                # the only way to make it work!?
+                if isinstance(cls.__dict__[name], (staticmethod, classmethod)):
+                    deco = staticmethod(decorator(candidate, just_errors=just_errors))
+                else:
+                    deco = decorator(candidate, just_errors=just_errors)
+                setattr(cls, name, deco)
             except AttributeError:
                 pass
             except Exception:
@@ -203,12 +209,12 @@ class Loggo(object):
             def wrapper(*args, **kwargs):
                 bound = self._params_to_dict(function, *args, **kwargs)
                 if bound is None:
-                    return self._safe_run_callable(function, args, kwargs)
+                    return function(*args, **kwargs)
                 param_strings = self.sanitise(bound)
                 if isinstance(called, str):
                     self.log(called, None, param_strings)
                 try:
-                    ret = self._safe_run_callable(function, args, kwargs)
+                    ret = function(*args, **kwargs)
                     if isinstance(returned, str):
                         param_strings['return_value'] = self._represent_return_value(ret)
                         param_strings['return_type'] = type(ret).__name__
@@ -221,22 +227,6 @@ class Loggo(object):
                         self.log(errored, error_alert, param_strings)
             return wrapper
         return real_decorator
-
-    @staticmethod
-    def _safe_run_callable(func, args, kwargs):
-        """
-        Run a function correctly, accounting for inability to pass args
-        """
-        if not args and not kwargs:
-            return func()
-        elif args and not kwargs:
-            return func(*args)
-        elif kwargs and not args:
-            return func(**kwargs)
-        elif args and kwargs:
-            return func(*args, **kwargs)
-        else:
-            raise ValueError('Could not figure out how to call method')
 
     def logme(self, function, just_errors=False):
         """
@@ -266,7 +256,7 @@ class Loggo(object):
             # bound will be none if inspect signature binding failed. in this
             # case, error log was created, raised if self.raise_logging_errors
             if bound is None:
-                return self._safe_run_callable(function, args, kwargs)
+                return function(*args, **kwargs)
 
             param_strings = self.sanitise(bound)
             signature, formatters = self._make_call_signature(function, param_strings)
@@ -284,7 +274,7 @@ class Loggo(object):
 
             try:
                 # where the original function is actually run
-                response = self._safe_run_callable(function, args, kwargs)
+                response = function(*args, **kwargs)
                 where = 'post' if response is not None else 'noreturn'
                 # the successful return log
                 if not just_errors:
@@ -346,9 +336,10 @@ class Loggo(object):
         """
         sig = inspect.signature(function)
         bound = sig.bind(*args, **kwargs).arguments
-        # these names are for methods and classmethods, don't need
-        # bound.pop('self', None)
-        # bound.pop('cls', None)
+        # todo: remove these only if they are first and if the method
+        # type is correct
+        bound.pop('self', None)
+        bound.pop('cls', None)
         return bound
 
     def _obscure_private_keys(self, dictionary, dict_depth=0):
@@ -573,6 +564,7 @@ class Loggo(object):
         if self.do_print:
             print(line)
         if self.do_write:
+            log_data.pop('self', None)
             logfile = self.get_logfile(**log_data)
             self.write_to_file(line, logfile)
 
