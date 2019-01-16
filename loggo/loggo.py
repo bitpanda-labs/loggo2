@@ -20,7 +20,7 @@ LOG_LEVELS = dict(critical='CRITICAL',
 
 MAX_DICT_DEPTH = 5
 
-# you don't need graylog installed, but it is really powerful
+# you don't need graylog installed
 try:
     import graypy
 except ImportError:
@@ -49,14 +49,14 @@ class Loggo(object):
     - line_length: max length for console printed string
     - private_data: key names that should be filtered out of logging. when not
     provided, nothing is censored
-      some sensible defaults are used
+    - raise_logging_errors: should Loggo errors be allowed to happen?
+    - obscure: a string to use instead of any private data
     """
     def __init__(self, config=None):
         config = config or dict()
         self.stopped = False
         self.allow_errors = True
         self.config = config
-        # these things should always end up in the extra data provided to logger
         self.log_data = dict(loggo=True, loggo_config=dict(config))
         self.facility = config.get('facility', 'loggo')
         self.ip = config.get('ip')
@@ -69,7 +69,6 @@ class Loggo(object):
         self.obscured = config.get('obscure', '[PRIVATE_DATA]')
         self.private_data = set(config.get('private_data', set()))
         self.no_graylog_disable_log = False
-
         self.logger = logging.getLogger(self.facility)  # pylint: disable=no-member
         self.logger.setLevel(logging.DEBUG)
         self.add_handler()
@@ -97,29 +96,31 @@ class Loggo(object):
         members = inspect.getmembers(cls)
         members = [(k, v) for k, v in members if self._can_decorate(v, name=k)]
         for name, candidate in members:
+            deco = decorator(candidate, just_errors=just_errors)
+            # somehow, decorating classmethods as staticmethods is the only way
+            # to make everything work properly. we should find out why, some day
+            if isinstance(cls.__dict__[name], (staticmethod, classmethod)):
+                deco = staticmethod(deco)
             try:
-                # somehow, decorating classmethods as staticmethods is
-                # the only way to make it work!?
-                if isinstance(cls.__dict__[name], (staticmethod, classmethod)):
-                    deco = staticmethod(decorator(candidate, just_errors=just_errors))
-                else:
-                    deco = decorator(candidate, just_errors=just_errors)
                 setattr(cls, name, deco)
+            # AttributeError happens if we can't write, as with __dict__
             except AttributeError:
                 pass
+            # Unknown exceptions should currently raise
             except Exception:
                 raise
         return cls
 
     def __call__(self, class_or_func):
         """
-        Make Loggo itself a decorator of either a class or a method/function. so
-        you can just use @Loggo on everything
+        Make Loggo itself a decorator of either a class or a method/function, so
+        you can just use @Loggo on both classes and functions
         """
         if inspect.isclass(class_or_func):
             return self._decorate_all_methods(class_or_func, self.logme)
         if self._can_decorate(class_or_func):
             return self.logme(class_or_func)
+        return class_or_func
 
     @contextmanager
     def pause(self, allow_errors=True):
@@ -138,7 +139,9 @@ class Loggo(object):
     @contextmanager
     def verbose(self, allow_errors=True):
         """
-        Context manager that makes, rather than suppresses, msgs
+        Context manager that makes, rather than suppresses, logs. The only real
+        use case for this is rare---the user has put the logger in a stopped
+        state, but wants to log something within the otherwise stopped section
         """
         original = self.allow_errors, self.stopped
         self.stopped = False
@@ -197,12 +200,11 @@ class Loggo(object):
 
         Example:
 
-        @Loggo.events(
-                      called='Log string for method call',
+        @Loggo.events(called='Log string for method call',
                       errored='Log string on exception',
                       returned='Log string for return',
-                      error_alert='critical'  # alert level for errors
-                      )
+                      error_alert='critical')  # alert level for errors
+        def f():  # ...
         """
         def real_decorator(function):
             @wraps(function)
@@ -211,17 +213,18 @@ class Loggo(object):
                 if bound is None:
                     return function(*args, **kwargs)
                 param_strings = self.sanitise(bound)
-                if isinstance(called, str):
+                if called:
                     self.log(called, None, param_strings)
                 try:
                     ret = function(*args, **kwargs)
-                    if isinstance(returned, str):
-                        param_strings['return_value'] = self._represent_return_value(ret)
+                    if returned:
+                        ret_rep = self._represent_return_value(ret)
+                        param_strings['return_value'] = ret_rep
                         param_strings['return_type'] = type(ret).__name__
                         self.log(returned, None, param_strings)
                         return ret
                 except Exception as error:
-                    if isinstance(errored, str):
+                    if errored:
                         param_strings['error'] = str(error)
                         param_strings['trace'] = traceback.format_exc()
                         self.log(errored, error_alert, param_strings)
@@ -289,6 +292,9 @@ class Loggo(object):
         return full_decoration
 
     def _string_params(self, non_private_params, use_repr=True):
+        """
+        Turn every entry in log_data into truncated strings
+        """
         params = dict()
         for key, val in non_private_params.items():
             safe_key = self._force_string_and_truncate(key, 50, use_repr=False)
@@ -297,6 +303,9 @@ class Loggo(object):
         return params
 
     def _make_call_signature(self, function, param_strings):
+        """
+        Represent the call as a string mimicking how it is written in Python
+        """
         signature = '{modul}.{callable}({params})'
         param_str = ', '.join('{}={}'.format(k, v) for k, v in param_strings.items())
         format_strings = dict(modul=getattr(function, '__module__', 'unknown_module'),
@@ -336,10 +345,12 @@ class Loggo(object):
         """
         sig = inspect.signature(function)
         bound = sig.bind(*args, **kwargs).arguments
-        # todo: remove these only if they are first and if the method
-        # type is correct
-        bound.pop('self', None)
-        bound.pop('cls', None)
+        if bound:
+            first = list(bound)[0]
+            if first == 'self':
+                bound.pop('self')
+            elif first == 'cls':
+                bound.pop('cls')
         return bound
 
     def _obscure_private_keys(self, dictionary, dict_depth=0):
@@ -356,7 +367,8 @@ class Loggo(object):
             else:
                 # recursive for embedded dictionaries
                 if isinstance(value, dict) and dict_depth < MAX_DICT_DEPTH:
-                    modified_dict[key] = self._obscure_private_keys(value, dict_depth + 1)
+                    recursed = self._obscure_private_keys(value, dict_depth + 1)
+                    modified_dict[key] = recursed
                 else:
                     modified_dict[key] = value
         return modified_dict
@@ -379,10 +391,10 @@ class Loggo(object):
         """
         generate message, level and log data for automated logs
 
-        `where`: 'pre'/'post'/'noreturn'/'error'
-        `returned`: what the decorated callable returned
-        `formatters`: dict containing format strings needed for message
-        `safe_log_data`: dict of stringified, truncated, censored parameters
+        where (str): 'pre'/'post'/'noreturn'/'error' --- the auto-log type
+        returned (ANY): what the decorated callable returned
+        formatters (dict): dict containing format strings needed for message
+        safe_log_data (bool): dict of stringified, truncated, censored parameters
         """
         # if errors not to be shown and this is an error, quit
         if not self.allow_errors and where == 'error':
@@ -401,23 +413,23 @@ class Loggo(object):
 
         # return value for log message
         if where == 'post':
-            formatters['return_value'] = self._represent_return_value(returned)
+            ret_str = self._represent_return_value(returned, truncate=False)
+            formatters['return_value'] = ret_str
             formatters['return_type'] = type(returned).__name__
 
-        # if what is returned is an exception, do some special handling:
+        # if what is 'returned' is an exception, get the error formatters
         if where == 'error':
             formatters['error_type'] = returned.__class__.__name__
             formatters['error_string'] = str(returned)
 
+        # format the string template
         msg = unformatted_message.format(**formatters).replace('  ', ' ')
-        level = 'dev' if where == 'error' else None
 
-        if where == 'post':
-            formatters['return_value'] = self._represent_return_value(returned, truncate=False)
+        # decide on alert level
+        level = 'dev' if where == 'error' else None
 
         # make the log data
         log_data = {**formatters, **safe_log_data}
-        log_data['except'] = True if where == 'error' else False
         custom_log_data = self.add_custom_log_data()
         log_data.update(custom_log_data)
 
@@ -460,7 +472,6 @@ class Loggo(object):
         Very simple log writer, could expand. simple append the line to the file
         """
         logfile = logfile or self.logfile
-
         needed_dir = os.path.dirname(logfile)
         if needed_dir and not os.path.isdir(needed_dir):
             os.makedirs(os.path.dirname(logfile))
@@ -471,10 +482,10 @@ class Loggo(object):
         """
         Add a handler for Graylog
         """
-        if not self.ip or not self.port or not graypy and not self.no_graylog_disable_log:  # pylint: disable=no-member
+        if not self.ip or not self.port or not graypy and not self.no_graylog_disable_log:
             self.log('Graylog not configured! Disabling it', 'dev')
             return
-        handler = graypy.GELFHandler(self.ip, self.port, debugging_fields=False)  # pylint: disable=no-member
+        handler = graypy.GELFHandler(self.ip, self.port, debugging_fields=False)
         self.logger.addHandler(handler)
 
     def _force_string_and_truncate(self, obj, max_length=30000, use_repr=False):
@@ -515,10 +526,16 @@ class Loggo(object):
         return self._string_params(no_protected, use_repr=use_repr)
 
     def sanitise_msg(self, msg):
+        """
+        Overwritable method to clean or alter log messages
+        """
         return msg
 
     @staticmethod
     def _get_log_level(alert):
+        """
+        Translate the passed in log level to an integer, default to 20
+        """
         if isinstance(alert, str):
             return getattr(logging, LOG_LEVELS.get(alert, 'INFO'))
         elif isinstance(alert, int):
@@ -530,23 +547,17 @@ class Loggo(object):
         Main logging method, called both in auto logs and manually by user
 
         message: string to log
-        alert: numerical priority of log
+        alert: str/int priority of log
         extra: dict of extra fields to log
         safe: do we need to sanitise extra?
         """
-        extra = extra or dict()
-
-        log_data = {**self.log_data, **extra}
-
         # don't log in a stopped state
         if self.stopped:
             return
 
-        # get parent function
-        callable_name = inspect.stack()[1][3]
-
-        if callable_name in {'add_handler'}:
-            return
+        # make basic log data from constants and what was passed in
+        extra = extra or dict()
+        log_data = {**self.log_data, **extra}
 
         # translate log levels to an integer --- things to fix here still
         log_level = self._get_log_level(alert)
@@ -560,17 +571,20 @@ class Loggo(object):
         # print or write log lines
         line = None
         if self.do_print or self.do_write:
-            line = self._build_string(message, alert, traceback=extra.get('traceback'))
+            trace = extra.get('traceback')
+            line = self._build_string(message, alert, traceback=trace)
         if self.do_print:
             print(line)
         if self.do_write:
             log_data.pop('self', None)
+            log_data.pop('cls', None)
             logfile = self.get_logfile(**log_data)
             self.write_to_file(line, logfile)
 
-        # the only actual call to logging module!
+        # the only actual call to logging module's log method!
         try:
             self.logger.log(log_level, message, extra=log_data)
+        # it has been known to fail, e.g. when extra contains weird stuff
         except Exception:
             if self.raise_logging_errors:
                 raise
