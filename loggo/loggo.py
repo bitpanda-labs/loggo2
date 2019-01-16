@@ -165,6 +165,43 @@ class Loggo(object):
                 return self._decorate_if_possible(unwrapped, just_errors=just_errors)
         return Decorated
 
+    def events(self, called=None, returned=None, errored=None, error_alert='dev'):
+        """
+        A decorator that takes messages as arguments
+
+        Example:
+
+        @Loggo.events(
+                      called='Log string for method call',
+                      errored='Log string on exception',
+                      returned='Log string for return',
+                      error_alert='critical'  # alert level for errors
+                      )
+        """
+        def real_decorator(function):
+            @wraps(function)
+            def wrapper(*args, **kwargs):
+                bound = self._params_to_dict(function, *args, **kwargs)
+                if bound is None:
+                    return function(*args, **kwargs)
+                param_strings = self.sanitise(bound)
+                if isinstance(called, str):
+                    self.log(called, None, param_strings)
+                try:
+                    ret = function(*args, **kwargs)
+                    if isinstance(returned, str):
+                        param_strings['return_value'] = self._represent_return_value(ret)
+                        param_strings['return_type'] = type(ret).__name__
+                        self.log(returned, None, param_strings)
+                        return ret
+                except Exception as error:
+                    if isinstance(errored, str):
+                        param_strings['error'] = str(error)
+                        param_strings['trace'] = traceback.format_exc()
+                        self.log(errored, error_alert, param_strings)
+            return wrapper
+        return real_decorator
+
     def logme(self, function, just_errors=False):
         """
         This the function decorator. After having instantiated Loggo, use it as a
@@ -200,6 +237,7 @@ class Loggo(object):
             privates = [key for key in param_strings if key not in bound]
 
             # add an id and number of params for this couplet
+            formatters['decorated'] = True
             formatters['couplet'] = uuid.uuid1()
             formatters['number_of_params'] = len(args) + len(kwargs)
             formatters['private_keys'] = ', '.join(privates)
