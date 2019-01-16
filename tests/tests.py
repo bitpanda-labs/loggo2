@@ -280,7 +280,6 @@ class TestLog(unittest.TestCase):
             (alert, msg), kwargs = mock_log.call_args
             self.assertEqual('Object could not be cast to string', msg)
 
-
     def test_fail_to_add_entry(self):
         with patch('logging.Logger.log') as mock_log:
             no_string_rep = NoRepr()
@@ -291,29 +290,12 @@ class TestLog(unittest.TestCase):
             self.assertEqual(result['not_fine'], '<<Unstringable input>>')
             self.assertEqual(result['fine'], '123')
 
-    def test_emergency_log_finite(self):
+    def test_log_fail(self):
         with patch('logging.Logger.log') as mock_log:
-            self.loggo._emergency_log('an error', 'different error', ValueError)
-            (alert, msg), kwargs = mock_log.call_args
-            self.assertEqual(msg, 'Unknown error in emergency log')
-
-    def test_emergency_log_infinite(self):
-        with patch('logging.Logger.log') as mock_log, \
-                patch('loggo.Loggo.sanitise') as stringer, \
-                patch('builtins.print') as printer:
-            stringer.side_effect = Exception('Bam!')
-            with self.assertRaises(Exception):
-                self.log('Otherwise', None, dict(reasonable='message'))
-                print_args = printer.call_args
-                self.assertEqual(print_args, 'General log failure: Bam!')
-
-    def test_emergency_megafail(self):
-        with patch('logging.Logger.log') as mock_log:#, \
-                #patch('builtins.print') as printer:
-            msg = 'General log failure: Really dead.'
             mock_log.side_effect = Exception('Really dead.')
-            with self.assertRaises(SystemExit):
-                self.loggo._emergency_log('an error', 'different error', ValueError)
+            self.loggo.raise_logging_errors = True
+            with self.assertRaises(Exception):
+                self.loggo.log('Anything')
 
     def test_loggo_pause(self):
         with patch('logging.Logger.log') as mock_log:
