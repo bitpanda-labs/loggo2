@@ -52,9 +52,7 @@ class Loggo(object):
       some sensible defaults are used
     """
     def __init__(self, config=None):
-        if config is None:
-            config = {}
-
+        config = config or dict()
         self.stopped = False
         self.allow_errors = True
         self.config = config
