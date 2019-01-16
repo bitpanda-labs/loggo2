@@ -74,14 +74,46 @@ class Loggo(object):
         self.logger.setLevel(logging.DEBUG)
         self.add_handler()
 
+    def _can_decorate(self, candidate):
+        """
+        Decide if we can decorate a given object
+
+        Must have non private name and be callable
+        """
+        name = getattr('candidate', '__name__', None)
+        if not name:
+            return False
+        if name.startswith('__') and name.endswith('__'):
+            return False
+        if not callable(candidate):
+            return False
+        return True
+
+    def _decorate_all_methods(self, cls, decorator, just_errors=False):
+        """
+        Decorate all viable methods in a class
+        """
+        assert inspect.isclass(cls)
+        members = inspect.getmembers(cls)
+        members = {k: v for k, v in members if self._can_decorate(v)}
+        for name, candidate in members.items():
+            try:
+                setattr(cls, name, decorator(candidate, just_errors=just_errors))
+            except AttributeError:
+                pass
+            except Exception:
+                raise
+        return cls
+
     def __call__(self, class_or_func):
         """
         Make Loggo itself a decorator of either a class or a method/function. so
         you can just use @Loggo on everything
         """
         if inspect.isclass(class_or_func):
-            return self.everything(class_or_func)
-        return self.logme(class_or_func)
+            return self._decorate_all_methods(class_or_func, self.logme)
+        if self._can_decorate(class_or_func):
+            return self.logme(class_or_func)
 
     @contextmanager
     def pause(self, allow_errors=True):
@@ -150,18 +182,8 @@ class Loggo(object):
         Decorator: only log errors within a given method
         """
         if inspect.isclass(class_or_func):
-            return self.everything(class_or_func, just_errors=True)
+            return self._decorate_all_methods(class_or_func, just_errors=True)
         return self.logme(class_or_func, just_errors=True)
-
-    def everything(self, cls, just_errors=False):
-        """
-        Decorator for class, which attaches itself to any (non-dunder) methods
-        """
-        class Decorated(cls):
-            def __getattribute__(self_or_class, name):
-                unwrapped = object.__getattribute__(self_or_class, name)
-                return self._decorate_if_possible(unwrapped, just_errors=just_errors)
-        return Decorated
 
     def events(self, called=None, returned=None, errored=None, error_alert='dev'):
         """
@@ -181,12 +203,12 @@ class Loggo(object):
             def wrapper(*args, **kwargs):
                 bound = self._params_to_dict(function, *args, **kwargs)
                 if bound is None:
-                    return function(*args, **kwargs)
+                    return self._safe_run_callable(function, args, kwargs)
                 param_strings = self.sanitise(bound)
                 if isinstance(called, str):
                     self.log(called, None, param_strings)
                 try:
-                    ret = function(*args, **kwargs)
+                    ret = self._safe_run_callable(function, args, kwargs)
                     if isinstance(returned, str):
                         param_strings['return_value'] = self._represent_return_value(ret)
                         param_strings['return_type'] = type(ret).__name__
@@ -199,6 +221,22 @@ class Loggo(object):
                         self.log(errored, error_alert, param_strings)
             return wrapper
         return real_decorator
+
+    @staticmethod
+    def _safe_run_callable(func, args, kwargs):
+        """
+        Run a function correctly, accounting for inability to pass args
+        """
+        if not args and not kwargs:
+            return func()
+        elif args and not kwargs:
+            return func(*args)
+        elif kwargs and not args:
+            return func(**kwargs)
+        elif args and kwargs:
+            return func(*args, **kwargs)
+        else:
+            raise ValueError('Could not figure out how to call method')
 
     def logme(self, function, just_errors=False):
         """
@@ -228,7 +266,7 @@ class Loggo(object):
             # bound will be none if inspect signature binding failed. in this
             # case, error log was created, raised if self.raise_logging_errors
             if bound is None:
-                return function(*args, **kwargs)
+                return self._safe_run_callable(function, args, kwargs)
 
             param_strings = self.sanitise(bound)
             signature, formatters = self._make_call_signature(function, param_strings)
@@ -246,7 +284,7 @@ class Loggo(object):
 
             try:
                 # where the original function is actually run
-                response = function(*args, **kwargs)
+                response = self._safe_run_callable(function, args, kwargs)
                 where = 'post' if response is not None else 'noreturn'
                 # the successful return log
                 if not just_errors:
@@ -306,24 +344,12 @@ class Loggo(object):
         """
         Turn args and kwargs into an OrderedDict of {param_name: value}
         """
-        try:
-            sig = inspect.signature(function)
-            bound = sig.bind(*args, **kwargs).arguments
-            # these names are for methods and classmethods, don't need
-            bound.pop('self', None)
-            bound.pop('cls', None)
-            return bound
-        except (ValueError, TypeError) as error:
-            modul = getattr(function, '__module__', 'unknown_module')
-            call = getattr(function, '__name__', 'unknown_callable')
-            call_sig = '{}.{}(<logging-error>)'.format(modul, call)
-            formatters = dict(call_signature=call_sig,
-                              error_type=str(type(error)),
-                              error_string=str(error),
-                              modul=modul)
-            self._generate_log('error', error, formatters, dict())
-            if self.raise_logging_errors:
-                raise error
+        sig = inspect.signature(function)
+        bound = sig.bind(*args, **kwargs).arguments
+        # these names are for methods and classmethods, don't need
+        # bound.pop('self', None)
+        # bound.pop('cls', None)
+        return bound
 
     def _obscure_private_keys(self, dictionary, dict_depth=0):
         """
@@ -343,19 +369,6 @@ class Loggo(object):
                 else:
                     modified_dict[key] = value
         return modified_dict
-
-    def _decorate_if_possible(self, func, just_errors=False):
-        """
-        To be decorable, the func must be callable, and have a non-magic __name__
-        """
-        name = getattr(func, '__name__', False)
-        if not name:
-            return func
-        if name.startswith('__') and name.endswith('__'):
-            return func
-        if callable(func):
-            return self.logme(func, just_errors=just_errors)
-        return func
 
     def _represent_return_value(self, response, truncate=140):
         """

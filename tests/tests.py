@@ -35,7 +35,35 @@ def may_or_may_not_error_test(first, other, kwargs=None):
 def aaa():
     return 'this'
 
-@Loggo.everything
+
+@Loggo
+class AllMethodTypes():
+
+    def __secret__(self):
+        """a method that should never be logged"""
+        return True
+
+    def public(self):
+        """normal method"""
+        return True
+
+    @classmethod
+    def cl(cls):
+        """class method"""
+        return True
+
+    @staticmethod
+    def st():
+        """static method"""
+        return True
+
+    def doubled(self):
+        return True
+
+all_method_types = AllMethodTypes()
+
+
+@Loggo
 class DummyClass(object):
     """
     A class with regular methods, static methods and errors
@@ -353,6 +381,58 @@ class TestLog(unittest.TestCase):
             return needed
         with self.assertRaises(TypeError):
             dummy()
+
+
+class TestDecoration(unittest.TestCase):
+
+    def test_methods_0(self):
+        with patch('logging.Logger.log') as logger:
+            method_name = '__secret__'
+            result = getattr(all_method_types, method_name)()
+            self.assertTrue(result)
+            logger.assert_not_called()
+
+    def test_methods_2(self):
+        with patch('logging.Logger.log') as logger:
+            method_name = 'public'
+            result = getattr(all_method_types, method_name)()
+            self.assertTrue(result)
+            logger.assert_called_once()
+
+    def test_methods_4(self):
+        with patch('logging.Logger.log') as logger:
+            method_name = 'cl'
+            result = getattr(all_method_types, method_name)()
+            self.assertTrue(result)
+            logger.assert_not_called()
+
+    def test_methods_5(self):
+        with patch('logging.Logger.log') as logger:
+            method_name = 'cl'
+            result = getattr(AllMethodTypes, method_name)()
+            self.assertTrue(result)
+            logger.assert_called_once()
+
+    def test_methods_6(self):
+        with patch('logging.Logger.log') as logger:
+            method_name = 'st'
+            result = getattr(all_method_types, method_name)()
+            self.assertTrue(result)
+            logger.assert_not_called()
+
+    def test_methods_7(self):
+        with patch('logging.Logger.log') as logger:
+            method_name = 'st'
+            result = getattr(AllMethodTypes, method_name)()
+            self.assertTrue(result)
+            logger.assert_called_once()
+
+    def test_methods_8(self):
+        with patch('logging.Logger.log') as logger:
+            method_name = 'doubled'
+            result = getattr(all_method_types, method_name)()
+            self.assertTrue(result)
+            logger.assert_not_called()
 
 
 if __name__ == '__main__':
