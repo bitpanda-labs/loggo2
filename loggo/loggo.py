@@ -530,26 +530,6 @@ class Loggo(object):
         # the only actual call to logging module!
         try:
             self.logger.log(log_level, message, extra=log_data)
-        except Exception as error:
-            self._emergency_log('General log failure: {}'.format(str(error)), message, error)
-
-    def _emergency_log(self, error_msg, msg, exception):
-        """
-        If there is an exception during logging, log/print it
-        """
-        try:
-            print(msg, error_msg)
-            if msg != error_msg:
-                self.log(error_msg, 'dev')
-                last_chance = getattr(exception, 'message', 'Unknown error in emergency log')
-                self.log(str(last_chance), 'dev')
-            else:
-                print(msg)
-                print('Exiting because the system is in infinite loop')
-                error_msg = str(getattr(exception, 'message', exception))
-                print(error_msg)
-                raise SystemExit(1)
-        except Exception as error:
-            print('Emergency log exception')
-            print(str(error))
-            raise SystemExit(1)
+        except Exception:
+            if self.raise_logging_errors:
+                raise
