@@ -218,7 +218,7 @@ class Loggo(object):
                 try:
                     ret = function(*args, **kwargs)
                     if returned:
-                        ret_rep = self._represent_return_value(ret)
+                        ret_rep = self._represent_return_value(ret, truncate=500)
                         param_strings['return_value'] = ret_rep
                         param_strings['return_type'] = type(ret).__name__
                         self.log(returned, None, param_strings)
@@ -497,6 +497,8 @@ class Loggo(object):
         except Exception as error:
             self.log('Object could not be cast to string', 'dev', dict(error=str(error)))
             return '<<Unstringable input>>'
+        if max_length is False:
+            return obj
         # truncate and return
         return (obj[:max_length] + '...') if len(obj) > (max_length + 3) else obj
 
