@@ -397,8 +397,8 @@ class Loggo(object):
         # get the correct message
         unformatted_message = FORMS.get(where)
 
-        # add timer
-        if where != 'pre':
+        # add timer: start_time could be missing when loggo itself errors
+        if where != 'pre' and 'start_time' in formatters:
             took = '{0:.2f} seconds'.format(time.time() - formatters['start_time'])
             formatters['took'] = took
 
