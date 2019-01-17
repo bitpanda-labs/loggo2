@@ -5,6 +5,7 @@ Loggo: safe and automatable logging
 import inspect
 import logging
 import os
+import time
 import traceback
 import uuid
 from contextlib import contextmanager
@@ -239,6 +240,7 @@ class Loggo(object):
             formatters['couplet'] = uuid.uuid1()
             formatters['number_of_params'] = len(args) + len(kwargs)
             formatters['private_keys'] = ', '.join(privates)
+            formatters['start_time'] = time.time()
 
             # pre log tells you what was called and with what arguments
             if not just_errors:
@@ -394,6 +396,11 @@ class Loggo(object):
 
         # get the correct message
         unformatted_message = FORMS.get(where)
+
+        # add timer
+        if where != 'pre':
+            took = '{0:.2f} seconds'.format(time.time() - formatters['start_time'])
+            formatters['took'] = took
 
         # return value for log message
         if where == 'post':
