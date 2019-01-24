@@ -263,8 +263,9 @@ class Loggo(object):
     def _string_params(self, non_private_params, use_repr=True):
         params = dict()
         for key, val in non_private_params.items():
+            truncation = 1000 if key not in {'trace', 'traceback'} else False
             safe_key = self._force_string_and_truncate(key, 50, use_repr=False)
-            safe_val = self._force_string_and_truncate(val, 1000, use_repr=use_repr)
+            safe_val = self._force_string_and_truncate(val, truncation, use_repr=use_repr)
             params[safe_key] = safe_val
         return params
 
@@ -473,7 +474,7 @@ class Loggo(object):
         handler = graypy.GELFHandler(self.ip, self.port, debugging_fields=False)  # pylint: disable=no-member
         self.logger.addHandler(handler)
 
-    def _force_string_and_truncate(self, obj, max_length=30000, use_repr=False):
+    def _force_string_and_truncate(self, obj, truncate=30000, use_repr=False):
         """
         Return stringified and truncated obj, or log alert if not possible
         """
@@ -482,8 +483,10 @@ class Loggo(object):
         except Exception as error:
             self.log('Object could not be cast to string', 'dev', dict(error=str(error)))
             return '<<Unstringable input>>'
+        if truncate in {False, None}:
+            return obj
         # truncate and return
-        return (obj[:max_length] + '...') if len(obj) > (max_length + 3) else obj
+        return (obj[:truncate] + '...') if len(obj) > (truncate + 3) else obj
 
     def _rename_protected_keys(self, log_data):
         """
