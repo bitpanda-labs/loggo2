@@ -389,7 +389,7 @@ class Loggo(object):
             return
 
         # do not log loggo, because why would you ever want that?
-        if formatters['modul'] == 'loggo.loggo':
+        if formatters['callable'] == 'loggo.loggo':
             return
 
         # get the correct message
