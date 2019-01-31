@@ -103,7 +103,7 @@ class TestDecoration(unittest.TestCase):
             with self.assertRaises(ValueError):
                 first_test_func(5)
             (alert, logged_msg), extras = logger.call_args_list[-1]
-            self.assertEqual(logged_msg, '*Errored during __main__.first_test_func(number=5) with ValueError "Broken!"', logged_msg)
+            self.assertEqual(logged_msg, '*Errored during first_test_func(number=5) with ValueError "Broken!"', logged_msg)
 
     def test_log_errors(self):
         with patch('logging.Logger.log') as logger:
@@ -122,7 +122,7 @@ class TestDecoration(unittest.TestCase):
                 result = may_or_may_not_error_test('astadh', 1331)
             (alert, logged_msg), extras = logger.call_args
             self.assertEqual(alert, 40)
-            self.assertEqual(logged_msg, '*Errored during __main__.may_or_may_not_error_test(first=\'astadh\', other=1331) with ValueError "no good"', logged_msg)
+            self.assertEqual(logged_msg, '*Errored during may_or_may_not_error_test(first=\'astadh\', other=1331) with ValueError "no good"', logged_msg)
 
     def test_logme_0(self):
         """
@@ -133,39 +133,39 @@ class TestDecoration(unittest.TestCase):
             self.assertEqual(res, 5000)
             self.assertTrue(kwa)
             (alert, logged_msg), extras = logger.call_args_list[0]
-            self.assertEqual(logged_msg, '*Called __main__.may_or_may_not_error_test(first=2534, other=2466, kwargs=True)')
+            self.assertEqual(logged_msg, '*Called may_or_may_not_error_test(first=2534, other=2466, kwargs=True)')
             (alert, logged_msg), extras = logger.call_args_list[-1]
-            self.assertEqual(logged_msg, '*Returned from __main__.may_or_may_not_error_test(first=2534, other=2466, kwargs=True) with tuple ((5000, True))', logged_msg)
+            self.assertEqual(logged_msg, '*Returned from may_or_may_not_error_test(first=2534, other=2466, kwargs=True) with tuple ((5000, True))', logged_msg)
 
     def test_logme_1(self):
         with patch('logging.Logger.log') as logger:
             result = dummy.add(1, 2)
             self.assertEqual(result, 3)
             (alert, logged_msg), extras = logger.call_args_list[0]
-            self.assertEqual(logged_msg, '*Called __main__.add(a=1, b=2)')
+            self.assertEqual(logged_msg, '*Called add(a=1, b=2)')
             (alert, logged_msg), extras = logger.call_args_list[-1]
-            self.assertEqual('*Returned from __main__.add(a=1, b=2) with int (3)', logged_msg, logged_msg)
+            self.assertEqual('*Returned from add(a=1, b=2) with int (3)', logged_msg, logged_msg)
 
     def test_everything_0(self):
         with patch('logging.Logger.log') as logger:
             dummy.add_and_maybe_subtract(15, 10, 5)
             (alert, logged_msg), extras = logger.call_args_list[0]
-            self.assertEqual(logged_msg, '*Called __main__.add_and_maybe_subtract(a=15, b=10, c=5)')
+            self.assertEqual(logged_msg, '*Called add_and_maybe_subtract(a=15, b=10, c=5)')
             (alert, logged_msg), extras = logger.call_args_list[-1]
-            self.assertEqual('*Returned from __main__.add_and_maybe_subtract(a=15, b=10, c=5) with int (20)', logged_msg, logged_msg)
+            self.assertEqual('*Returned from add_and_maybe_subtract(a=15, b=10, c=5) with int (20)', logged_msg, logged_msg)
 
     def test_everything_1(self):
         with patch('logging.Logger.log') as logger:
             result = dummy.static_method(10)
             self.assertEqual(result, 100)
             (alert, logged_msg), extras = logger.call_args_list[-1]
-            self.assertEqual('*Returned from __main__.static_method(number=10) with int (100)', logged_msg, logged_msg)
+            self.assertEqual('*Returned from static_method(number=10) with int (100)', logged_msg, logged_msg)
 
     def test_everything_3(self):
         with patch('logging.Logger.log') as logger:
             result = dummy.optional_provided()
             (alert, logged_msg), extras = logger.call_args_list[0]
-            self.assertEqual(logged_msg, '*Called __main__.optional_provided()')
+            self.assertEqual(logged_msg, '*Called optional_provided()')
             (alert, logged_msg), extras = logger.call_args_list[-1]
             self.assertTrue('Returned None' in logged_msg)
 
@@ -190,7 +190,7 @@ class TestDecoration(unittest.TestCase):
             with self.assertRaises(ValueError):
                 result = dummy.hopefully_only_errors(5)
             (alert, logged_msg), extras = logger.call_args
-            self.assertEqual('*Errored during __main__.hopefully_only_errors(n=5) with ValueError "Bam!"', logged_msg, logged_msg)
+            self.assertEqual('*Errored during hopefully_only_errors(n=5) with ValueError "Bam!"', logged_msg, logged_msg)
 
     def test_private_keyword_removal(self):
         with patch('logging.Logger.log') as logger:
@@ -311,7 +311,7 @@ class TestLog(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     may_or_may_not_error_test('one', 'two')
             (alert, msg), kwargs = logger.call_args
-            self.assertEqual('*Errored during __main__.may_or_may_not_error_test(first=\'one\', other=\'two\') with ValueError "no good"', msg, msg)
+            self.assertEqual('*Errored during may_or_may_not_error_test(first=\'one\', other=\'two\') with ValueError "no good"', msg, msg)
             logger.assert_called_once()
             logger.reset()
             with self.assertRaises(ValueError):
