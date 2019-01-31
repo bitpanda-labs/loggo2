@@ -389,7 +389,7 @@ class Loggo(object):
             return
 
         # do not log loggo, because why would you ever want that?
-        if formatters['callable'] == 'loggo.loggo':
+        if 'loggo.loggo' in formatters.get('call_signature'):
             return
 
         # get the correct message
