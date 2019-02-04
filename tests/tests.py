@@ -403,50 +403,43 @@ class TestMethods(unittest.TestCase):
 
     def test_methods_secret_not_called(self):
         with patch('logging.Logger.log') as logger:
-            method_name = '__secret__'
-            result = getattr(all_method_types, method_name)()
+            result = all_method_types.__secret__()
             self.assertTrue(result)
             logger.assert_not_called()
 
     def test_methods_public_instance(self):
         with patch('logging.Logger.log') as logger:
-            method_name = 'public'
-            result = getattr(all_method_types, method_name)()
+            result = all_method_types.public()
             self.assertTrue(result)
             self.assertEqual(logger.call_count, 2)
 
     def test_methods_classmethod_instance(self):
         with patch('logging.Logger.log') as logger:
-            method_name = 'cl'
-            result = getattr(all_method_types, method_name)()
+            result = all_method_types.cl()
             self.assertTrue(result)
             self.assertEqual(logger.call_count, 2)
 
     def test_methods_classmethod_class(self):
         with patch('logging.Logger.log') as logger:
-            method_name = 'cl'
-            result = getattr(AllMethodTypes, method_name)()
+            result = AllMethodTypes.cl()
             self.assertTrue(result)
             self.assertEqual(logger.call_count, 2)
 
     def test_methods_staticmethod_instance(self):
         with patch('logging.Logger.log') as logger:
-            method_name = 'st'
-            result = getattr(all_method_types, method_name)()
+            result = all_method_types.st()
             self.assertTrue(result)
             self.assertEqual(logger.call_count, 2)
 
     def test_methods_staticmethod_class(self):
         with patch('logging.Logger.log') as logger:
-            method_name = 'st'
-            result = getattr(AllMethodTypes, method_name)()
+            result = AllMethodTypes.st()
             self.assertTrue(result)
             self.assertEqual(logger.call_count, 2)
 
     def test_methods_double_logged_instance(self):
         with patch('logging.Logger.log') as logger:
-            method_name = 'doubled'
-            result = getattr(all_method_types, method_name)()
+            result = all_method_types.doubled()
             self.assertTrue(result)
             self.assertEqual(logger.call_count, 4)
 
