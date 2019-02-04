@@ -297,8 +297,9 @@ class Loggo(object):
         """
         params = dict()
         for key, val in non_private_params.items():
+            truncation = 1000 if key not in {'trace', 'traceback'} else False
             safe_key = self._force_string_and_truncate(key, 50, use_repr=False)
-            safe_val = self._force_string_and_truncate(val, 1000, use_repr=use_repr)
+            safe_val = self._force_string_and_truncate(val, truncation, use_repr=use_repr)
             params[safe_key] = safe_val
         return params
 
@@ -306,10 +307,9 @@ class Loggo(object):
         """
         Represent the call as a string mimicking how it is written in Python
         """
-        signature = '{modul}.{callable}({params})'
+        signature = '{callable}({params})'
         param_str = ', '.join('{}={}'.format(k, v) for k, v in param_strings.items())
-        format_strings = dict(modul=getattr(function, '__module__', 'unknown_module'),
-                              callable=getattr(function, '__name__', 'unknown_callable'),
+        format_strings = dict(callable=getattr(function, '__qualname__', 'unknown_callable'),
                               params=param_str)
         formatted = signature.format(**format_strings)
         format_strings['call_signature'] = formatted
@@ -405,7 +405,7 @@ class Loggo(object):
             return
 
         # do not log loggo, because why would you ever want that?
-        if formatters['modul'] == 'loggo.loggo':
+        if 'loggo.loggo' in formatters.get('call_signature'):
             return
 
         # get the correct message
@@ -488,7 +488,7 @@ class Loggo(object):
         handler = graypy.GELFHandler(self.ip, self.port, debugging_fields=False)
         self.logger.addHandler(handler)
 
-    def _force_string_and_truncate(self, obj, max_length=30000, use_repr=False):
+    def _force_string_and_truncate(self, obj, truncate=30000, use_repr=False):
         """
         Return stringified and truncated obj, or log alert if not possible
         """
@@ -497,10 +497,10 @@ class Loggo(object):
         except Exception as error:
             self.log('Object could not be cast to string', 'dev', dict(error=str(error)))
             return '<<Unstringable input>>'
-        if max_length is False:
+        if truncate in {False, None}:
             return obj
         # truncate and return
-        return (obj[:max_length] + '...') if len(obj) > (max_length + 3) else obj
+        return (obj[:truncate] + '...') if len(obj) > (truncate + 3) else obj
 
     def _rename_protected_keys(self, log_data):
         """
