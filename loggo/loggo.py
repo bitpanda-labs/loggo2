@@ -106,9 +106,6 @@ class Loggo(object):
             # AttributeError happens if we can't write, as with __dict__
             except AttributeError:
                 pass
-            # Unknown exceptions should currently raise
-            except Exception:
-                raise
         return cls
 
     def __call__(self, class_or_func):
