@@ -270,10 +270,9 @@ class Loggo(object):
         return params
 
     def _make_call_signature(self, function, param_strings):
-        signature = '{modul}.{callable}({params})'
+        signature = '{callable}({params})'
         param_str = ', '.join('{}={}'.format(k, v) for k, v in param_strings.items())
-        format_strings = dict(modul=getattr(function, '__module__', 'unknown_module'),
-                              callable=getattr(function, '__name__', 'unknown_callable'),
+        format_strings = dict(callable=getattr(function, '__qualname__', 'unknown_callable'),
                               params=param_str)
         formatted = signature.format(**format_strings)
         format_strings['call_signature'] = formatted
@@ -390,7 +389,7 @@ class Loggo(object):
             return
 
         # do not log loggo, because why would you ever want that?
-        if formatters['modul'] == 'loggo.loggo':
+        if 'loggo.loggo' in formatters.get('call_signature'):
             return
 
         # get the correct message
