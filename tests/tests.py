@@ -35,7 +35,6 @@ def may_or_may_not_error_test(first, other, kwargs=None):
         return (first + other, kwargs)
 
 
-
 @Loggo.logme
 def aaa():
     return 'this'
@@ -62,8 +61,11 @@ class AllMethodTypes():
         """static method"""
         return True
 
+    @Loggo
     def doubled(self):
+        """Loggo twice, bad but shouldn't kill"""
         return True
+
 
 all_method_types = AllMethodTypes()
 
@@ -446,7 +448,7 @@ class TestMethods(unittest.TestCase):
             method_name = 'doubled'
             result = getattr(all_method_types, method_name)()
             self.assertTrue(result)
-            self.assertEqual(logger.call_count, 2)
+            self.assertEqual(logger.call_count, 4)
 
 
 if __name__ == '__main__':
