@@ -46,14 +46,9 @@ from tester import Loggo, log
 
 ### Decorators
 
-You can use `@Loggo` as a decorator on a class, class method or function. On classes, it will log every method (same as `Loggo.everything`), on methods and functions it will log the call signature, return and errors (the same as `Loggo.logme`)
+You can use `@Loggo` as a decorator on a class, class method or function. On classes, it will log every method; on methods and functions it will log the call signature, return and errors.
 
-`Loggo` provides a number of specific decorators:
-
-* `@Loggo.logme` will log the call, return and possible errors of a function/method
-* `@Loggo.everything` attaches the `@Loggo.logme` decorator to all methods in a class
-* `@Loggo.ignore` will not log a particular method of a class decorated by `Loggo.everything` 
-* `@Loggo.errors` will only log errors, not function calls and returns
+Furthermore, you can use `@Loggo.ignore` to ignore a particular method of a class decorated by `@Loggo`. There is also `@Loggo.errors`, which will only log errors, not calls and returns.
 
 For an example use, let's make a simple class that multiplies two numbers, but only if a password is supplied. We can ignore logging of the boring authentication system.
 
@@ -82,29 +77,29 @@ class Multiplier(object):
 First, let's use it properly, with our secret password passed in:
 
 ```python
-Mult = Multiplier(50)
-result = Mult.multiply(50, 'tOpSeCrEt')
+mult = Multiplier(50)
+result = mult.multiply(50, 'tOpSeCrEt')
 assert result == 2500 # True
 ```
 
-We'll get some nice green-coloured text in the console:
+We'll get some nice text in the console:
 
 ```
-11.05 2018 17:14:54 Called tester.multiply method with 2 args, 0 kwargs: n=int(50). 1 private arguments (password) not displayed. None
-11.05 2018 17:14:54 Returned a int (2500) from tester.multiply method None
+11.05 2018 17:14:54 *Called Multiplier.multiply(n=50, password='[PRIVATE_DATA]')
+11.05 2018 17:14:54 *Returned from Multiplier.multiply(n=50, password='[PRIVATE_DATA]') with int (2500)
 ```
 
-Notice that our private argument `password` was successfully identified and omitted. Additional information goes into `mylog.txt`, as well, but the `obscure` option `'[[[PRIVATE_DATA]]]'` is used in place of the password. If we use try to use our class with incorrect authentication:
+Notice that our private argument `password` was successfully obscured. If you used `do_write=True`, this log will also be in your specified log file, also with password obscured.
 
 ```python
 result = Mult.multiply(7, 'password123')
 ```
 
-An error will raise, and we'll get extra info in the console, including a traceback:
+An error will raise, a log will be generated and we'll get extra info in the console, including a traceback:
 
 ```
-11.05 2018 17:19:43 Called tester.multiply method with 2 args, 0 kwargs: n=int(7). 1 private arguments (password) not displayed.  None
-11.05 2018 17:19:43 Errored with ValueError "Not authenticated! Provide password" when calling tester.multiply method with 2 args, 0 kwargs: n=int(7). 1 private arguments (password) not displayed.  ... -- see below: 
+11.05 2018 17:19:43 *Called Multiplier.multiply(n=7, password='[PRIVATE_DATA]')
+11.05 2018 17:19:43 *Errored during Multiplier.multiply(n=7, password='[PRIVATE_DATA]') with ValueError "Not authenticated!"    dev -- see below:
 Traceback (most recent call last):
   File "/Users/danny/work/loggo/loggo/loggo.py", line 137, in full_decoration
     response = function(*args, **kwargs)
@@ -113,10 +108,9 @@ Traceback (most recent call last):
 ValueError: Not authenticated!
 ```
 
-### Other decorators
+### `@Loggo.events`
 
-* `@loggo.errors` will only log exceptions
-* `@Loggo.events` allows you to pass in messages for particular events:
+`@Loggo.events` allows you to pass in messages for particular events:
 
 ```python
 @Loggo.events(
@@ -189,17 +183,3 @@ After this you can simply push the version bump commit to remote as you would no
 ## Limitations
 
 `Loggo` uses Python's standard library (`logging`) to ultimately generate a log. There are some gotchas when using it: for instance, in terms of the extra data that can be passed in, key names for this extra data cannot clash with some internal names used within the `logging` module (`message`, `args`, etc.). To get around this, you'll get a warning that your data contains a bad key name, and it will be changed (i.e. from `message` to `protected_message`).
-
-Another current limitation is that Loggo when used as class decorator may not correctly handle static methods on uninstantiated classes. To get around this, decorate the method itself:
-
-```python
-class NeverInstantiate(object):
-
-    @staticmethod
-    @Loggo
-    def static_process():
-        return True
-
-# this will log ok
-assert NeverInstantiate.static_process()
-```
