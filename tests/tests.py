@@ -1,6 +1,6 @@
 import os
 import unittest
-from unittest.mock import mock_open, patch, ANY, Mock
+from unittest.mock import mock_open, patch, ANY
 
 from loggo import Loggo as a_loggo
 
@@ -148,12 +148,10 @@ class TestDecoration(unittest.TestCase):
             self.assertEqual(logged_msg, '*Errored during first_test_func(number=5) with ValueError "Broken!"', logged_msg)
 
     def test_log_errors(self):
-        with patch('logging.Logger.log') as logger:
-            with self.assertRaises(ValueError) as error:
-                with Loggo.log_errors() as loggin:
+        with patch('logging.Logger.log'):
+            with self.assertRaises(ValueError):
+                with Loggo.log_errors():
                     second_test_func(5)
-            #(alert, logged_msg), extras = logger.call_args_list[-1]
-            #self.assertTrue('*Errored with ValueError' in logged_msg)
 
     def test_one(self):
         """
@@ -161,7 +159,7 @@ class TestDecoration(unittest.TestCase):
         """
         with patch('logging.Logger.log') as logger:
             with self.assertRaisesRegex(ValueError, 'no good'):
-                result = may_or_may_not_error_test('astadh', 1331)
+                may_or_may_not_error_test('astadh', 1331)
             (alert, logged_msg), extras = logger.call_args
             self.assertEqual(alert, 40)
             self.assertEqual(logged_msg, '*Errored during may_or_may_not_error_test(first=\'astadh\', other=1331) with ValueError "no good"', logged_msg)
@@ -310,7 +308,8 @@ class TestLog(unittest.TestCase):
             self.log(msg, None, log_data)
             mock_log.assert_called_with(20, msg, extra=ANY)
             logger_was_passed = mock_log.call_args[1]['extra']['key']
-            done_by_hand = str(large_number)[:1000] + '...'
+            # 7500 here is the default self.truncation for loggo
+            done_by_hand = str(large_number)[:7500] + '...'
             self.assertEqual(logger_was_passed, done_by_hand)
 
     def test_string_truncation_fail(self):
@@ -319,7 +318,7 @@ class TestLog(unittest.TestCase):
         """
         with patch('logging.Logger.log') as mock_log:
             no_string_rep = NoRepr()
-            result = self.loggo._force_string_and_truncate(no_string_rep)
+            result = self.loggo._force_string_and_truncate(no_string_rep, 7500)
             self.assertEqual(result, '<<Unstringable input>>')
             (alert, msg), kwargs = mock_log.call_args
             self.assertEqual('Object could not be cast to string', msg)
