@@ -294,7 +294,7 @@ class Loggo(object):
         """
         params = dict()
         for key, val in non_private_params.items():
-            truncation = 1000 if key not in {'trace', 'traceback'} else False
+            truncation = 7500 if key not in {'trace', 'traceback'} else False
             safe_key = self._force_string_and_truncate(key, 50, use_repr=False)
             safe_val = self._force_string_and_truncate(val, truncation, use_repr=use_repr)
             params[safe_key] = safe_val
