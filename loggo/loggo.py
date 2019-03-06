@@ -58,7 +58,7 @@ class Loggo(object):
         self.stopped = False
         self.allow_errors = True
         self.config = config
-        self.log_data = dict(loggo=True, loggo_config=dict(config))
+        self.log_data = dict(loggo=True)
         self.facility = config.get('facility', 'loggo')
         self.ip = config.get('ip')
         self.port = config.get('port')
