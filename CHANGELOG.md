@@ -9,8 +9,8 @@ This log should always be updated when doing backwards incompatible changes, res
     - Added config option: `truncation (int)`, which determines extra data value max length
 
 - Changed
-    - Internals updated to allow auto-logging of static/class methods in uninstantiated classes
-    - `_force_string_and_truncate` `truncate` param now required
+    - Internals updated to allow auto-logging of static/class methods in uninstantiated classes.
+    - Slight reformatting of auto-generated messages (better getting of class name, no `__main__`)
 
 - Removed
     - Loggo.everything (the class decorator), now simply use Loggo
