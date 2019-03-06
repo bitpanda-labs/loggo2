@@ -30,10 +30,11 @@ setup = dict(facility='tester',             # name of program logging the messag
              do_write=True,                 # write to file
              logfile='mylog.txt',           # custom path to logfile
              line_length=200,               # line truncation for console logging
+             truncation=1000,               # longest possible value in extra data
              private_data=['password'],     # list of sensitive args/kwargs
              obscured='[[[PRIVATE_DATA]]]') # string with which to obscure data
 Loggo = Loggo(setup)
-log = Loggo.log
+log = Loggo.log # just saves you doing Loggo.log all the time...
 ```
 
 ## Usage

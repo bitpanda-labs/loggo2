@@ -305,7 +305,7 @@ class TestLog(unittest.TestCase):
         """
         with patch('logging.Logger.log') as mock_log:
             msg = 'This is simply a test of the int truncation inside the log.'
-            large_number = 10**300001
+            large_number = 10**75001
             log_data = dict(key=large_number)
             self.log(msg, None, log_data)
             mock_log.assert_called_with(20, msg, extra=ANY)
@@ -319,7 +319,7 @@ class TestLog(unittest.TestCase):
         """
         with patch('logging.Logger.log') as mock_log:
             no_string_rep = NoRepr()
-            result = self.loggo._force_string_and_truncate(no_string_rep)
+            result = self.loggo._force_string_and_truncate(no_string_rep, 7500)
             self.assertEqual(result, '<<Unstringable input>>')
             (alert, msg), kwargs = mock_log.call_args
             self.assertEqual('Object could not be cast to string', msg)

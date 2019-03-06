@@ -179,7 +179,7 @@ class Loggo(object):
     @staticmethod
     def ignore(function):
         """
-        A decorator that will override Loggo.everything, in case you do not want
+        A decorator that will override Loggo class deco, in case you do not want
         to log one particular method for some reason
         """
         function._do_not_log_this_callable = True
