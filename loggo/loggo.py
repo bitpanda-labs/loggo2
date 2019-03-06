@@ -46,6 +46,7 @@ class Loggo(object):
     - logfile: path to a file to which logs will be written
     - do_print: print logs to console
     - do_write: write logs to file
+    - truncation: truncate value of log data fields to this length
     - line_length: max length for console printed string
     - private_data: key names that should be filtered out of logging. when not
     provided, nothing is censored
@@ -63,6 +64,7 @@ class Loggo(object):
         self.port = config.get('port')
         self.do_print = config.get('do_print')
         self.do_write = config.get('do_write')
+        self.truncation = config.get('truncation', 7500)
         self.raise_logging_errors = config.get('raise_logging_errors', False)
         self.logfile = config.get('logfile', './logs/logs.txt')
         self.line_length = config.get('line_length', 200)
@@ -294,7 +296,7 @@ class Loggo(object):
         """
         params = dict()
         for key, val in non_private_params.items():
-            truncation = 7500 if key not in {'trace', 'traceback'} else False
+            truncation = self.truncation if key not in {'trace', 'traceback'} else False
             safe_key = self._force_string_and_truncate(key, 50, use_repr=False)
             safe_val = self._force_string_and_truncate(val, truncation, use_repr=use_repr)
             params[safe_key] = safe_val
@@ -485,7 +487,7 @@ class Loggo(object):
         handler = graypy.GELFHandler(self.ip, self.port, debugging_fields=False)
         self.logger.addHandler(handler)
 
-    def _force_string_and_truncate(self, obj, truncate=30000, use_repr=False):
+    def _force_string_and_truncate(self, obj, truncate, use_repr=False):
         """
         Return stringified and truncated obj, or log alert if not possible
         """
