@@ -1,3 +1,2 @@
 graypy
-colorama
 flake8
