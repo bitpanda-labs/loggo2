@@ -13,12 +13,12 @@ test_setup = dict(facility='LOGGO_TEST',
 Loggo = a_loggo(test_setup)
 
 
-@Loggo.logme
+@Loggo
 def function_with_private_arg(priv, acceptable=True):
     return acceptable
 
 
-@Loggo.logme
+@Loggo
 def function_with_private_kwarg(number, a_float=0.0, mnemonic=None):
     return number * a_float
 
@@ -35,13 +35,13 @@ def may_or_may_not_error_test(first, other, kwargs=None):
         return (first + other, kwargs)
 
 
-@Loggo.logme
+@Loggo
 def aaa():
     return 'this'
 
 
 @Loggo
-class AllMethodTypes():
+class AllMethodTypes:
 
     def __secret__(self):
         """a method that should never be logged"""
@@ -117,12 +117,12 @@ def second_test_func(number):
     raise ValueError('Broken!')
 
 
-@Loggo.logme
+@Loggo
 def test_func3(number):
     raise ValueError('Broken!')
 
 
-@Loggo.logme
+@Loggo
 def test_inner():
     try:
         test_func3(1)
@@ -391,7 +391,7 @@ class TestLog(unittest.TestCase):
 
     def test_bad_args(self):
 
-        @Loggo.logme
+        @Loggo
         def dummy(needed):
             return needed
         with self.assertRaises(TypeError):

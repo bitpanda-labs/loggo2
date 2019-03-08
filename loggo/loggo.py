@@ -90,7 +90,7 @@ class Loggo(object):
             return False
         return True
 
-    def _decorate_all_methods(self, cls, decorator, just_errors=False):
+    def _decorate_all_methods(self, cls, just_errors=False):
         """
         Decorate all viable methods in a class
         """
@@ -98,7 +98,7 @@ class Loggo(object):
         members = inspect.getmembers(cls)
         members = [(k, v) for k, v in members if self._can_decorate(v, name=k)]
         for name, candidate in members:
-            deco = decorator(candidate, just_errors=just_errors)
+            deco = self.logme(candidate, just_errors=just_errors)
             # somehow, decorating classmethods as staticmethods is the only way
             # to make everything work properly. we should find out why, some day
             if isinstance(cls.__dict__[name], (staticmethod, classmethod)):
@@ -116,7 +116,7 @@ class Loggo(object):
         you can just use @Loggo on both classes and functions
         """
         if inspect.isclass(class_or_func):
-            return self._decorate_all_methods(class_or_func, self.logme)
+            return self._decorate_all_methods(class_or_func)
         if self._can_decorate(class_or_func):
             return self.logme(class_or_func)
         return class_or_func
