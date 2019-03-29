@@ -18,8 +18,6 @@ LOG_LEVELS = dict(critical='CRITICAL',
                   info='INFO',
                   debug='DEBUG')
 
-MAX_DICT_DEPTH = 5
-
 # you don't need graylog installed
 try:
     import graypy
@@ -49,6 +47,7 @@ class Loggo(object):
     - truncation: truncate value of log data fields to this length
     - line_length: max length for console printed string
     - private_data: key names that should be filtered out of logging. when not
+    - max_dict_depth: how deep into log data loggo will look for private data
     provided, nothing is censored
     - raise_logging_errors: should Loggo errors be allowed to happen?
     - obscure: a string to use instead of any private data
@@ -70,6 +69,7 @@ class Loggo(object):
         self.line_length = config.get('line_length', 200)
         self.obscured = config.get('obscure', '[PRIVATE_DATA]')
         self.private_data = set(config.get('private_data', set()))
+        self.max_dict_depth = config.get('max_dict_depth', 5)
         self.no_graylog_disable_log = False
         self.logger = logging.getLogger(self.facility)  # pylint: disable=no-member
         self.logger.setLevel(logging.DEBUG)
@@ -352,25 +352,20 @@ class Loggo(object):
                 bound.pop('cls')
         return bound
 
-    def _obscure_private_keys(self, dictionary, dict_depth=0):
+    def _obscure_private_keys(self, log_data, dict_depth=0):
         """
         Obscure any private values in a dictionary recursively
         """
-        if not self.private_data:
-            return dictionary
+        if not isinstance(log_data, dict) or dict_depth >= self.max_dict_depth:
+            return log_data
 
-        modified_dict = dict()
-        for key, value in dictionary.items():
+        out = dict()
+        for key, value in log_data.items():
             if key in self.private_data:
-                modified_dict[key] = self.obscured
+                out[key] = self.obscured
             else:
-                # recursive for embedded dictionaries
-                if isinstance(value, dict) and dict_depth < MAX_DICT_DEPTH:
-                    recursed = self._obscure_private_keys(value, dict_depth + 1)
-                    modified_dict[key] = recursed
-                else:
-                    modified_dict[key] = value
-        return modified_dict
+                out[key] = self._obscure_private_keys(value, dict_depth + 1)
+        return out
 
     def _represent_return_value(self, response, truncate=140):
         """

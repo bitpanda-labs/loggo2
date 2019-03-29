@@ -131,6 +131,20 @@ def test_inner():
     return 1
 
 
+within = dict(lst=list(), ok=dict(ok=dict(priv='secret')))
+beyond = dict(lst=list(), ok=dict(ok=dict(ok=dict(ok=dict(ok=dict(ok=dict(priv='allowed')))))))
+
+
+@Loggo
+def test_func_with_recursive_data_beyond(data):
+    pass
+
+
+@Loggo
+def test_func_with_recursive_data_within(data):
+    pass
+
+
 dummy = DummyClass()
 
 
@@ -203,7 +217,7 @@ class TestDecoration(unittest.TestCase):
 
     def test_everything_3(self):
         with patch('logging.Logger.log') as logger:
-            result = dummy.optional_provided()
+            dummy.optional_provided()
             (alert, logged_msg), extras = logger.call_args_list[0]
             self.assertEqual(logged_msg, '*Called DummyClass.optional_provided()')
             (alert, logged_msg), extras = logger.call_args_list[-1]
@@ -228,7 +242,7 @@ class TestDecoration(unittest.TestCase):
     def test_loggo_errors(self):
         with patch('logging.Logger.log') as logger:
             with self.assertRaises(ValueError):
-                result = dummy.hopefully_only_errors(5)
+                dummy.hopefully_only_errors(5)
             (alert, logged_msg), extras = logger.call_args
             self.assertEqual('*Errored during DummyClass.hopefully_only_errors(n=5) with ValueError "Bam!"', logged_msg, logged_msg)
 
@@ -242,11 +256,22 @@ class TestDecoration(unittest.TestCase):
 
     def test_private_positional_removal(self):
         with patch('logging.Logger.log') as logger:
-            mnem = 'every good boy deserves fruit'
             res = function_with_private_arg('should not log', False)
             self.assertFalse(res)
             (alert, logged_msg), extras = logger.call_args_list[0]
             self.assertEqual(extras['extra']['priv'], "'[PRIVATE_DATA]'")
+
+    def test_private_beyond(self):
+        with patch('logging.Logger.log') as logger:
+            test_func_with_recursive_data_beyond(beyond)
+            (alert, logged_msg), extras = logger.call_args_list[0]
+            self.assertTrue('allowed' in extras['extra']['data'])
+
+    def test_private_within(self):
+        with patch('logging.Logger.log') as logger:
+            test_func_with_recursive_data_within(within)
+            (alert, logged_msg), extras = logger.call_args_list[0]
+            self.assertFalse('secret' in extras['extra']['data'])
 
 
 class NoRepr(object):
