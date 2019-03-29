@@ -356,9 +356,7 @@ class Loggo(object):
         """
         Obscure any private values in a dictionary recursively
         """
-        too_deep = dict_depth >= self.max_dict_depth
-
-        if not self.private_data or not isinstance(log_data, dict) or too_deep:
+        if not isinstance(log_data, dict) or dict_depth >= self.max_dict_depth:
             return log_data
 
         out = dict()
