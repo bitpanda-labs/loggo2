@@ -479,7 +479,7 @@ class Loggo(object):
         if not self.ip or not self.port or not graypy and not self.no_graylog_disable_log:
             self.log('Graylog not configured! Disabling it', 'dev')
             return
-        handler = graypy.GELFHandler(self.ip, self.port, debugging_fields=False)
+        handler = graypy.GELFUDPHandler(self.ip, self.port, debugging_fields=False)
         self.logger.addHandler(handler)
 
     def _force_string_and_truncate(self, obj, truncate, use_repr=False):
