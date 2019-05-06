@@ -371,15 +371,11 @@ class Loggo(object):
         """
         Make a string representation of whatever a method returns
         """
-        representable = (int, float, str, list, set, dict, type(None), bool, tuple)
-        if isinstance(response, representable):
-            return '({})'.format(self._force_string_and_truncate(response, truncate, use_repr=True))
         # some custom handling for request response objects
-        content = getattr(response, 'content', False)
-        if content:
-            return '({})'.format(self._force_string_and_truncate(content.decode('utf-8'), truncate, use_repr=True))
-        # fallback, should not happen
-        return ''
+        if type(response) == 'requests.models.Response':
+            response = response.text
+
+        return '({})'.format(self._force_string_and_truncate(response, truncate, use_repr=True))
 
     def _generate_log(self, where, returned, formatters, safe_log_data):
         """
