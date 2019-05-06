@@ -399,11 +399,11 @@ class Loggo(object):
             return
 
         # do not log loggo, because why would you ever want that?
-        if 'loggo.loggo' in formatters.get('call_signature'):
+        if 'loggo.loggo' in formatters['call_signature']:
             return
 
         # get the correct message
-        unformatted_message = FORMS.get(where)
+        unformatted_message = FORMS[where]
 
         # return value for log message
         if where == 'post':
