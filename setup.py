@@ -12,9 +12,8 @@ def read(fname):
 setup(
     name='loggo',
     version='3.0.1',  # DO NOT EDIT THIS LINE MANUALLY. LET bump2version UTILITY DO IT
-    author='Danny McDonald',
-    author_email='daniel.mcdonald@bitpanda.com',
-    description=('Python logging tools'),
+    author='Bitpanda GmbH',
+    description='Python logging tools',
     keywords='bitpanda utilities',
     packages=['loggo', 'tests'],
     long_description=read('README.md'),
