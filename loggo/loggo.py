@@ -372,7 +372,7 @@ class Loggo(object):
         Make a string representation of whatever a method returns
         """
         # some custom handling for request response objects
-        if type(response) == 'requests.models.Response':
+        if str(type(response)) == "<class 'requests.models.Response'>":
             response = response.text
 
         return '({})'.format(self._force_string_and_truncate(response, truncate, use_repr=True))
