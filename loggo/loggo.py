@@ -31,7 +31,7 @@ FORMS = dict(pre='*Called {call_signature}',
              error='*Errored during {call_signature} with {error_type} "{error_string}"')
 
 
-class Loggo(object):
+class Loggo:
     """
     A class for logging
 
