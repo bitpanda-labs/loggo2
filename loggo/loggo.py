@@ -482,7 +482,7 @@ class Loggo:
         try:
             obj = str(obj) if not use_repr else repr(obj)
         except Exception as error:
-            self.log('Object could not be cast to string', extra=dict(error_type=type(error), error=str(error)))
+            self.log('Object could not be cast to string', extra=dict(error_type=type(error), error=error))
             return '<<Unstringable input>>'
         if truncate in {False, None}:
             return obj
