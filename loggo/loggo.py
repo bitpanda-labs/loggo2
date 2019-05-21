@@ -31,7 +31,7 @@ FORMS = dict(pre='*Called {call_signature}',
              error='*Errored during {call_signature} with {error_type} "{error_string}"')
 
 
-class Loggo(object):
+class Loggo:
     """
     A class for logging
 
@@ -409,14 +409,11 @@ class Loggo(object):
 
         # if what is 'returned' is an exception, get the error formatters
         if where == 'error':
-            formatters['error_type'] = returned.__class__.__name__
+            formatters['error_type'] = type(returned).__name__
             formatters['error_string'] = str(returned)
 
         # format the string template
         msg = unformatted_message.format(**formatters).replace('  ', ' ')
-
-        # decide on alert level
-        level = 'dev' if where == 'error' else None
 
         # make the log data
         log_data = {**formatters, **safe_log_data}
@@ -428,7 +425,7 @@ class Loggo(object):
         # turn it on just for now, as if we shouldn't log we'd have returned
         self.stopped = False
         # do logging
-        self.log(msg, level, log_data, safe=True)
+        self.log(msg, extra=log_data, safe=True)
         # restore old stopped state
         self.stopped = original_state
 
@@ -473,7 +470,7 @@ class Loggo(object):
         Add a handler for Graylog
         """
         if not self.ip or not self.port or not graypy and not self.no_graylog_disable_log:
-            self.log('Graylog not configured! Disabling it', 'dev')
+            self.log('Graylog not configured! Disabling it')
             return
         handler = graypy.GELFUDPHandler(self.ip, self.port, debugging_fields=False)
         self.logger.addHandler(handler)
@@ -485,7 +482,7 @@ class Loggo(object):
         try:
             obj = str(obj) if not use_repr else repr(obj)
         except Exception as error:
-            self.log('Object could not be cast to string', 'dev', dict(error=str(error)))
+            self.log('Object could not be cast to string', extra=dict(error_type=type(error), error=error))
             return '<<Unstringable input>>'
         if truncate in {False, None}:
             return obj
