@@ -17,7 +17,7 @@ setup(
     keywords='bitpanda utilities',
     packages=['loggo', 'tests'],
     long_description=read('README.md'),
-    install_requires=['graypy>=1.1.2,<=1.2.0'],
-    python_requires='>=3',
+    install_requires=['graypy>=1.1.2,<1.2.0'],
+    python_requires='>=3.6',
     classifiers=['Topic :: Utilities'],
 )
