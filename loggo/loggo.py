@@ -10,6 +10,7 @@ import uuid
 from contextlib import contextmanager
 from datetime import datetime
 from functools import wraps
+from typing import Optional, Dict, Union, Callable, Generator, Any
 
 LOG_LEVELS = dict(critical='CRITICAL',
                   dev='ERROR',
@@ -52,7 +53,7 @@ class Loggo:
     - raise_logging_errors: should Loggo errors be allowed to happen?
     - obscure: a string to use instead of any private data
     """
-    def __init__(self, config=None):
+    def __init__(self, config: Optional[Dict] = None) -> None:
         config = config or dict()
         self.stopped = False
         self.allow_errors = True
@@ -75,7 +76,7 @@ class Loggo:
         self.logger.setLevel(logging.DEBUG)
         self.add_handler()
 
-    def _can_decorate(self, candidate, name=None):
+    def _can_decorate(self, candidate: Callable, name: Optional[str] = None) -> bool:
         """
         Decide if we can decorate a given object
 
@@ -90,7 +91,7 @@ class Loggo:
             return False
         return True
 
-    def _decorate_all_methods(self, cls, just_errors=False):
+    def _decorate_all_methods(self, cls: type, just_errors: bool = False) -> type:
         """
         Decorate all viable methods in a class
         """
@@ -110,7 +111,7 @@ class Loggo:
                 pass
         return cls
 
-    def __call__(self, class_or_func):
+    def __call__(self, class_or_func: Union[Callable, type]) -> Union[Callable, type]:
         """
         Make Loggo itself a decorator of either a class or a method/function, so
         you can just use @Loggo on both classes and functions
@@ -122,7 +123,7 @@ class Loggo:
         return class_or_func
 
     @contextmanager
-    def pause(self, allow_errors=True):
+    def pause(self, allow_errors: bool = True) -> Generator:
         """
         A context manager that prevents loggo from logging in that context. By
         default, errors will still make it through, unless allow_errors==False
@@ -136,7 +137,7 @@ class Loggo:
             self.allow_errors, self.stopped = original
 
     @contextmanager
-    def verbose(self, allow_errors=True):
+    def verbose(self, allow_errors: bool = True) -> Generator:
         """
         Context manager that makes, rather than suppresses, logs. The only real
         use case for this is rare---the user has put the logger in a stopped
@@ -151,7 +152,7 @@ class Loggo:
             self.allow_errors, self.stopped = original
 
     @contextmanager
-    def log_errors(self):
+    def log_errors(self) -> Generator:
         """
         Context manager that logs errors only
         """
@@ -161,7 +162,7 @@ class Loggo:
         finally:
             self.allow_errors, self.stopped = original
 
-    def stop(self, allow_errors=True):
+    def stop(self, allow_errors: bool = True) -> None:
         """
         Normal function: manually stop loggo from logging, but by default allow
         errors through
@@ -169,7 +170,7 @@ class Loggo:
         self.stopped = True
         self.allow_errors = allow_errors
 
-    def start(self, allow_errors=True):
+    def start(self, allow_errors: bool = True) -> None:
         """
         Normal function: manually restart loggo, also allowing errors by default
         """
@@ -177,7 +178,7 @@ class Loggo:
         self.allow_errors = allow_errors
 
     @staticmethod
-    def ignore(function):
+    def ignore(function: Callable) -> Callable:
         """
         A decorator that will override Loggo class deco, in case you do not want
         to log one particular method for some reason
@@ -185,7 +186,7 @@ class Loggo:
         function._do_not_log_this_callable = True
         return function
 
-    def errors(self, class_or_func):
+    def errors(self, class_or_func: Union[Callable, type]) -> Union[Callable, type]:
         """
         Decorator: only log errors within a given method
         """
@@ -193,7 +194,8 @@ class Loggo:
             return self._decorate_all_methods(class_or_func, just_errors=True)
         return self.logme(class_or_func, just_errors=True)
 
-    def events(self, called=None, returned=None, errored=None, error_alert='dev'):
+    def events(self, called: Optional[str] = None, returned: Optional[str] = None, errored: Optional[str] = None,
+               error_alert: str = 'dev') -> Callable:
         """
         A decorator that takes messages as arguments
 
@@ -205,9 +207,9 @@ class Loggo:
                       error_alert='critical')  # alert level for errors
         def f():  # ...
         """
-        def real_decorator(function):
+        def real_decorator(function: Callable) -> Callable:
             @wraps(function)
-            def wrapper(*args, **kwargs):
+            def wrapper(*args, **kwargs) -> Any:
                 bound = self._params_to_dict(function, *args, **kwargs)
                 if bound is None:
                     return function(*args, **kwargs)
@@ -230,7 +232,7 @@ class Loggo:
             return wrapper
         return real_decorator
 
-    def logme(self, function, just_errors=False):
+    def logme(self, function: Callable, just_errors: bool = False) -> Callable:
         """
         This the function decorator. After having instantiated Loggo, use it as a
         decorator like so:
@@ -246,7 +248,7 @@ class Loggo:
             return function
 
         @wraps(function)
-        def full_decoration(*args, **kwargs):
+        def full_decoration(*args, **kwargs) -> Any:
             """
             Main decorator logic. Generate a log before running the callable,
             then try to run it. If it errors, log the error. If it doesn't,
@@ -302,7 +304,8 @@ class Loggo:
             params[safe_key] = safe_val
         return params
 
-    def _make_call_signature(self, function, param_strings):
+    @staticmethod
+    def _make_call_signature(function, param_strings):
         """
         Represent the call as a string mimicking how it is written in Python
         """
