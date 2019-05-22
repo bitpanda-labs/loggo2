@@ -1,2 +1,3 @@
 graypy>=1.1.2
 flake8
+mypy

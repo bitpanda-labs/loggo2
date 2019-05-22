@@ -4,15 +4,18 @@ python:
   - '3.7'
 stages:
   - build
+  - static-checks
   - test
 jobs:
   include:
     - stage: build
       script:
         - python setup.py install
+    - stage: static-checks
+      script:
+        - flake8 loggo/ tests/
+        - mypy loggo/ tests/
     - stage: test
       script:
-        - pip install flake8
-        - flake8 loggo
         - python setup.py install
         - python tests/tests.py

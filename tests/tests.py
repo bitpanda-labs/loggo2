@@ -244,33 +244,33 @@ class TestDecoration(unittest.TestCase):
             with self.assertRaises(ValueError):
                 dummy.hopefully_only_errors(5)
             (alert, logged_msg), extras = logger.call_args
-            self.assertEqual('*Errored during DummyClass.hopefully_only_errors(n=5) with ValueError "Bam!"', logged_msg, logged_msg)
+            self.assertEqual('*Errored during DummyClass.hopefully_only_errors(n=5) with ValueError "Bam!"', logged_msg)
 
     def test_private_keyword_removal(self):
         with patch('logging.Logger.log') as logger:
             mnem = 'every good boy deserves fruit'
             res = function_with_private_kwarg(10, a_float=5.5, mnemonic=mnem)
-            self.assertEqual(res, 10*5.5)
-            (alert, logged_msg), extras = logger.call_args_list[0]
+            self.assertEqual(res, 10 * 5.5)
+            (_alert, _logged_msg), extras = logger.call_args_list[0]
             self.assertEqual(extras['extra']['mnemonic'], "'[PRIVATE_DATA]'")
 
     def test_private_positional_removal(self):
         with patch('logging.Logger.log') as logger:
             res = function_with_private_arg('should not log', False)
             self.assertFalse(res)
-            (alert, logged_msg), extras = logger.call_args_list[0]
+            (_alert, _logged_msg), extras = logger.call_args_list[0]
             self.assertEqual(extras['extra']['priv'], "'[PRIVATE_DATA]'")
 
     def test_private_beyond(self):
         with patch('logging.Logger.log') as logger:
             test_func_with_recursive_data_beyond(beyond)
-            (alert, logged_msg), extras = logger.call_args_list[0]
+            (_alert, _logged_msg), extras = logger.call_args_list[0]
             self.assertTrue('allowed' in extras['extra']['data'])
 
     def test_private_within(self):
         with patch('logging.Logger.log') as logger:
             test_func_with_recursive_data_within(within)
-            (alert, logged_msg), extras = logger.call_args_list[0]
+            (_alert, _logged_msg), extras = logger.call_args_list[0]
             self.assertFalse('secret' in extras['extra']['data'])
 
 
@@ -296,7 +296,7 @@ class TestLog(unittest.TestCase):
         """
         with patch('logging.Logger.log') as mock_log:
             self.log('fine', None, dict(name='bad', other='good'))
-            (alert, msg), kwargs = mock_log.call_args
+            (_alert, _msg), kwargs = mock_log.call_args
             self.assertEqual(kwargs['extra']['protected_name'], 'bad')
             self.assertEqual(kwargs['extra']['other'], 'good')
 
@@ -396,10 +396,9 @@ class TestLog(unittest.TestCase):
             logger.assert_called_once()
 
     def test_see_below(self):
-        with patch('logging.Logger.log') as logger:
-            msg = 'testing only'
-            s = self.loggo._build_string(msg, 'dev', traceback=False)
-            self.assertTrue('-- see below:' not in s)
+        msg = 'testing only'
+        s = self.loggo._build_string(msg, 'dev', traceback=False)
+        self.assertTrue('-- see below:' not in s)
 
     def test_compat(self):
         test = 'a string'
