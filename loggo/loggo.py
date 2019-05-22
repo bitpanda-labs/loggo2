@@ -10,7 +10,7 @@ import uuid
 from contextlib import contextmanager
 from datetime import datetime
 from functools import wraps
-from typing import Optional, Dict, Union, Callable, Generator, Any
+from typing import Optional, Dict, Union, Callable, Generator, Any, cast
 
 LOG_LEVELS = dict(critical='CRITICAL',
                   dev='ERROR',
@@ -21,7 +21,7 @@ LOG_LEVELS = dict(critical='CRITICAL',
 
 # you don't need graylog installed
 try:
-    import graypy
+    import graypy  # type: ignore
 except ImportError:
     graypy = None
 
@@ -103,7 +103,7 @@ class Loggo:
             # somehow, decorating classmethods as staticmethods is the only way
             # to make everything work properly. we should find out why, some day
             if isinstance(cls.__dict__[name], (staticmethod, classmethod)):
-                deco = staticmethod(deco)
+                deco = cast(Callable, staticmethod(deco))
             try:
                 setattr(cls, name, deco)
             # AttributeError happens if we can't write, as with __dict__
@@ -117,7 +117,7 @@ class Loggo:
         you can just use @Loggo on both classes and functions
         """
         if inspect.isclass(class_or_func):
-            return self._decorate_all_methods(class_or_func)
+            return self._decorate_all_methods(cast(type, class_or_func))
         if self._can_decorate(class_or_func):
             return self.logme(class_or_func)
         return class_or_func
@@ -183,7 +183,7 @@ class Loggo:
         A decorator that will override Loggo class deco, in case you do not want
         to log one particular method for some reason
         """
-        function._do_not_log_this_callable = True
+        function._do_not_log_this_callable = True  # type: ignore
         return function
 
     def errors(self, class_or_func: Union[Callable, type]) -> Union[Callable, type]:
@@ -191,7 +191,7 @@ class Loggo:
         Decorator: only log errors within a given method
         """
         if inspect.isclass(class_or_func):
-            return self._decorate_all_methods(class_or_func, just_errors=True)
+            return self._decorate_all_methods(cast(type, class_or_func), just_errors=True)
         return self.logme(class_or_func, just_errors=True)
 
     def events(self, called: Optional[str] = None, returned: Optional[str] = None, errored: Optional[str] = None,
