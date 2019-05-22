@@ -11,7 +11,7 @@ def read(fname):
 
 setup(
     name='loggo',
-    version='3.0.1',  # DO NOT EDIT THIS LINE MANUALLY. LET bump2version UTILITY DO IT
+    version='4.0.0',  # DO NOT EDIT THIS LINE MANUALLY. LET bump2version UTILITY DO IT
     author='Bitpanda GmbH',
     description='Python logging tools',
     keywords='bitpanda utilities',
