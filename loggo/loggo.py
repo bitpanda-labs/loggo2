@@ -103,7 +103,8 @@ class Loggo:
             # somehow, decorating classmethods as staticmethods is the only way
             # to make everything work properly. we should find out why, some day
             if isinstance(cls.__dict__[name], (staticmethod, classmethod)):
-                deco = cast(Callable, staticmethod(deco))
+                # Make mypy ignore due to an open issue: https://github.com/python/mypy/issues/5530
+                deco = staticmethod(deco)  # type: ignore
             try:
                 setattr(cls, name, deco)
             # AttributeError happens if we can't write, as with __dict__
