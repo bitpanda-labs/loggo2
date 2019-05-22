@@ -35,25 +35,29 @@ FORMS = dict(pre='*Called {call_signature}',
 class Loggo:
     """
     A class for logging
-
-    On instantiation, pass in a dictionary containing the config. Currently
-    accepted config values are:
-
-    - facility: name of the app the log is coming from
-    - ip: ip address for graylog
-    - port: port for graylog
-    - logfile: path to a file to which logs will be written
-    - do_print: print logs to console
-    - do_write: write logs to file
-    - truncation: truncate value of log data fields to this length
-    - line_length: max length for console printed string
-    - private_data: key names that should be filtered out of logging. when not
-    - max_dict_depth: how deep into log data loggo will look for private data
-    provided, nothing is censored
-    - raise_logging_errors: should Loggo errors be allowed to happen?
-    - obscure: a string to use instead of any private data
     """
+    # Callables with an attribute of this name set to True will not be logged by Loggo
+    no_logs_attribute_name = '_do_not_log_this_callable'
+
     def __init__(self, config: Optional[Dict] = None) -> None:
+        """
+        On instantiation, pass in a dictionary containing the config. Currently
+        accepted config values are:
+
+        - facility: name of the app the log is coming from
+        - ip: ip address for graylog
+        - port: port for graylog
+        - logfile: path to a file to which logs will be written
+        - do_print: print logs to console
+        - do_write: write logs to file
+        - truncation: truncate value of log data fields to this length
+        - line_length: max length for console printed string
+        - private_data: key names that should be filtered out of logging. when not
+        - max_dict_depth: how deep into log data loggo will look for private data
+        provided, nothing is censored
+        - raise_logging_errors: should Loggo errors be allowed to happen?
+        - obscure: a string to use instead of any private data
+        """
         config = config or dict()
         self.stopped = False
         self.allow_errors = True
@@ -184,7 +188,7 @@ class Loggo:
         A decorator that will override Loggo class deco, in case you do not want
         to log one particular method for some reason
         """
-        function._do_not_log_this_callable = True  # type: ignore
+        setattr(function, Loggo.no_logs_attribute_name, True)
         return function
 
     def errors(self, class_or_func: Union[Callable, type]) -> Union[Callable, type]:
@@ -245,7 +249,7 @@ class Loggo:
         """
 
         # if logging has been turned off, just do nothing
-        if getattr(function, '_do_not_log_this_callable', False):
+        if getattr(function, Loggo.no_logs_attribute_name, False):
             return function
 
         @wraps(function)
