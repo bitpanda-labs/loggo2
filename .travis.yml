@@ -12,7 +12,6 @@ jobs:
         - python setup.py install
     - stage: test
       script:
-        - pip install flake8 mypy
         - flake8 loggo/ tests/
         - mypy loggo/ tests/
         - python setup.py install
