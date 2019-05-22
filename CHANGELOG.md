@@ -3,7 +3,7 @@ Changelog
 
 This log should always be updated when doing backwards incompatible changes, resulting in a major version bump. Feel free to add a log for lesser version bumps as well, but for major bumps it's a must.
 
-**unreleased**
+4.0.0
 -----
 - Changed
     - Drop support for Python versions lower than 3.6
