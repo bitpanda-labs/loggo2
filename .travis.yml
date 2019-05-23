@@ -17,5 +17,4 @@ jobs:
         - mypy loggo/ tests/
     - stage: test
       script:
-        - python setup.py install
-        - python tests/tests.py
+        - python -m unittest
