@@ -1,9 +1,9 @@
 import os
 import unittest
-from unittest.mock import mock_open, patch, ANY
+from unittest.mock import mock_open, patch, ANY, Mock
 import logging
 
-from loggo import Loggo as a_loggo
+from loggo import Loggo as LoggoType
 
 test_setup = dict(facility='LOGGO_TEST',
                   ip=None,
@@ -11,7 +11,7 @@ test_setup = dict(facility='LOGGO_TEST',
                   do_print=True,
                   do_write=True,
                   private_data=['mnemonic', 'priv'])
-Loggo = a_loggo(test_setup)
+Loggo = LoggoType(test_setup)
 
 
 @Loggo
@@ -72,7 +72,7 @@ all_method_types = AllMethodTypes()
 
 
 @Loggo
-class DummyClass(object):
+class DummyClass:
     """
     A class with regular methods, static methods and errors
     """
@@ -103,7 +103,7 @@ class DummyClass(object):
         raise ValueError('Bam!')
 
 
-class DummyClass2(object):
+class DummyClass2:
     def add(self, a, b, c):
         return a + b + c
 
@@ -275,7 +275,7 @@ class TestDecoration(unittest.TestCase):
             self.assertFalse('secret' in extras['extra']['data'])
 
 
-class NoRepr(object):
+class NoRepr:
     """
     An object that really hates being repr'd
     """
@@ -286,8 +286,11 @@ class NoRepr(object):
 class TestLog(unittest.TestCase):
 
     def setUp(self):
+        self.log_msg = 'This is a message that can be used when the content does not matter.'
+        self.log_data = {'This is': 'log data', 'that can be': 'used when the content does not matter'}
+
         self.test_setup = dict(facility='LOG_TEST', ip=None, port=None, do_print=True, do_write=True)
-        self.loggo = a_loggo(self.test_setup)
+        self.loggo = LoggoType(self.test_setup)
         self.log = self.loggo.log
 
     def test_protected_keys(self):
@@ -420,6 +423,42 @@ class TestLog(unittest.TestCase):
             return needed
         with self.assertRaises(TypeError):
             dummy()
+
+    def test_debug(self):
+        with patch('loggo.Loggo.log') as logger:
+            self.loggo.debug(self.log_msg, self.log_data)
+            logger.assert_called_with(logging.DEBUG, self.log_msg, self.log_data)
+
+    def test_info(self):
+        with patch('loggo.Loggo.log') as logger:
+            self.loggo.info(self.log_msg, self.log_data)
+            logger.assert_called_with(logging.INFO, self.log_msg, self.log_data)
+
+    def test_warning(self):
+        with patch('loggo.Loggo.log') as logger:
+            self.loggo.warning(self.log_msg, self.log_data)
+            logger.assert_called_with(logging.WARNING, self.log_msg, self.log_data)
+
+    def test_error(self):
+        with patch('loggo.Loggo.log') as logger:
+            self.loggo.error(self.log_msg, self.log_data)
+            logger.assert_called_with(logging.ERROR, self.log_msg, self.log_data)
+
+    def test_critical(self):
+        with patch('loggo.Loggo.log') as logger:
+            self.loggo.critical(self.log_msg, self.log_data)
+            logger.assert_called_with(logging.CRITICAL, self.log_msg, self.log_data)
+
+    def test_listen_to(self):
+        sub_loggo_facility = 'a sub logger'
+        sub_loggo = LoggoType({'facility': sub_loggo_facility})
+        self.loggo.listen_to(sub_loggo_facility)
+
+        self.loggo.log = Mock()
+        log_args = logging.WARNING, 'The parent logger should log this message after sublogger logs it'
+        sub_loggo.log(*log_args)
+
+        self.loggo.log.assert_called_with(*log_args, ANY)
 
 
 class TestMethods(unittest.TestCase):

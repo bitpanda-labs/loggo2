@@ -310,7 +310,7 @@ class Loggo:
         Represent the call as a string mimicking how it is written in Python
         """
         signature = '{callable}({params})'
-        param_str = ', '.join('{}={}'.format(k, v) for k, v in param_strings.items())
+        param_str = ', '.join(f'{k}={v}' for k, v in param_strings.items())
         format_strings = dict(callable=getattr(function, '__qualname__', 'unknown_callable'),
                               params=param_str)
         formatted = signature.format(**format_strings)
@@ -367,7 +367,7 @@ class Loggo:
                 out[key] = self._obscure_private_keys(value, dict_depth + 1)
         return out
 
-    def _represent_return_value(self, response, truncate=140):
+    def _represent_return_value(self, response: Any, truncate: Optional[int] = 140) -> str:
         """
         Make a string representation of whatever a method returns
         """
@@ -403,7 +403,7 @@ class Loggo:
 
         # return value for log message
         if where == 'post':
-            ret_str = self._represent_return_value(returned, truncate=False)
+            ret_str = self._represent_return_value(returned, truncate=None)
             formatters['return_value'] = ret_str
             formatters['return_type'] = type(returned).__name__
 
@@ -445,7 +445,7 @@ class Loggo:
         datapoints = [tstamp, msg, level]
         strung = '\t' + '\t'.join([str(s).strip('\n') for s in datapoints])
         if trace:
-            strung = '{} -- see below: \n{}\n'.format(strung, trace)
+            strung = f'{strung} -- see below: \n{trace}\n'
         return strung.strip('\n') + '\n'
 
     def get_logfile(self, **kwargs):
