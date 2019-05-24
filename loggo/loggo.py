@@ -10,7 +10,7 @@ import uuid
 from contextlib import contextmanager
 from datetime import datetime
 from functools import wraps
-from typing import Optional, Dict, Union, Callable, Generator, Any, cast
+from typing import Optional, Dict, Union, Callable, Generator, Any, cast, Mapping, Tuple
 
 # you don't need graylog installed
 try:
@@ -292,20 +292,20 @@ class Loggo:
                 raise
         return full_decoration
 
-    def _string_params(self, non_private_params, use_repr=True):
+    def _string_params(self, non_private_params: Dict, use_repr: bool = True) -> Dict[str, str]:
         """
         Turn every entry in log_data into truncated strings
         """
         params = dict()
         for key, val in non_private_params.items():
-            truncation = self.truncation if key not in {'trace', 'traceback'} else False
+            truncation = self.truncation if key not in {'trace', 'traceback'} else None
             safe_key = self._force_string_and_truncate(key, 50, use_repr=False)
             safe_val = self._force_string_and_truncate(val, truncation, use_repr=use_repr)
             params[safe_key] = safe_val
         return params
 
     @staticmethod
-    def _make_call_signature(function, param_strings):
+    def _make_call_signature(function: Callable, param_strings: Dict[str, str]) -> Tuple[str, Dict]:
         """
         Represent the call as a string mimicking how it is written in Python
         """
@@ -323,7 +323,7 @@ class Loggo:
         Python logging module (i.e. another logger) and steals its logs
         """
         class LoggoHandler(logging.Handler):
-            def emit(handler_self, record):
+            def emit(handler_self, record: logging.LogRecord) -> None:
                 attributes = {'msg', 'created', 'msecs', 'stack_info',
                               'levelname', 'filename', 'module', 'args',
                               'funcName', 'process', 'relativeCreated',
@@ -338,7 +338,7 @@ class Loggo:
         other_loggo.setLevel(Loggo.log_threshold)
         other_loggo.addHandler(LoggoHandler())
 
-    def _params_to_dict(self, function, *args, **kwargs):
+    def _params_to_dict(self, function: Callable, *args, **kwargs) -> Mapping:
         """
         Turn args and kwargs into an OrderedDict of {param_name: value}
         """
@@ -352,7 +352,7 @@ class Loggo:
                 bound.pop('cls')
         return bound
 
-    def _obscure_private_keys(self, log_data, dict_depth=0):
+    def _obscure_private_keys(self, log_data: Any, dict_depth: int = 0) -> Any:
         """
         Obscure any private values in a dictionary recursively
         """
@@ -429,7 +429,7 @@ class Loggo:
         # restore old stopped state
         self.stopped = original_state
 
-    def add_custom_log_data(self):
+    def add_custom_log_data(self) -> Dict[str, str]:
         """
         An overwritable method useful for adding custom log data
         """
@@ -474,7 +474,7 @@ class Loggo:
         handler = graypy.GELFUDPHandler(self.ip, self.port, debugging_fields=False)
         self.logger.addHandler(handler)
 
-    def _force_string_and_truncate(self, obj, truncate, use_repr=False):
+    def _force_string_and_truncate(self, obj: Any, truncate: Optional[int], use_repr: bool = False) -> str:
         """
         Return stringified and truncated obj. If stringification fails, log a warning
         and return the string '<<Unstringable input>>'
@@ -484,7 +484,7 @@ class Loggo:
         except Exception as error:
             self.warning('Object could not be cast to string', extra=dict(error_type=type(error), error=error))
             return '<<Unstringable input>>'
-        if truncate in {False, None}:
+        if truncate is None:
             return obj
         # truncate and return
         return (obj[:truncate] + '...') if len(obj) > (truncate + 3) else obj
@@ -503,7 +503,7 @@ class Loggo:
             out[key] = value
         return out
 
-    def sanitise(self, unsafe_dict: Dict, use_repr: bool = True) -> Dict[str, str]:
+    def sanitise(self, unsafe_dict: Mapping, use_repr: bool = True) -> Dict[str, str]:
         """
         Ensure that log data is safe to log:
 
