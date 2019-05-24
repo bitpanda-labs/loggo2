@@ -209,7 +209,7 @@ class Loggo:
         """
         def real_decorator(function: Callable) -> Callable:
             @wraps(function)
-            def wrapper(*args, **kwargs) -> Any:
+            def wrapper(*args: Any, **kwargs: Any) -> Any:
                 bound = self._params_to_dict(function, *args, **kwargs)
                 if bound is None:
                     return function(*args, **kwargs)
@@ -248,7 +248,7 @@ class Loggo:
             return function
 
         @wraps(function)
-        def full_decoration(*args, **kwargs) -> Any:
+        def full_decoration(*args: Any, **kwargs: Any) -> Any:
             """
             Main decorator logic. Generate a log before running the callable,
             then try to run it. If it errors, log the error. If it doesn't,
@@ -338,7 +338,7 @@ class Loggo:
         other_loggo.setLevel(Loggo.log_threshold)
         other_loggo.addHandler(LoggoHandler())
 
-    def _params_to_dict(self, function: Callable, *args, **kwargs) -> Mapping:
+    def _params_to_dict(self, function: Callable, *args: Any, **kwargs: Any) -> Mapping:
         """
         Turn args and kwargs into an OrderedDict of {param_name: value}
         """
@@ -448,7 +448,7 @@ class Loggo:
             strung = f'{strung} -- see below: \n{trace}\n'
         return strung.strip('\n') + '\n'
 
-    def get_logfile(self, **kwargs) -> str:
+    def get_logfile(self, **kwargs: str) -> str:
         """
         This method exists so that it can be overwritten for applications requiring
         more complex logfile choices.
@@ -564,17 +564,17 @@ class Loggo:
             if self.raise_logging_errors:
                 raise
 
-    def debug(self, *args, **kwargs) -> None:
+    def debug(self, *args: Any, **kwargs: Any) -> None:
         return self.log(logging.DEBUG, *args, **kwargs)
 
-    def info(self, *args, **kwargs) -> None:
+    def info(self, *args: Any, **kwargs: Any) -> None:
         return self.log(logging.INFO, *args, **kwargs)
 
-    def warning(self, *args, **kwargs) -> None:
+    def warning(self, *args: Any, **kwargs: Any) -> None:
         return self.log(logging.WARNING, *args, **kwargs)
 
-    def error(self, *args, **kwargs) -> None:
+    def error(self, *args: Any, **kwargs: Any) -> None:
         return self.log(logging.ERROR, *args, **kwargs)
 
-    def critical(self, *args, **kwargs) -> None:
+    def critical(self, *args: Any, **kwargs: Any) -> None:
         return self.log(logging.CRITICAL, *args, **kwargs)
