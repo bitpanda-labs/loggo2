@@ -48,10 +48,10 @@ class Loggo:
         - truncation: truncate value of log data fields to this length
         - line_length: max length for console printed string
         - private_data: key names that should be filtered out of logging. when not
-        - max_dict_depth: how deep into log data loggo will look for private data
-        provided, nothing is censored
+        - max_dict_depth: how deep into log data loggo will look for private data provided, nothing is censored
         - raise_logging_errors: should Loggo errors be allowed to happen?
         - obscure: a string to use instead of any private data
+        - log_if_graylog_disabled: boolean value, should a warning log be made when failing to connect to graylog
         """
         config = config or dict()
         self.stopped = False
@@ -377,14 +377,14 @@ class Loggo:
 
         return '({})'.format(self._force_string_and_truncate(response, truncate, use_repr=True))
 
-    def _generate_log(self, where, returned, formatters, safe_log_data):
+    def _generate_log(self, where: str, returned: Any, formatters: Dict, safe_log_data: Dict[str, str]) -> None:
         """
         generate message, level and log data for automated logs
 
         where (str): 'pre'/'post'/'noreturn'/'error' --- the auto-log type
         returned (ANY): what the decorated callable returned
         formatters (dict): dict containing format strings needed for message
-        safe_log_data (bool): dict of stringified, truncated, censored parameters
+        safe_log_data (dict): dict of stringified, truncated, censored parameters
         """
         # if errors not to be shown and this is an error, quit
         if not self.allow_errors and where == 'error':
@@ -448,14 +448,14 @@ class Loggo:
             strung = f'{strung} -- see below: \n{trace}\n'
         return strung.strip('\n') + '\n'
 
-    def get_logfile(self, **kwargs):
+    def get_logfile(self, **kwargs) -> str:
         """
         This method exists so that it can be overwritten for applications requiring
         more complex logfile choices.
         """
         return self.logfile
 
-    def write_to_file(self, line, logfile=None):
+    def write_to_file(self, line: str, logfile: Optional[str] = None) -> None:
         """
         Very simple log writer, could expand. simple append the line to the file
         """
@@ -476,7 +476,8 @@ class Loggo:
 
     def _force_string_and_truncate(self, obj, truncate, use_repr=False):
         """
-        Return stringified and truncated obj, or log alert if not possible
+        Return stringified and truncated obj. If stringification fails, log a warning
+        and return the string '<<Unstringable input>>'
         """
         try:
             obj = str(obj) if not use_repr else repr(obj)
@@ -488,7 +489,8 @@ class Loggo:
         # truncate and return
         return (obj[:truncate] + '...') if len(obj) > (truncate + 3) else obj
 
-    def _rename_protected_keys(self, log_data):
+    @staticmethod
+    def _rename_protected_keys(log_data: Dict) -> Dict:
         """
         Some names cannot go into logger; remove them here and log the problem
         """
@@ -523,8 +525,8 @@ class Loggo:
         """
         Main logging method, called both in auto logs and manually by user
 
-        message: string to log
-        alert: str/int priority of log
+        level: int, priority of log
+        msg: string to log
         extra: dict of extra fields to log
         safe: do we need to sanitise extra?
         """
@@ -543,7 +545,6 @@ class Loggo:
         log_data['log_level'] = str(level)
 
         # print or write log lines
-        line = None
         if self.do_print or self.do_write:
             trace = extra.get('traceback', '')
             line = self._build_string(msg, level, trace=trace)

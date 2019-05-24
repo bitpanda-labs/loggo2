@@ -34,7 +34,6 @@ setup = dict(facility='tester',             # name of program logging the messag
              private_data=['password'],     # list of sensitive args/kwargs
              obscured='[[[PRIVATE_DATA]]]') # string with which to obscure data
 Loggo = Loggo(setup)
-log = Loggo.log # just saves you doing Loggo.log all the time...
 ```
 
 ## Usage
@@ -42,7 +41,7 @@ log = Loggo.log # just saves you doing Loggo.log all the time...
 In other parts of the project, you should then be able to access the configured logger components with:
 
 ```python
-from tester import Loggo, log
+from tester import Loggo
 ```
 
 ### Decorators
@@ -124,19 +123,28 @@ def test():
     pass
 ```
 
-### Log function
+### Logging without decorators
 
-The standalone `log` function takes three parameters:
+For logging manually, Loggo provides methods similar to the logging functions of the `logging` standard library: `Loggo.log`, `Loggo.debug`, `Loggo.info`, `Loggo.warning`, `Loggo.error`, `Loggo.critical`. The methods use the configuration that has already been defined. The main method `Loggo.log` takes three parameters:
 
 ```python
-alert_level = 'dev'
-extra_data = dict(some='data', that='will', be='logged')
-log('Message to log', alert_level, extra_data)
-# console: 11.05 2018 17:36:24 Message to log  dev
+level = 50
+msg = 'Message to log'
+extra = dict(some='data', that='will', be='logged')
+Loggo.log(level, msg, extra)
+# console: 11.05 2018 17:36:24 Message to log  50
 # extra_data in log file if `do_print` setting is True
 ```
 
-It uses the configuration that has already been defined.
+Methods `Loggo.debug`, `Loggo.info`, `Loggo.warning`, `Loggo.error` and `Loggo.critical` are convenience methods for setting the log level. For instance,
+```python
+Loggo.warning('A message', dict(some='data'))
+```
+is equivalent to
+```python
+Loggo.log(logging.WARNING, 'A message', dict(some='data'))
+```
+where `logging.WARNING` is an integer constant imported from the standard library.
 
 ### Methods
 
@@ -154,8 +162,7 @@ with Loggo.pause(allow_errors=False):
 ## Tests
 
 ```bash
-cd tests
-python tests.py
+python -m unittest
 ```
 
 ## Bumping version
