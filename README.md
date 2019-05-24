@@ -118,7 +118,7 @@ ValueError: Not authenticated!
               called='Log string for method call',
               errored='Log string on exception',
               returned='Log string for return',
-              error_alert='critical'  # alert level for errors
+              error_level=50  # log level for errors
               )
 def test():
     pass

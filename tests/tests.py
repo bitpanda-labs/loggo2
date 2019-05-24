@@ -1,6 +1,7 @@
 import os
 import unittest
 from unittest.mock import mock_open, patch, ANY
+import logging
 
 from loggo import Loggo as a_loggo
 
@@ -295,22 +296,21 @@ class TestLog(unittest.TestCase):
         in order to stop error in logger later
         """
         with patch('logging.Logger.log') as mock_log:
-            self.log('fine', None, dict(name='bad', other='good'))
+            self.log(logging.INFO, 'fine', dict(name='bad', other='good'))
             (_alert, _msg), kwargs = mock_log.call_args
             self.assertEqual(kwargs['extra']['protected_name'], 'bad')
             self.assertEqual(kwargs['extra']['other'], 'good')
 
     def test_can_log(self):
         with patch('logging.Logger.log') as logger:
-            nums = [(None, 20), ('dev', 40), ('critical', 50)]
+            level_num = 50
             msg = 'Test message here'
-            for level, num in nums:
-                result = self.log(msg, level, dict(extra='data'))
-                self.assertIsNone(result)
-                (alert, logged_msg), extras = logger.call_args
-                self.assertEqual(alert, num)
-                self.assertEqual(msg, logged_msg)
-                self.assertEqual(extras['extra']['extra'], 'data')
+            result = self.log(level_num, msg, dict(extra='data'))
+            self.assertIsNone(result)
+            (alert, logged_msg), extras = logger.call_args
+            self.assertEqual(alert, level_num)
+            self.assertEqual(msg, logged_msg)
+            self.assertEqual(extras['extra']['extra'], 'data')
 
     def test_write_to_file(self):
         """
@@ -318,7 +318,7 @@ class TestLog(unittest.TestCase):
         """
         mock = mock_open()
         with patch('builtins.open', mock):
-            self.log('An entry in our log')
+            self.log(logging.INFO, 'An entry in our log')
             mock.assert_called_with(Loggo.logfile, 'a')
             self.assertTrue(os.path.isfile(Loggo.logfile))
 
@@ -330,7 +330,7 @@ class TestLog(unittest.TestCase):
             msg = 'This is simply a test of the int truncation inside the log.'
             large_number = 10**300001
             log_data = dict(key=large_number)
-            self.log(msg, None, log_data)
+            self.log(logging.INFO, msg, log_data)
             mock_log.assert_called_with(20, msg, extra=ANY)
             logger_was_passed = mock_log.call_args[1]['extra']['key']
             # 7500 here is the default self.truncation for loggo
@@ -363,14 +363,14 @@ class TestLog(unittest.TestCase):
             mock_log.side_effect = Exception('Really dead.')
             self.loggo.raise_logging_errors = True
             with self.assertRaises(Exception):
-                self.loggo.log('Anything')
+                self.loggo.log(logging.INFO, 'Anything')
 
     def test_loggo_pause(self):
         with patch('logging.Logger.log') as mock_log:
             with Loggo.pause():
-                Loggo.log('test')
+                Loggo.log(logging.INFO, 'test')
             mock_log.assert_not_called()
-            Loggo.log('test')
+            Loggo.log(logging.INFO, 'test')
             mock_log.assert_called()
 
     def test_loggo_pause_error(self):
@@ -392,24 +392,24 @@ class TestLog(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     may_or_may_not_error_test('one', 'two')
             logger.assert_not_called()
-            Loggo.log('test')
+            Loggo.log(logging.INFO, 'test')
             logger.assert_called_once()
 
     def test_see_below(self):
         msg = 'testing only'
-        s = self.loggo._build_string(msg, 'dev', traceback=False)
+        s = self.loggo._build_string(msg, 50)
         self.assertTrue('-- see below:' not in s)
 
     def test_compat(self):
         test = 'a string'
         with patch('loggo.Loggo.log') as logger:
-            Loggo.log(test, None, None)
+            Loggo.log(logging.INFO, test, None)
         args = logger.call_args
-        self.assertEqual(args[0][0], test)
-        self.assertIsNone(args[0][1])
+        self.assertIsInstance(args[0][0], int)
+        self.assertEqual(args[0][1], test)
         self.assertIsNone(args[0][2])
         with patch('logging.Logger.log') as logger:
-            Loggo.log(test)
+            Loggo.log(logging.INFO, test)
         (alert, msg), kwargs = logger.call_args
         self.assertEqual(test, msg)
 
