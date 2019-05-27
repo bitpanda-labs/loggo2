@@ -160,7 +160,7 @@ class TestDecoration(unittest.TestCase):
             with self.assertRaises(ValueError):
                 first_test_func(5)
             (alert, logged_msg), extras = logger.call_args_list[-1]
-            self.assertEqual(logged_msg, '*Errored during first_test_func(number=5) with ValueError "Broken!"', logged_msg)
+            self.assertEqual(logged_msg, '*Errored during first_test_func(number=5) with ValueError "Broken!"')
 
     def test_log_errors(self):
         with patch('logging.Logger.log'):
@@ -177,7 +177,9 @@ class TestDecoration(unittest.TestCase):
                 may_or_may_not_error_test('astadh', 1331)
             (alert, logged_msg), extras = logger.call_args
             self.assertEqual(alert, 20)
-            self.assertEqual(logged_msg, '*Errored during may_or_may_not_error_test(first=\'astadh\', other=1331) with ValueError "no good"', logged_msg)
+            expected_msg = ('*Errored during may_or_may_not_error_test(first=\'astadh\', other=1331) '
+                            'with ValueError "no good"')
+            self.assertEqual(logged_msg, expected_msg)
 
     def test_logme_0(self):
         """
@@ -190,7 +192,9 @@ class TestDecoration(unittest.TestCase):
             (alert, logged_msg), extras = logger.call_args_list[0]
             self.assertEqual(logged_msg, '*Called may_or_may_not_error_test(first=2534, other=2466, kwargs=True)')
             (alert, logged_msg), extras = logger.call_args_list[-1]
-            self.assertEqual(logged_msg, '*Returned from may_or_may_not_error_test(first=2534, other=2466, kwargs=True) with tuple ((5000, True))', logged_msg)
+            expected_msg = ('*Returned from may_or_may_not_error_test(first=2534, other=2466, '
+                            'kwargs=True) with tuple ((5000, True))')
+            self.assertEqual(logged_msg, expected_msg)
 
     def test_logme_1(self):
         with patch('logging.Logger.log') as logger:
@@ -199,7 +203,7 @@ class TestDecoration(unittest.TestCase):
             (alert, logged_msg), extras = logger.call_args_list[0]
             self.assertEqual(logged_msg, '*Called DummyClass.add(a=1, b=2)')
             (alert, logged_msg), extras = logger.call_args_list[-1]
-            self.assertEqual('*Returned from DummyClass.add(a=1, b=2) with int (3)', logged_msg, logged_msg)
+            self.assertEqual('*Returned from DummyClass.add(a=1, b=2) with int (3)', logged_msg)
 
     def test_everything_0(self):
         with patch('logging.Logger.log') as logger:
@@ -207,14 +211,15 @@ class TestDecoration(unittest.TestCase):
             (alert, logged_msg), extras = logger.call_args_list[0]
             self.assertEqual(logged_msg, '*Called DummyClass.add_and_maybe_subtract(a=15, b=10, c=5)')
             (alert, logged_msg), extras = logger.call_args_list[-1]
-            self.assertEqual('*Returned from DummyClass.add_and_maybe_subtract(a=15, b=10, c=5) with int (20)', logged_msg, logged_msg)
+            expected_msg = '*Returned from DummyClass.add_and_maybe_subtract(a=15, b=10, c=5) with int (20)'
+            self.assertEqual(expected_msg, logged_msg)
 
     def test_everything_1(self):
         with patch('logging.Logger.log') as logger:
             result = dummy.static_method(10)
             self.assertEqual(result, 100)
             (alert, logged_msg), extras = logger.call_args_list[-1]
-            self.assertEqual('*Returned from DummyClass.static_method(number=10) with int (100)', logged_msg, logged_msg)
+            self.assertEqual('*Returned from DummyClass.static_method(number=10) with int (100)', logged_msg)
 
     def test_everything_3(self):
         with patch('logging.Logger.log') as logger:
@@ -382,7 +387,9 @@ class TestLog(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     may_or_may_not_error_test('one', 'two')
             (alert, msg), kwargs = logger.call_args
-            self.assertEqual('*Errored during may_or_may_not_error_test(first=\'one\', other=\'two\') with ValueError "no good"', msg, msg)
+            expected_msg = ('*Errored during may_or_may_not_error_test(first=\'one\', '
+                            'other=\'two\') with ValueError "no good"')
+            self.assertEqual(expected_msg, msg)
             logger.assert_called_once()
             logger.reset()
             with self.assertRaises(ValueError):
