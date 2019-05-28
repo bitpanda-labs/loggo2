@@ -1,5 +1,7 @@
 [![Build Status](https://travis-ci.org/bitpanda-labs/loggo.svg?branch=master)](https://travis-ci.org/bitpanda-labs/loggo)
 
+[![codecov.io](https://codecov.io/github/bitpanda-labs/loggo/coverage.svg?branch=master)](https://codecov.io/github/bitpanda-labs/loggo?branch=master)
+
 # Logging utilities for Python projects
 
 <!--- Don't edit the version line below manually. Let bump2version do it for you. -->
