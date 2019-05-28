@@ -3,6 +3,13 @@ Changelog
 
 This log should always be updated when doing backwards incompatible changes, resulting in a major version bump. Feel free to add a log for lesser version bumps as well, but for major bumps it's a must.
 
+**unreleased major**
+-----
+- Changed
+    - `Loggo.listen_to()` no longer takes positional argument `no_graylog_disable_log`. Instead of this, the key-value-pair `'log_if_graylog_disabled': bool` can be included in the config dict when instantiating Loggo.
+    - The `error_alert` kwarg of `Loggo.events()` was renamed to `error_level` and is now expected to be integer.
+    - The signature `Loggo.log(self, message: str, alert: Optional[str] = None, extra: Optional[Dict] = None, safe: bool = False)` is now `Loggo.log(self, level: int, msg: str, extra: Optional[Dict] = None, safe: bool = False)`.
+
 4.0.0
 -----
 - Changed

@@ -14,7 +14,8 @@ jobs:
     - stage: static-checks
       script:
         - flake8 loggo/ tests/
-        - mypy loggo/ tests/
+        - mypy loggo/ --disallow-untyped-defs
+        - mypy tests/
     - stage: test
       script:
         - python -m unittest
