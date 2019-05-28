@@ -1,6 +1,6 @@
 [![Build Status](https://travis-ci.org/bitpanda-labs/loggo.svg?branch=master)](https://travis-ci.org/bitpanda-labs/loggo)
 
-[![codecov.io](https://codecov.io/github/bitpanda-labs/loggo/coverage.svg?branch=master)](https://codecov.io/github/bitpanda-labs/loggo?branch=master)
+[![codecov.io](https://codecov.io/gh/bitpanda-labs/loggo/branch/master/graph/badge.svg)](https://codecov.io/gh/bitpanda-labs/loggo)
 
 # Logging utilities for Python projects
 
