@@ -18,4 +18,5 @@ jobs:
         - mypy tests/
     - stage: test
       script:
-        - python -m unittest
+        - coverage run -m unittest
+        - codecov
