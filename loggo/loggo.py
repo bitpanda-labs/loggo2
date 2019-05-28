@@ -123,7 +123,7 @@ class Loggo:
         return class_or_func
 
     @contextmanager
-    def pause(self, allow_errors: bool = True) -> Generator:
+    def pause(self, allow_errors: bool = True) -> Generator[None, None, None]:
         """
         A context manager that prevents loggo from logging in that context. By
         default, errors will still make it through, unless allow_errors==False
@@ -132,12 +132,12 @@ class Loggo:
         self.stopped = True
         self.allow_errors = allow_errors
         try:
-            yield self
+            yield
         finally:
             self.allow_errors, self.stopped = original
 
     @contextmanager
-    def verbose(self, allow_errors: bool = True) -> Generator:
+    def verbose(self, allow_errors: bool = True) -> Generator[None, None, None]:
         """
         Context manager that makes, rather than suppresses, logs. The only real
         use case for this is rare---the user has put the logger in a stopped
@@ -147,18 +147,18 @@ class Loggo:
         self.stopped = False
         self.allow_errors = allow_errors
         try:
-            yield self
+            yield
         finally:
             self.allow_errors, self.stopped = original
 
     @contextmanager
-    def log_errors(self) -> Generator:
+    def log_errors(self) -> Generator[None, None, None]:
         """
         Context manager that logs errors only
         """
         original = self.allow_errors, self.stopped
         try:
-            yield self
+            yield
         finally:
             self.allow_errors, self.stopped = original
 
