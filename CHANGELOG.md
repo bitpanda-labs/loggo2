@@ -3,7 +3,7 @@ Changelog
 
 This log should always be updated when doing backwards incompatible changes, resulting in a major version bump. Feel free to add a log for lesser version bumps as well, but for major bumps it's a must.
 
-**unreleased major**
+5.0.0
 -----
 - Changed
     - `Loggo.listen_to()` no longer takes positional argument `no_graylog_disable_log`. Instead of this, the key-value-pair `'log_if_graylog_disabled': bool` can be included in the config dict when instantiating Loggo.
