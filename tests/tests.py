@@ -148,6 +148,18 @@ def test_func_with_recursive_data_within(data):
 
 dummy = DummyClass()
 
+# events test data
+@Loggo.events(called='Log string for method call',
+              returned='Log string for return')
+def event_success():
+    return 1
+
+@Loggo.events(called='Log string for method call',
+              errored='Log string on exception',
+              error_level=50)
+def event_fail():
+    raise ValueError('Boom!')
+
 
 class TestDecoration(unittest.TestCase):
 
@@ -511,6 +523,30 @@ class TestMethods(unittest.TestCase):
             result = all_method_types.doubled()
             self.assertTrue(result)
             self.assertEqual(logger.call_count, 4)
+
+
+class TestEvents(unittest.TestCase):
+
+    def test_events_pass(self):
+        with patch('logging.Logger.log') as logger:
+            n = event_success()
+            self.assertEqual(n, 1)
+            self.assertEqual(logger.call_count, 2)
+            (alert, logged_msg), extras = logger.call_args_list[0]
+            self.assertEqual(logged_msg, 'Log string for method call')
+            (alert, logged_msg), extras = logger.call_args_list[1]
+            self.assertEqual(logged_msg, 'Log string for return')
+
+    def test_events_fail(self):
+        with patch('logging.Logger.log') as logger:
+            n = event_fail()
+            self.assertIsNone(n)
+            self.assertEqual(logger.call_count, 2)
+            (alert, logged_msg), extras = logger.call_args_list[0]
+            self.assertEqual(logged_msg, 'Log string for method call')
+            (alert, logged_msg), extras = logger.call_args_list[1]
+            self.assertEqual(logged_msg, 'Log string on exception')
+            self.assertEqual(alert, 50)
 
 
 if __name__ == '__main__':
