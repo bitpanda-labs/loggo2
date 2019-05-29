@@ -154,6 +154,7 @@ dummy = DummyClass()
 def event_success():
     return 1
 
+
 @Loggo.events(called='Log string for method call',
               errored='Log string on exception',
               error_level=50)
