@@ -17,7 +17,9 @@ setup(
     description='Python logging tools',
     url='https://github.com/bitpanda-labs/loggo',
     keywords='bitpanda utilities',
-    packages=['loggo', 'tests'],
+    packages=['loggo'],
+    package_data={'loggo': ['py.typed']},
+    zip_safe=False,  # For mypy to be able to find the installed package
     long_description=read('README.md'),
     long_description_content_type='text/markdown',
     install_requires=['graypy>=1.1.2,<1.2.0'],
