@@ -39,7 +39,7 @@ class Loggo:
                  returned: Optional[str] = FORMS['returned'],
                  returned_none: Optional[str] = FORMS['returned_none'],
                  errored: Optional[str] = FORMS['errored'],
-                 error_level: int = 50,
+                 error_level: int = 20,
                  facility: str = 'loggo',
                  ip: Optional[str] = None,
                  port: Optional[str] = None,
@@ -49,7 +49,7 @@ class Loggo:
                  raise_logging_errors: bool = False,
                  logfile: Optional[str] = './logs/logs.txt',
                  obscured: Optional[str] = '********',
-                 private_data: Set[str] = set(),
+                 private_data: Set[str] = None,
                  max_dict_depth: int = 5,
                  log_if_graylog_disabled: bool = True) -> None:
         """
@@ -85,7 +85,7 @@ class Loggo:
         self.raise_logging_errors = raise_logging_errors
         self.logfile = logfile
         self.obscured = obscured
-        self.private_data = private_data
+        self.private_data = private_data or set()
         self.max_dict_depth = max_dict_depth
         self.log_if_graylog_disabled = log_if_graylog_disabled
         self.logger = logging.getLogger(self.facility)  # pylint: disable=no-member
