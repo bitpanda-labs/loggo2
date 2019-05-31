@@ -47,7 +47,7 @@ class Loggo:
                  do_write: bool = False,
                  truncation: int = 7500,
                  raise_logging_errors: bool = False,
-                 logfile: Optional[str] = './logs/logs.txt',
+                 logfile: str = './logs/logs.txt',
                  obscured: Optional[str] = '********',
                  private_data: Set[str] = None,
                  max_dict_depth: int = 5,
