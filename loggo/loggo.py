@@ -22,7 +22,7 @@ except ImportError:
 FORMS = dict(called='*Called {call_signature}',
              returned='*Returned from {call_signature} with {return_type} {return_value}',
              returned_none='*Returned None from {call_signature}',
-             errored='*Errored during {call_signature} with {error_type} "{error_string}"')
+             errored='*Errored during {call_signature} with {exception_type} "{exception_msg}"')
 
 
 class Loggo:
@@ -48,8 +48,7 @@ class Loggo:
                  truncation: int = 7500,
                  raise_logging_errors: bool = False,
                  logfile: Optional[str] = './logs/logs.txt',
-                 line_length: int = 200,
-                 obscured: Optional[str] = '[PRIVATE_DATA]',
+                 obscured: Optional[str] = '********',
                  private_data: Set[str] = set(),
                  max_dict_depth: int = 5,
                  log_if_graylog_disabled: bool = True) -> None:
@@ -61,10 +60,9 @@ class Loggo:
         - ip: ip address for graylog
         - port: port for graylog
         - logfile: path to a file to which logs will be written
-        - do_print: porint logs to console
+        - do_print: print logs to console
         - do_write: write logs to file
         - truncation: truncate value of log data fields to this length
-        - line_length: max length for console printed string
         - private_data: key names that should be filtered out of logging. when not
         - max_dict_depth: how deep into log data loggo will look for private data provided, nothing is censored
         - raise_logging_errors: should Loggo errors be allowed to happen?
@@ -86,7 +84,6 @@ class Loggo:
         self.truncation = truncation
         self.raise_logging_errors = raise_logging_errors
         self.logfile = logfile
-        self.line_length = line_length
         self.obscured = obscured
         self.private_data = private_data
         self.max_dict_depth = max_dict_depth
@@ -316,8 +313,7 @@ class Loggo:
         param_str = ', '.join(f'{k}={v}' for k, v in param_strings.items())
         format_strings = dict(callable=getattr(function, '__qualname__', 'unknown_callable'),
                               params=param_str)
-        formatted = signature.format(**format_strings)
-        format_strings['call_signature'] = formatted
+        format_strings['call_signature'] = signature.format(**format_strings)
         return format_strings
 
     def listen_to(loggo_self, facility: str) -> None:
@@ -409,8 +405,8 @@ class Loggo:
 
         # if what is 'returned' is an exception, get the error formatters
         if msg == self.errored:
-            formatters['error_type'] = type(returned).__name__
-            formatters['error_string'] = str(returned)
+            formatters['exception_type'] = type(returned).__name__
+            formatters['exception_msg'] = str(returned)
             formatters['level'] = self.error_level
         else:
             formatters['level'] = 20
@@ -464,7 +460,7 @@ class Loggo:
         try:
             obj = str(obj) if not use_repr else repr(obj)
         except Exception as error:
-            self.warning('Object could not be cast to string', extra=dict(error_type=type(error), error=error))
+            self.warning('Object could not be cast to string', extra=dict(exception_type=type(error), error=error))
             return '<<Unstringable input>>'
         if truncate is None:
             return obj
