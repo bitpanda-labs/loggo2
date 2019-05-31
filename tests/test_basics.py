@@ -1,17 +1,16 @@
+import logging
 import os
 import unittest
-from unittest.mock import mock_open, patch, ANY, Mock
-import logging
+
+from unittest.mock import ANY, Mock, mock_open, patch
 
 from loggo import Loggo as LoggoType
 
-test_setup = dict(facility='LOGGO_TEST',
-                  ip=None,
-                  port=None,
-                  do_print=True,
-                  do_write=True,
+test_setup = dict(do_write=True,
+                  log_if_graylog_disabled=False,
                   private_data=['mnemonic', 'priv'])
-Loggo = LoggoType(test_setup)
+
+Loggo = LoggoType(**test_setup)
 
 
 @Loggo
@@ -69,6 +68,14 @@ class AllMethodTypes:
 
 
 all_method_types = AllMethodTypes()
+
+
+class NoRepr:
+    """
+    An object that really hates being repr'd
+    """
+    def __repr__(self):
+        raise Exception('No.')
 
 
 @Loggo
@@ -147,19 +154,6 @@ def test_func_with_recursive_data_within(data):
 
 
 dummy = DummyClass()
-
-# events test data
-@Loggo.events(called='Log string for method call',
-              returned='Log string for return')
-def event_success():
-    return 1
-
-
-@Loggo.events(called='Log string for method call',
-              errored='Log string on exception',
-              error_level=50)
-def event_fail():
-    raise ValueError('Boom!')
 
 
 class TestDecoration(unittest.TestCase):
@@ -293,22 +287,12 @@ class TestDecoration(unittest.TestCase):
             self.assertFalse('secret' in extras['extra']['data'])
 
 
-class NoRepr:
-    """
-    An object that really hates being repr'd
-    """
-    def __repr__(self):
-        raise Exception('No.')
-
-
 class TestLog(unittest.TestCase):
 
     def setUp(self):
         self.log_msg = 'This is a message that can be used when the content does not matter.'
         self.log_data = {'This is': 'log data', 'that can be': 'used when the content does not matter'}
-
-        self.test_setup = dict(facility='LOG_TEST', ip=None, port=None, do_print=True, do_write=True)
-        self.loggo = LoggoType(self.test_setup)
+        self.loggo = LoggoType(do_print=True, do_write=True, log_if_graylog_disabled=False)
         self.log = self.loggo.log
 
     def test_protected_keys(self):
@@ -419,9 +403,11 @@ class TestLog(unittest.TestCase):
             logger.assert_called_once()
 
     def test_see_below(self):
-        msg = 'testing only'
-        s = self.loggo._build_string(msg, 50)
-        self.assertTrue('-- see below:' not in s)
+        """legacy test, deletable if it causes problems later"""
+        with patch('logging.Logger.log') as logger:
+            Loggo.log(50, 'test')
+            (alert, msg), kwargs = logger.call_args
+            self.assertFalse('-- see below:' in msg)
 
     def test_compat(self):
         test = 'a string'
@@ -471,83 +457,12 @@ class TestLog(unittest.TestCase):
 
     def test_listen_to(self):
         sub_loggo_facility = 'a sub logger'
-        sub_loggo = LoggoType({'facility': sub_loggo_facility})
+        sub_loggo = LoggoType(facility=sub_loggo_facility)
         self.loggo.listen_to(sub_loggo_facility)
-
         self.loggo.log = Mock()
-        log_args = logging.WARNING, 'The parent logger should log this message after sublogger logs it'
-        sub_loggo.log(*log_args)
-
-        self.loggo.log.assert_called_with(*log_args, ANY)
-
-
-class TestMethods(unittest.TestCase):
-
-    def test_methods_secret_not_called(self):
-        with patch('logging.Logger.log') as logger:
-            result = all_method_types.__secret__()
-            self.assertTrue(result)
-            logger.assert_not_called()
-
-    def test_methods_public_instance(self):
-        with patch('logging.Logger.log') as logger:
-            result = all_method_types.public()
-            self.assertTrue(result)
-            self.assertEqual(logger.call_count, 2)
-
-    def test_methods_classmethod_instance(self):
-        with patch('logging.Logger.log') as logger:
-            result = all_method_types.cl()
-            self.assertTrue(result)
-            self.assertEqual(logger.call_count, 2)
-
-    def test_methods_classmethod_class(self):
-        with patch('logging.Logger.log') as logger:
-            result = AllMethodTypes.cl()
-            self.assertTrue(result)
-            self.assertEqual(logger.call_count, 2)
-
-    def test_methods_staticmethod_instance(self):
-        with patch('logging.Logger.log') as logger:
-            result = all_method_types.st()
-            self.assertTrue(result)
-            self.assertEqual(logger.call_count, 2)
-
-    def test_methods_staticmethod_class(self):
-        with patch('logging.Logger.log') as logger:
-            result = AllMethodTypes.st()
-            self.assertTrue(result)
-            self.assertEqual(logger.call_count, 2)
-
-    def test_methods_double_logged_instance(self):
-        with patch('logging.Logger.log') as logger:
-            result = all_method_types.doubled()
-            self.assertTrue(result)
-            self.assertEqual(logger.call_count, 4)
-
-
-class TestEvents(unittest.TestCase):
-
-    def test_events_pass(self):
-        with patch('logging.Logger.log') as logger:
-            n = event_success()
-            self.assertEqual(n, 1)
-            self.assertEqual(logger.call_count, 2)
-            (alert, logged_msg), extras = logger.call_args_list[0]
-            self.assertEqual(logged_msg, 'Log string for method call')
-            (alert, logged_msg), extras = logger.call_args_list[1]
-            self.assertEqual(logged_msg, 'Log string for return')
-
-    def test_events_fail(self):
-        with patch('logging.Logger.log') as logger:
-            n = event_fail()
-            self.assertIsNone(n)
-            self.assertEqual(logger.call_count, 2)
-            (alert, logged_msg), extras = logger.call_args_list[0]
-            self.assertEqual(logged_msg, 'Log string for method call')
-            (alert, logged_msg), extras = logger.call_args_list[1]
-            self.assertEqual(logged_msg, 'Log string on exception')
-            self.assertEqual(alert, 50)
+        warn = 'The parent logger should log this message after sublogger logs it'
+        sub_loggo.log(logging.WARNING, warn)
+        self.loggo.log.assert_called_with(logging.WARNING, warn, ANY)
 
 
 if __name__ == '__main__':
