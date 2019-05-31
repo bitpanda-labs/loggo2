@@ -2,13 +2,12 @@
 [![codecov.io](https://codecov.io/gh/bitpanda-labs/loggo/branch/master/graph/badge.svg)](https://codecov.io/gh/bitpanda-labs/loggo)
 [![LoC](https://tokei.rs/b1/github/bitpanda-labs/loggo)](https://github.com/bitpanda-labs/loggo)
 
-# Logging utilities for Python projects
+# `@loggo`: automated logging for Python 3
 
 <!--- Don't edit the version line below manually. Let bump2version do it for you. -->
 > Version 5.0.0
 
-
-> This module provides ways of logging the input, output and errors in classes and functions It can be hooked up to graylog, printed to console or saved to a log file. It requires very little configuration.
+> You find Python's builtin `logging` module repetitive, tedious and ugly, and the logs you do write with it clash with your otherwise awesome style. `loggo` is here to help: it automates the boring stuff, simplifies the tricky stuff, hooks up effortlessly to [graylog](), and keeps an eye out for privacy and security if you need it to.
 
 ## Install
 
@@ -20,42 +19,43 @@ python setup.py install
 
 ## Setup
 
-Setting up the tool as you like requires a small amount of configuration. Put this in the main `__init__.py`, or in a file called `log.py`. so you can import the same, ready-set-up logger easily. Let's call our app `tester`, so you would use `tester/__init__.py`:
+To get started, import and instantiate th main class, ideally somewhere at the core of your project. If you have a module with multiple files, do the initial configuration in the main `__init__.py`, or in a file called `log.py`. so you can import the same, ready-set-up logger easily.
+
+For example, if your app was called `tester`, you could add the following to `tester/__init__.py`:
 
 ```python
 from loggo import Loggo
-# All setup values are optional
-setup = dict(facility='tester',             # name of program logging the message
-             ip='0.0.0.0',                  # ip for graylog
-             port=9999,                     # port for graylog
-             do_print=True,                 # print to console
-             do_write=True,                 # write to file
-             logfile='mylog.txt',           # custom path to logfile
-             line_length=200,               # line truncation for console logging
-             truncation=1000,               # longest possible value in extra data
-             private_data=['password'],     # list of sensitive args/kwargs
-             obscured='[[[PRIVATE_DATA]]]') # string with which to obscure data
-Loggo = Loggo(setup)
+# all setup values are optional
+loggo = Loggo(facility='tester',         # name of program logging the message
+              ip='0.0.0.0',              # ip for graylog
+              port=9999,                 # port for graylog
+              do_print=True,             # print each log to console
+              do_write=True,             # write each log to file
+              logfile='mylog.txt',       # custom path to logfile
+              line_length=200,           # line truncation for console logging
+              truncation=1000,           # longest possible value in extra data
+              private_data=['password'], # list of sensitive args/kwargs
+              obscured='******')         # string with which to obscure data
 ```
 
 ## Usage
 
-In other parts of the project, you should then be able to access the configured logger components with:
+In other parts of the project, you can then access the configured logger instance with:
 
 ```python
-from tester import Loggo
+from tester import loggo
 ```
 
-### Decorators
+### Loggo as decorator
 
-You can use `@Loggo` as a decorator on a class, class method or function. On classes, it will log every method; on methods and functions it will log the call signature, return and errors.
+You can use `@loggo` as a decorator on any callable: a class, on its method, or on function. On classes, it will log every method; on methods and functions it will log the call signature, return and errors. The central idea behind `loggo` is that you can simply decorate every class in your project, as well as any important standalone functions, and have comprehensive, standardised information about your project's internals without any extra labour.
 
-Furthermore, you can use `@Loggo.ignore` to ignore a particular method of a class decorated by `@Loggo`. There is also `@Loggo.errors`, which will only log errors, not calls and returns.
+If a method within a decorated class is called too often, or if you don't need to keep an eye on it, you can use `@loggo.ignore` to ignore it. Also available is `@loggo.errors`, which will only log exceptions, not calls and returns.
 
-For an example use, let's make a simple class that multiplies two numbers, but only if a password is supplied. We can ignore logging of the boring authentication system.
+For an example use-case, let's make a simple class that multiplies two numbers, but only if a password is supplied. We will ignore logging of the boring authentication system.
 
 ```python
-@Loggo
+@loggo
 class Multiplier(object):
 
     def __init__(self, base):
@@ -70,7 +70,7 @@ class Multiplier(object):
             raise ValueError('Not authenticated!')
         return self.base * n
 
-    @Loggo.ignore
+    @loggo.ignore
     def _do_authentication(self, password):
         """Not exactly Fort Knox"""
         return password == 'tOpSeCrEt'
@@ -87,21 +87,21 @@ assert result == 2500 # True
 We'll get some nice text in the console:
 
 ```
-11.05 2018 17:14:54 *Called Multiplier.multiply(n=50, password='[PRIVATE_DATA]')
-11.05 2018 17:14:54 *Returned from Multiplier.multiply(n=50, password='[PRIVATE_DATA]') with int (2500)
+11.05 2018 17:14:54 *Called Multiplier.multiply(n=50, password='******')
+11.05 2018 17:14:54 *Returned from Multiplier.multiply(n=50, password='******') with int (2500)
 ```
 
-Notice that our private argument `password` was successfully obscured. If you used `do_write=True`, this log will also be in your specified log file, also with password obscured.
+Notice that our private argument `password` was successfully obscured, even without us naming the argument when we called the method. If you used `do_write=True`, this log will also be in your specified log file, also with password obscured.
 
 ```python
-result = Mult.multiply(7, 'password123')
+result = mult.multiply(7, 'password123')
 ```
 
-An error will raise, a log will be generated and we'll get extra info in the console, including a traceback:
+Here an error will raise, a log will be generated, and we'll get extra info in the console, including traceback:
 
 ```
-11.05 2018 17:19:43 *Called Multiplier.multiply(n=7, password='[PRIVATE_DATA]')
-11.05 2018 17:19:43 *Errored during Multiplier.multiply(n=7, password='[PRIVATE_DATA]') with ValueError "Not authenticated!"    dev -- see below:
+11.05 2018 17:19:43 *Called Multiplier.multiply(n=7, password='******')
+11.05 2018 17:19:43 *Errored during Multiplier.multiply(n=7, password='******') with ValueError "Not authenticated!"    20 -- see below:
 Traceback (most recent call last):
   File "/Users/danny/work/loggo/loggo/loggo.py", line 137, in full_decoration
     response = function(*args, **kwargs)
@@ -110,54 +110,77 @@ Traceback (most recent call last):
 ValueError: Not authenticated!
 ```
 
-### `@Loggo.events`
+If you're using [graypy](https://github.com/severb/graypy/), you'll get a lot of extra goodness, such as key-value pairs for call signatures, timestamps, arguments, return values, exception information, and so on.
 
-`@Loggo.events` allows you to pass in messages for particular events:
+### Custom messages
+
+When configuring `loggo`, you can use your own message format for the auto-generated logs. There are four keys, one for each autolog type:
 
 ```python
-@Loggo.events(
-              called='Log string for method call',
-              errored='Log string on exception',
-              returned='Log string for return',
-              error_level=50  # log level for errors
-              )
+loggo = Loggo(called='Log before callable is run',
+              returned='Log for return from {call_signature} at {timestamp}',
+              returned_none='Log when the return value of the callable is None',
+              errored='Log string on exception: {exception_type}')
+@loggo
 def test():
     pass
 ```
 
+If you pass `None` for any of these keyword arguments, logs of that time will be completely suppressed. If you do not provide a value for `returned_none`, `loggo` will use the value you provided for `returned`, or fall back to its own default.
+
+Notice, in the example above, you can include particular format strings in the log message. Currently supported are:
+
+* `call_signature`: the callable name and its arguments and keyword arguments
+* `callable`: the `__qualname__` of the decorated object
+* `params`: comma separated key value pairs for arguments passed
+* `return_value`: the object returned by the callable
+* `return_type`: type of returned object
+* `exception_type`: `ValueError`, `AttributeError`, etc.
+* `exception_msg`: details about the thrown exception
+* `level`: the alert level associated with this log
+* `timestamp`: time at time of logging
+
+Adding more such strings is trivial; submit an issue if there is something else you need.
+
 ### Logging without decorators
 
-For logging manually, Loggo provides methods similar to the logging functions of the `logging` standard library: `Loggo.log`, `Loggo.debug`, `Loggo.info`, `Loggo.warning`, `Loggo.error`, `Loggo.critical`. The methods use the configuration that has already been defined. The main method `Loggo.log` takes three parameters:
+For logging manually, `loggo` provides methods similar to the logging functions of the `logging` standard library: `loggo.log`, `loggo.debug`, `loggo.info`, `loggo.warning`, `loggo.error`, and `loggo.critical`. The methods use the configuration that has already been defined. The main method `loggo.log` takes three parameters:
 
 ```python
 level = 50
 msg = 'Message to log'
 extra = dict(some='data', that='will', be='logged')
-Loggo.log(level, msg, extra)
+loggo.log(level, msg, extra)
 # console: 11.05 2018 17:36:24 Message to log  50
 # extra_data in log file if `do_print` setting is True
 ```
 
-Methods `Loggo.debug`, `Loggo.info`, `Loggo.warning`, `Loggo.error` and `Loggo.critical` are convenience methods for setting the log level. For instance,
+Methods `loggo.debug`, `loggo.info`, `loggo.warning`, `loggo.error` and `loggo.critical` are convenience methods for setting the log level. For instance,
+
 ```python
-Loggo.warning('A message', dict(some='data'))
+loggo.warning('A message', dict(some='data'))
 ```
+
 is equivalent to
+
 ```python
-Loggo.log(logging.WARNING, 'A message', dict(some='data'))
+loggo.log(logging.WARNING, 'A message', dict(some='data'))
 ```
+
 where `logging.WARNING` is an integer constant imported from the standard library.
+
+The advantage of using `loggo` for these kinds of logs is that `loggo` will make the extra data more readable and truncate very large strings. More importantly, you also still get whatever extras you've configured, like obfuscation of private data, or writing to console/file.
 
 ### Methods
 
-You can also start and stop logging with `Loggo.start()` and `Loggo.stop()`, at any point in your code, though error logs will still get through. If you want to suppress errors too, you can pass in `allow_errors=False`.
+You can also start and stop logging with `loggo.start()` and `loggo.stop()`, at any point in your code, though by default, error logs will still get through. If you want to suppress errors too, you can pass in `allow_errors=False`.
 
-### Context manager
+### Context managers
 
 You can suppress logs using a context manager. Errors are allowed here by default too:
 
 ```python
-with Loggo.pause(allow_errors=False):
+with loggo.pause(allow_errors=False):
     do_something()
 ```
 
@@ -167,9 +190,11 @@ with Loggo.pause(allow_errors=False):
 python -m unittest
 ```
 
-## Bumping version
+## Contributing
 
-Version bumps should be done using the `bump2version` utility. Install it with pip:
+Issues, feature requests and code contributions are welcomed.
+
+`loggo` adheres to semantic versioning, ideally via the `bump2version` utility. Install it with pip:
 
 ```bash
 pip install bump2version
@@ -179,17 +204,9 @@ Whenever you need to bump version, in the project root directory do:
 
 ```bash
 bump2version (major | minor | patch)
-git push <remote> <branch> --follow-tags
+git push <remote> <branch> --follow-tags 
 ```
-
-If you don't want to remember to use the `--follow-tags` flag, you can edit your git config:
-
-```bash
-git config --global push.followTags true
-```
-
-After this you can simply push the version bump commit to remote as you would normally, and the tag will also be pushed.
 
 ## Limitations
 
-`Loggo` uses Python's standard library (`logging`) to ultimately generate a log. There are some gotchas when using it: for instance, in terms of the extra data that can be passed in, key names for this extra data cannot clash with some internal names used within the `logging` module (`message`, `args`, etc.). To get around this, you'll get a warning that your data contains a bad key name, and it will be changed (i.e. from `message` to `protected_message`).
+`loggo` uses Python's standard library (`logging`) to generate logs. There are some gotchas when using it: for instance, in terms of the extra data that can be passed in, key names for this extra data cannot clash with some internal names used within the `logging` module (`message`, `args`, etc.). To get around this, you'll get a warning that your data contains a bad key name, and it will be changed (i.e. from `message` to `protected_message`).
