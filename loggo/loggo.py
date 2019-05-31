@@ -6,6 +6,7 @@ import inspect
 import logging
 import os
 import traceback
+import types
 import uuid
 from contextlib import contextmanager
 from datetime import datetime
@@ -19,7 +20,8 @@ except ImportError:
     graypy = None
 
 # Strings to be formatted for pre function, post function and error during function
-FORMS = dict(called='*Called {call_signature}',
+FORMS = dict(instantiated='*Instantiated {classname}({params})',
+             called='*Called {call_signature}',
              returned='*Returned from {call_signature} with {return_type} {return_value}',
              returned_none='*Returned None from {call_signature}',
              errored='*Errored during {call_signature} with {exception_type} "{exception_msg}"')
@@ -35,6 +37,7 @@ class Loggo:
     log_threshold = logging.DEBUG
 
     def __init__(self,
+                 instantiated: Optional[str] = FORMS['instantiated'],
                  called: Optional[str] = FORMS['called'],
                  returned: Optional[str] = FORMS['returned'],
                  returned_none: Optional[str] = FORMS['returned_none'],
@@ -72,6 +75,7 @@ class Loggo:
         self.stopped = False
         self.allow_errors = True
         self.called = called
+        self.instantiated = instantiated
         self.returned = returned
         self.returned_none = self._best_returned_none(returned, returned_none)
         self.errored = errored
@@ -118,7 +122,7 @@ class Loggo:
         name = name or getattr(candidate, '__name__', None)
         if not name:
             return False
-        if name.startswith('__') and name.endswith('__'):
+        if name.startswith('__') and name.endswith('__') and name != '__init__':
             return False
         if not callable(candidate):
             return False
@@ -138,6 +142,7 @@ class Loggo:
             if isinstance(cls.__dict__[name], (staticmethod, classmethod)):
                 # Make mypy ignore due to an open issue: https://github.com/python/mypy/issues/5530
                 deco = staticmethod(deco)  # type: ignore
+            deco = types.MethodType(deco, cls)
             try:
                 setattr(cls, name, deco)
             # AttributeError happens if we can't write, as with __dict__
@@ -261,25 +266,28 @@ class Loggo:
             param_strings = self.sanitise(bound)
             formatters = self._make_call_signature(function, param_strings)
             privates = [key for key in param_strings if key not in bound]
+            is_init = formatters['callable'].endswith('__init__')
 
             # add more format strings
             more = dict(decorated=True,
                         couplet=uuid.uuid1(),
                         number_of_params=len(args) + len(kwargs),
                         private_keys=', '.join(privates),
-                        timestamp=datetime.now().strftime('%d.%m %Y %H:%M:%S'))
+                        timestamp=datetime.now().strftime('%d.%m %Y %H:%M:%S'),
+                        instantiation=True)
             formatters.update(more)
 
             # 'called' log tells you what was called and with what arguments
             if not just_errors:
-                self._generate_log(self.called, None, formatters, param_strings)
+                msg = self.instantiated if is_init else self.called
+                self._generate_log(msg, None, formatters, param_strings)
 
             try:
                 # where the original function is actually run
                 response = function(*args, **kwargs)
                 msg = self.returned if response is not None else self.returned_none
                 # the successful return log
-                if not just_errors:
+                if not just_errors and not is_init:
                     self._generate_log(msg, response, formatters, param_strings)
                 # return whatever the original callable did
                 return response
@@ -310,9 +318,14 @@ class Loggo:
         Return it within a dict containing some other format strings.
         """
         signature = '{callable}({params})'
+        try:
+            classname = function.__class__.__name__
+        except AttributeError:
+            classname = 'unknown_class'
         param_str = ', '.join(f'{k}={v}' for k, v in param_strings.items())
         format_strings = dict(callable=getattr(function, '__qualname__', 'unknown_callable'),
-                              params=param_str)
+                              params=param_str,
+                              classname=classname)
         format_strings['call_signature'] = signature.format(**format_strings)
         return format_strings
 

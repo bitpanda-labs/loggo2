@@ -132,6 +132,7 @@ Notice, in the example above, you can include particular format strings in the l
 
 * `call_signature`: the callable name and its arguments and keyword arguments
 * `callable`: the `__qualname__` of the decorated object
+* `classname`: the class to which a logged method belongs
 * `params`: comma separated key value pairs for arguments passed
 * `return_value`: the object returned by the callable
 * `return_type`: type of returned object
