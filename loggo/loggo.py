@@ -6,7 +6,6 @@ import inspect
 import logging
 import os
 import traceback
-import types
 import uuid
 from contextlib import contextmanager
 from datetime import datetime
@@ -139,10 +138,10 @@ class Loggo:
             deco = self.logme(candidate, just_errors=just_errors)
             # somehow, decorating classmethods as staticmethods is the only way
             # to make everything work properly. we should find out why, some day
-            if isinstance(cls.__dict__[name], (staticmethod, classmethod)):
+            
+            if name in cls.__dict__ and isinstance(cls.__dict__[name], (staticmethod, classmethod)):
                 # Make mypy ignore due to an open issue: https://github.com/python/mypy/issues/5530
                 deco = staticmethod(deco)  # type: ignore
-            deco = types.MethodType(deco, cls)
             try:
                 setattr(cls, name, deco)
             # AttributeError happens if we can't write, as with __dict__
@@ -318,14 +317,12 @@ class Loggo:
         Return it within a dict containing some other format strings.
         """
         signature = '{callable}({params})'
-        try:
-            classname = function.__class__.__name__
-        except AttributeError:
-            classname = 'unknown_class'
+        callabl = getattr(function, '__qualname__', 'unknown_callable')
+        classname = callabl.rsplit('.')[0]
         param_str = ', '.join(f'{k}={v}' for k, v in param_strings.items())
-        format_strings = dict(callable=getattr(function, '__qualname__', 'unknown_callable'),
-                              params=param_str,
-                              classname=classname)
+        format_strings = dict(callable=callabl,
+                              classname=classname,
+                              params=param_str)
         format_strings['call_signature'] = signature.format(**format_strings)
         return format_strings
 
