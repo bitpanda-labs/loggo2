@@ -173,7 +173,7 @@ class TestDecoration(unittest.TestCase):
     def test_log_errors(self):
         with patch('logging.Logger.log'):
             with self.assertRaises(ValueError):
-                with Loggo.log_errors():
+                with loggo.log_errors():
                     second_test_func(5)
 
     def test_one(self):
@@ -325,8 +325,8 @@ class TestLog(unittest.TestCase):
         mock = mock_open()
         with patch('builtins.open', mock):
             self.log(logging.INFO, 'An entry in our log')
-            mock.assert_called_with(Loggo.logfile, 'a')
-            self.assertTrue(os.path.isfile(Loggo.logfile))
+            mock.assert_called_with(loggo.logfile, 'a')
+            self.assertTrue(os.path.isfile(loggo.logfile))
 
     def test_int_truncation(self):
         """
@@ -373,15 +373,15 @@ class TestLog(unittest.TestCase):
 
     def test_loggo_pause(self):
         with patch('logging.Logger.log') as mock_log:
-            with Loggo.pause():
-                Loggo.log(logging.INFO, 'test')
+            with loggo.pause():
+                loggo.log(logging.INFO, 'test')
             mock_log.assert_not_called()
-            Loggo.log(logging.INFO, 'test')
+            loggo.log(logging.INFO, 'test')
             mock_log.assert_called()
 
     def test_loggo_pause_error(self):
         with patch('logging.Logger.log') as logger:
-            with Loggo.pause():
+            with loggo.pause():
                 with self.assertRaises(ValueError):
                     may_or_may_not_error_test('one', 'two')
             (alert, msg), kwargs = logger.call_args
@@ -396,30 +396,30 @@ class TestLog(unittest.TestCase):
 
     def test_loggo_error_suppressed(self):
         with patch('logging.Logger.log') as logger:
-            with Loggo.pause(allow_errors=False):
+            with loggo.pause(allow_errors=False):
                 with self.assertRaises(ValueError):
                     may_or_may_not_error_test('one', 'two')
             logger.assert_not_called()
-            Loggo.log(logging.INFO, 'test')
+            loggo.log(logging.INFO, 'test')
             logger.assert_called_once()
 
     def test_see_below(self):
         """legacy test, deletable if it causes problems later"""
         with patch('logging.Logger.log') as logger:
-            Loggo.log(50, 'test')
+            loggo.log(50, 'test')
             (alert, msg), kwargs = logger.call_args
             self.assertFalse('-- see below:' in msg)
 
     def test_compat(self):
         test = 'a string'
         with patch('loggo.Loggo.log') as logger:
-            Loggo.log(logging.INFO, test, None)
+            loggo.log(logging.INFO, test, None)
         args = logger.call_args
         self.assertIsInstance(args[0][0], int)
         self.assertEqual(args[0][1], test)
         self.assertIsNone(args[0][2])
         with patch('logging.Logger.log') as logger:
-            Loggo.log(logging.INFO, test)
+            loggo.log(logging.INFO, test)
         (alert, msg), kwargs = logger.call_args
         self.assertEqual(test, msg)
 
@@ -458,7 +458,7 @@ class TestLog(unittest.TestCase):
 
     def test_listen_to(self):
         sub_loggo_facility = 'a sub logger'
-        sub_loggo = Loggo(facility=sub_loggo_facility)
+        sub_loggo = loggo(facility=sub_loggo_facility)
         self.loggo.listen_to(sub_loggo_facility)
         self.loggo.log = Mock()
         warn = 'The parent logger should log this message after sublogger logs it'
