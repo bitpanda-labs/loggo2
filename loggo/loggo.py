@@ -303,7 +303,7 @@ class Loggo:
         return params
 
     @staticmethod
-    def _make_call_signature(function: Callable, param_strings: Dict[str, str]) -> Tuple[str, Dict]:
+    def _make_call_signature(function: Callable, param_strings: Dict[str, str]) -> Dict:
         """
         Represent the call as a string mimicking how it is written in Python.
 
