@@ -139,8 +139,8 @@ Notice, in the example above, you can include particular format strings in the l
 * `exception_msg`: details about the thrown exception
 * `level`: the alert level associated with this log
 * `timestamp`: time at time of logging
-* `couplet`: uuid.uuid1() for the called and returned/errored pair
-* `number_of_params`: total args + kwargs as int
+* `couplet`: `uuid.uuid1()` for the called and returned/errored pair
+* `number_of_params`: total `args + kwargs` as int
 * `private_keys`: list of identified private argument names
 
 Adding more such strings is trivial; submit an issue if there is something else you need.
