@@ -523,9 +523,8 @@ class Loggo:
         # print or write log lines
         trace = extra.get('traceback')
         if self.do_write or self.do_print:
-            now = datetime.now().strftime('%d.%m %Y %H:%M:%S')
-            timestamp = extra.get('timestamp', now)
-            line = f'{now}\t{msg}\t{level}'
+            ts = extra.get('timestamp', datetime.now().strftime('%d.%m %Y %H:%M:%S'))
+            line = f'{ts}\t{msg}\t{level}'
         if trace:
             line = f'{msg} -- see below: \n{trace}\n' if trace else msg
         if self.do_print:
