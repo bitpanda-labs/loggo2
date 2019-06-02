@@ -10,7 +10,7 @@ import uuid
 from contextlib import contextmanager
 from datetime import datetime
 from functools import wraps
-from typing import Optional, Set, Dict, Union, Callable, Generator, Any, cast, Mapping, Tuple
+from typing import Optional, Set, Dict, Union, Callable, Generator, Any, cast, Mapping
 
 # you don't need graylog installed
 try:
@@ -49,7 +49,7 @@ class Loggo:
                  raise_logging_errors: bool = False,
                  logfile: str = './logs/logs.txt',
                  obscured: Optional[str] = '********',
-                 private_data: Set[str] = None,
+                 private_data: Optional[Set[str]] = None,
                  max_dict_depth: int = 5,
                  log_if_graylog_disabled: bool = True) -> None:
         """
@@ -92,14 +92,14 @@ class Loggo:
         self.logger.setLevel(Loggo.log_threshold)
         self._add_graylog_handler()
 
-    def _best_returned_none(self, returned, returned_none):
+    def _best_returned_none(self, returned: Optional[str], returned_none: Optional[str]) -> Optional[str]:
         """
         If the user has their own msg format for 'returned' logs, but not one
         for 'returned_none', we should use theirs over loggo's default
         """
         # if the user explicitly doesn't want logs for returns, set to none
         if not returned_none or not returned:
-            return
+            return None
         # if they provided their own, use that
         if returned_none != FORMS['returned_none']:
             return returned_none
@@ -376,7 +376,7 @@ class Loggo:
 
         return '({})'.format(self._force_string_and_truncate(response, truncate, use_repr=True))
 
-    def _generate_log(self, msg: str, returned: Any, formatters: Dict, safe_log_data: Dict[str, str]) -> None:
+    def _generate_log(self, msg: Optional[str], returned: Any, formatters: Dict, safe_log_data: Dict[str, str]) -> None:
         """
         generate message, level and log data for automated logs
 
@@ -385,6 +385,10 @@ class Loggo:
         formatters (dict): dict containing format strings needed for message
         safe_log_data (dict): dict of stringified, truncated, censored parameters
         """
+        # if the user turned off logs of this type, do nothing immediately
+        if not msg:
+            return
+
         # if errors not to be shown and this is an error, quit
         if not self.allow_errors and msg == self.errored:
             return
@@ -518,7 +522,7 @@ class Loggo:
             extra = self.sanitise(extra, use_repr=False)
             msg = self.sanitise_msg(msg)
 
-        extra.update(dict(level=str(level), loggo=True))
+        extra.update(dict(level=str(level), loggo=str(True)))
 
         # print or write log lines
         trace = extra.get('traceback')

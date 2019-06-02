@@ -1,6 +1,7 @@
 import logging
 import os
 import unittest
+from typing import Mapping, Any
 
 from unittest.mock import ANY, Mock, mock_open, patch
 
@@ -8,7 +9,7 @@ from loggo import Loggo as LoggoType
 
 test_setup = dict(do_write=True,
                   log_if_graylog_disabled=False,
-                  private_data=['mnemonic', 'priv'])
+                  private_data={'mnemonic', 'priv'})  # type: Mapping[str, Any]
 
 Loggo = LoggoType(**test_setup)
 

@@ -1,18 +1,21 @@
 import unittest
 from unittest.mock import patch
-
+from typing import Mapping, Optional
 from loggo import Loggo as LoggoType
 
+# without the Mapping annotation this fails, apparently due to mypy problems
 strings = dict(called='Log string {call_signature}',
                returned='Log string for return',
-               errored='Log string on exception')
+               errored='Log string on exception')  # type: Mapping[str, str]
 
 CustomStrings = LoggoType(log_if_graylog_disabled=False, **strings)
 
-strings['returned_none'] = 'Returned none!'
-strings['called'] = None
+nocalled = dict(called=None,
+                returned='Log string for return',
+                returned_none='Returned none!',
+                errored='Log string on exception')  # type: Mapping[str, Optional[str]]
 
-CustomNoneString = LoggoType(log_if_graylog_disabled=False, **strings)
+CustomNoneString = LoggoType(log_if_graylog_disabled=False, **nocalled)
 
 
 # custom message test data
