@@ -458,7 +458,7 @@ class TestLog(unittest.TestCase):
 
     def test_listen_to(self):
         sub_loggo_facility = 'a sub logger'
-        sub_loggo = loggo(facility=sub_loggo_facility)
+        sub_loggo = Loggo(facility=sub_loggo_facility)
         self.loggo.listen_to(sub_loggo_facility)
         self.loggo.log = Mock()
         warn = 'The parent logger should log this message after sublogger logs it'
