@@ -39,7 +39,7 @@ class Loggo:
                  returned: Optional[str] = FORMS['returned'],
                  returned_none: Optional[str] = FORMS['returned_none'],
                  errored: Optional[str] = FORMS['errored'],
-                 error_level: int = 20,
+                 error_level: Optional[int] = logging.INFO,
                  facility: str = 'loggo',
                  ip: Optional[str] = None,
                  port: Optional[str] = None,
@@ -272,21 +272,21 @@ class Loggo:
 
             # 'called' log tells you what was called and with what arguments
             if not just_errors:
-                self._generate_log(self.called, None, formatters, param_strings)
+                self._generate_log('called', None, formatters, param_strings)
 
             try:
                 # where the original function is actually run
                 response = function(*args, **kwargs)
-                msg = self.returned if response is not None else self.returned_none
+                where = 'returned_none' if response is None else 'returned'
                 # the successful return log
                 if not just_errors:
-                    self._generate_log(msg, response, formatters, param_strings)
+                    self._generate_log(where, response, formatters, param_strings)
                 # return whatever the original callable did
                 return response
             # handle any possible error
             except Exception as error:
                 formatters['traceback'] = traceback.format_exc()
-                self._generate_log(self.errored, error, formatters, param_strings)
+                self._generate_log('errored', error, formatters, param_strings)
                 raise
         return full_decoration
 
@@ -376,7 +376,7 @@ class Loggo:
 
         return '({})'.format(self._force_string_and_truncate(response, truncate, use_repr=True))
 
-    def _generate_log(self, msg: Optional[str], returned: Any, formatters: Dict, safe_log_data: Dict[str, str]) -> None:
+    def _generate_log(self, where: str, returned: Any, formatters: Dict, safe_log_data: Dict[str, str]) -> None:
         """
         generate message, level and log data for automated logs
 
@@ -386,15 +386,16 @@ class Loggo:
         safe_log_data (dict): dict of stringified, truncated, censored parameters
         """
         # if the user turned off logs of this type, do nothing immediately
+        msg = getattr(self, where)
         if not msg:
             return
 
         # if errors not to be shown and this is an error, quit
-        if not self.allow_errors and msg == self.errored:
+        if not self.allow_errors and where == 'errored':
             return
 
         # if state is stopped and not an error, quit
-        if self.stopped and msg != self.errored:
+        if self.stopped and where != 'errored':
             return
 
         # do not log loggo, because why would you ever want that?
@@ -402,18 +403,18 @@ class Loggo:
             return
 
         # return value for log message
-        if msg == self.returned:
+        if 'returned' in where:
             ret_str = self._represent_return_value(returned, truncate=None)
             formatters['return_value'] = ret_str
             formatters['return_type'] = type(returned).__name__
 
         # if what is 'returned' is an exception, get the error formatters
-        if msg == self.errored:
+        if where == 'errored':
             formatters['exception_type'] = type(returned).__name__
             formatters['exception_msg'] = str(returned)
-            formatters['level'] = self.error_level
+            formatters['level'] = self.error_level if self.error_level is not None else logging.INFO
         else:
-            formatters['level'] = 20
+            formatters['level'] = logging.INFO
 
         # format the string template
         msg = msg.format(**formatters).replace('  ', ' ')
@@ -463,8 +464,8 @@ class Loggo:
         """
         try:
             obj = str(obj) if not use_repr else repr(obj)
-        except Exception as error:
-            self.warning('Object could not be cast to string', extra=dict(exception_type=type(error), error=error))
+        except Exception as exc:
+            self.warning('Object could not be cast to string', extra=dict(exception_type=type(exc), exception=exc))
             return '<<Unstringable input>>'
         if truncate is None:
             return obj
@@ -524,13 +525,14 @@ class Loggo:
 
         extra.update(dict(level=str(level), loggo=str(True)))
 
-        # print or write log lines
-        trace = extra.get('traceback')
+        # format logs for printing/writing to file
         if self.do_write or self.do_print:
             ts = extra.get('timestamp', datetime.now().strftime('%d.%m %Y %H:%M:%S'))
             line = f'{ts}\t{msg}\t{level}'
-        if trace:
-            line = f'{msg} -- see below: \n{trace}\n' if trace else msg
+            trace = extra.get('traceback')
+            if trace:
+                line = f'{line} -- see below: \n{trace}\n'
+        # do printing and writing to file
         if self.do_print:
             print(line)
         if self.do_write:
