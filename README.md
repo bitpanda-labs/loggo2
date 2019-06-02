@@ -34,7 +34,7 @@ loggo = Loggo(facility='tester',         # name of program logging the message
               logfile='mylog.txt',       # custom path to logfile
               line_length=200,           # line truncation for console logging
               truncation=1000,           # longest possible value in extra data
-              private_data=['password'], # list of sensitive args/kwargs
+              private_data={'password'}, # set of sensitive args/kwargs
               obscured='******')         # string with which to obscure data
 ```
 
@@ -139,6 +139,9 @@ Notice, in the example above, you can include particular format strings in the l
 * `exception_msg`: details about the thrown exception
 * `level`: the alert level associated with this log
 * `timestamp`: time at time of logging
+* `couplet`: uuid.uuid1() for the called and returned/errored pair
+* `number_of_params`: total args + kwargs as int
+* `private_keys`: list of identified private argument names
 
 Adding more such strings is trivial; submit an issue if there is something else you need.
 
