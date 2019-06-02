@@ -5,27 +5,27 @@ from typing import Mapping, Any
 
 from unittest.mock import ANY, Mock, mock_open, patch
 
-from loggo import Loggo as LoggoType
+from loggo import Loggo
 
 test_setup = dict(do_write=True,
                   log_if_graylog_disabled=False,
                   private_data={'mnemonic', 'priv'})  # type: Mapping[str, Any]
 
-Loggo = LoggoType(**test_setup)
+loggo = Loggo(**test_setup)
 
 
-@Loggo
+@loggo
 def function_with_private_arg(priv, acceptable=True):
     return acceptable
 
 
-@Loggo
+@loggo
 def function_with_private_kwarg(number, a_float=0.0, mnemonic=None):
     return number * a_float
 
 
 # we can also use loggo.__call__
-@Loggo
+@loggo
 def may_or_may_not_error_test(first, other, kwargs=None):
     """
     A function that may or may not error
@@ -36,12 +36,12 @@ def may_or_may_not_error_test(first, other, kwargs=None):
         return (first + other, kwargs)
 
 
-@Loggo
+@loggo
 def aaa():
     return 'this'
 
 
-@Loggo
+@loggo
 class AllMethodTypes:
 
     def __secret__(self):
@@ -62,7 +62,7 @@ class AllMethodTypes:
         """static method"""
         return True
 
-    @Loggo
+    @loggo
     def doubled(self):
         """Loggo twice, bad but shouldn't kill"""
         return True
@@ -79,7 +79,7 @@ class NoRepr:
         raise Exception('No.')
 
 
-@Loggo
+@loggo
 class DummyClass:
     """
     A class with regular methods, static methods and errors
@@ -102,11 +102,11 @@ class DummyClass:
         if kw:
             raise ValueError('Should not have provided!')
 
-    @Loggo.ignore
+    @loggo.ignore
     def hopefully_ignored(self, n):
         return n**n
 
-    @Loggo.errors
+    @loggo.errors
     def hopefully_only_errors(self, n):
         raise ValueError('Bam!')
 
@@ -116,22 +116,22 @@ class DummyClass2:
         return a + b + c
 
 
-@Loggo.errors
+@loggo.errors
 def first_test_func(number):
     raise ValueError('Broken!')
 
 
-@Loggo.errors
+@loggo.errors
 def second_test_func(number):
     raise ValueError('Broken!')
 
 
-@Loggo
+@loggo
 def test_func3(number):
     raise ValueError('Broken!')
 
 
-@Loggo
+@loggo
 def test_inner():
     try:
         test_func3(1)
@@ -144,12 +144,12 @@ within = dict(lst=list(), ok=dict(ok=dict(priv='secret')))
 beyond = dict(lst=list(), ok=dict(ok=dict(ok=dict(ok=dict(ok=dict(ok=dict(priv='allowed')))))))
 
 
-@Loggo
+@loggo
 def test_func_with_recursive_data_beyond(data):
     pass
 
 
-@Loggo
+@loggo
 def test_func_with_recursive_data_within(data):
     pass
 
@@ -293,7 +293,7 @@ class TestLog(unittest.TestCase):
     def setUp(self):
         self.log_msg = 'This is a message that can be used when the content does not matter.'
         self.log_data = {'This is': 'log data', 'that can be': 'used when the content does not matter'}
-        self.loggo = LoggoType(do_print=True, do_write=True, log_if_graylog_disabled=False)
+        self.loggo = Loggo(do_print=True, do_write=True, log_if_graylog_disabled=False)
         self.log = self.loggo.log
 
     def test_protected_keys(self):
@@ -425,7 +425,7 @@ class TestLog(unittest.TestCase):
 
     def test_bad_args(self):
 
-        @Loggo
+        @loggo
         def dummy(needed):
             return needed
         with self.assertRaises(TypeError):
@@ -458,7 +458,7 @@ class TestLog(unittest.TestCase):
 
     def test_listen_to(self):
         sub_loggo_facility = 'a sub logger'
-        sub_loggo = LoggoType(facility=sub_loggo_facility)
+        sub_loggo = Loggo(facility=sub_loggo_facility)
         self.loggo.listen_to(sub_loggo_facility)
         self.loggo.log = Mock()
         warn = 'The parent logger should log this message after sublogger logs it'

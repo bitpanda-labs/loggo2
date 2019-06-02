@@ -1,12 +1,12 @@
 import unittest
 from unittest.mock import patch
 
-from loggo import Loggo as LoggoType
+from loggo import Loggo
 
-Loggo = LoggoType(log_if_graylog_disabled=False)
+loggo = Loggo(log_if_graylog_disabled=False)
 
 
-@Loggo
+@loggo
 class AllMethodTypes:
 
     def __secret__(self):
@@ -27,7 +27,7 @@ class AllMethodTypes:
         """static method"""
         return True
 
-    @Loggo
+    @loggo
     def doubled(self):
         """Loggo twice, bad but shouldn't kill"""
         return True
