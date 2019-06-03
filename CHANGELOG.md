@@ -3,6 +3,21 @@ Changelog
 
 This log should always be updated when doing backwards incompatible changes, resulting in a major version bump. Feel free to add a log for lesser version bumps as well, but for major bumps it's a must.
 
+x.x.x (unreleased)
+-----
+
+- Added
+    - `called`, `returned`, `returned_none` and `errored` kwargs on instantiation for custom log strings
+
+- Changed
+    - do not pass a config dict on instantiation, instead just keyword arguments
+    - tests split into three separete files for maintainability
+    - default obscured data string `[PRIVATE_DATA] -> ********` 
+
+- Removed
+    - loggo.events; its functionality is still available during instantiation
+    - line_length config, which was not respected anyway, and not really needed.
+
 5.0.0
 -----
 - Changed

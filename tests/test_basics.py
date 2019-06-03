@@ -1,30 +1,31 @@
 import logging
 import os
 import unittest
+from typing import Mapping, Any
 
 from unittest.mock import ANY, Mock, mock_open, patch
 
-from loggo import Loggo as LoggoType
+from loggo import Loggo
 
 test_setup = dict(do_write=True,
                   log_if_graylog_disabled=False,
-                  private_data=['mnemonic', 'priv'])
+                  private_data={'mnemonic', 'priv'})  # type: Mapping[str, Any]
 
-Loggo = LoggoType(**test_setup)
+loggo = Loggo(**test_setup)
 
 
-@Loggo
+@loggo
 def function_with_private_arg(priv, acceptable=True):
     return acceptable
 
 
-@Loggo
+@loggo
 def function_with_private_kwarg(number, a_float=0.0, mnemonic=None):
     return number * a_float
 
 
 # we can also use loggo.__call__
-@Loggo
+@loggo
 def may_or_may_not_error_test(first, other, kwargs=None):
     """
     A function that may or may not error
@@ -35,12 +36,12 @@ def may_or_may_not_error_test(first, other, kwargs=None):
         return (first + other, kwargs)
 
 
-@Loggo
+@loggo
 def aaa():
     return 'this'
 
 
-@Loggo
+@loggo
 class AllMethodTypes:
 
     def __secret__(self):
@@ -61,7 +62,7 @@ class AllMethodTypes:
         """static method"""
         return True
 
-    @Loggo
+    @loggo
     def doubled(self):
         """Loggo twice, bad but shouldn't kill"""
         return True
@@ -78,7 +79,7 @@ class NoRepr:
         raise Exception('No.')
 
 
-@Loggo
+@loggo
 class DummyClass:
     """
     A class with regular methods, static methods and errors
@@ -101,11 +102,11 @@ class DummyClass:
         if kw:
             raise ValueError('Should not have provided!')
 
-    @Loggo.ignore
+    @loggo.ignore
     def hopefully_ignored(self, n):
         return n**n
 
-    @Loggo.errors
+    @loggo.errors
     def hopefully_only_errors(self, n):
         raise ValueError('Bam!')
 
@@ -115,22 +116,22 @@ class DummyClass2:
         return a + b + c
 
 
-@Loggo.errors
+@loggo.errors
 def first_test_func(number):
     raise ValueError('Broken!')
 
 
-@Loggo.errors
+@loggo.errors
 def second_test_func(number):
     raise ValueError('Broken!')
 
 
-@Loggo
+@loggo
 def test_func3(number):
     raise ValueError('Broken!')
 
 
-@Loggo
+@loggo
 def test_inner():
     try:
         test_func3(1)
@@ -143,12 +144,12 @@ within = dict(lst=list(), ok=dict(ok=dict(priv='secret')))
 beyond = dict(lst=list(), ok=dict(ok=dict(ok=dict(ok=dict(ok=dict(ok=dict(priv='allowed')))))))
 
 
-@Loggo
+@loggo
 def test_func_with_recursive_data_beyond(data):
     pass
 
 
-@Loggo
+@loggo
 def test_func_with_recursive_data_within(data):
     pass
 
@@ -172,7 +173,7 @@ class TestDecoration(unittest.TestCase):
     def test_log_errors(self):
         with patch('logging.Logger.log'):
             with self.assertRaises(ValueError):
-                with Loggo.log_errors():
+                with loggo.log_errors():
                     second_test_func(5)
 
     def test_one(self):
@@ -292,7 +293,7 @@ class TestLog(unittest.TestCase):
     def setUp(self):
         self.log_msg = 'This is a message that can be used when the content does not matter.'
         self.log_data = {'This is': 'log data', 'that can be': 'used when the content does not matter'}
-        self.loggo = LoggoType(do_print=True, do_write=True, log_if_graylog_disabled=False)
+        self.loggo = Loggo(do_print=True, do_write=True, log_if_graylog_disabled=False)
         self.log = self.loggo.log
 
     def test_protected_keys(self):
@@ -324,8 +325,8 @@ class TestLog(unittest.TestCase):
         mock = mock_open()
         with patch('builtins.open', mock):
             self.log(logging.INFO, 'An entry in our log')
-            mock.assert_called_with(Loggo.logfile, 'a')
-            self.assertTrue(os.path.isfile(Loggo.logfile))
+            mock.assert_called_with(loggo.logfile, 'a')
+            self.assertTrue(os.path.isfile(loggo.logfile))
 
     def test_int_truncation(self):
         """
@@ -372,15 +373,15 @@ class TestLog(unittest.TestCase):
 
     def test_loggo_pause(self):
         with patch('logging.Logger.log') as mock_log:
-            with Loggo.pause():
-                Loggo.log(logging.INFO, 'test')
+            with loggo.pause():
+                loggo.log(logging.INFO, 'test')
             mock_log.assert_not_called()
-            Loggo.log(logging.INFO, 'test')
+            loggo.log(logging.INFO, 'test')
             mock_log.assert_called()
 
     def test_loggo_pause_error(self):
         with patch('logging.Logger.log') as logger:
-            with Loggo.pause():
+            with loggo.pause():
                 with self.assertRaises(ValueError):
                     may_or_may_not_error_test('one', 'two')
             (alert, msg), kwargs = logger.call_args
@@ -395,36 +396,36 @@ class TestLog(unittest.TestCase):
 
     def test_loggo_error_suppressed(self):
         with patch('logging.Logger.log') as logger:
-            with Loggo.pause(allow_errors=False):
+            with loggo.pause(allow_errors=False):
                 with self.assertRaises(ValueError):
                     may_or_may_not_error_test('one', 'two')
             logger.assert_not_called()
-            Loggo.log(logging.INFO, 'test')
+            loggo.log(logging.INFO, 'test')
             logger.assert_called_once()
 
     def test_see_below(self):
         """legacy test, deletable if it causes problems later"""
         with patch('logging.Logger.log') as logger:
-            Loggo.log(50, 'test')
+            loggo.log(50, 'test')
             (alert, msg), kwargs = logger.call_args
             self.assertFalse('-- see below:' in msg)
 
     def test_compat(self):
         test = 'a string'
         with patch('loggo.Loggo.log') as logger:
-            Loggo.log(logging.INFO, test, None)
+            loggo.log(logging.INFO, test, None)
         args = logger.call_args
         self.assertIsInstance(args[0][0], int)
         self.assertEqual(args[0][1], test)
         self.assertIsNone(args[0][2])
         with patch('logging.Logger.log') as logger:
-            Loggo.log(logging.INFO, test)
+            loggo.log(logging.INFO, test)
         (alert, msg), kwargs = logger.call_args
         self.assertEqual(test, msg)
 
     def test_bad_args(self):
 
-        @Loggo
+        @loggo
         def dummy(needed):
             return needed
         with self.assertRaises(TypeError):
@@ -457,7 +458,7 @@ class TestLog(unittest.TestCase):
 
     def test_listen_to(self):
         sub_loggo_facility = 'a sub logger'
-        sub_loggo = LoggoType(facility=sub_loggo_facility)
+        sub_loggo = Loggo(facility=sub_loggo_facility)
         self.loggo.listen_to(sub_loggo_facility)
         self.loggo.log = Mock()
         warn = 'The parent logger should log this message after sublogger logs it'

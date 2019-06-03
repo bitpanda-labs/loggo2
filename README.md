@@ -5,9 +5,9 @@
 # `@loggo`: automated logging for Python 3
 
 <!--- Don't edit the version line below manually. Let bump2version do it for you. -->
-> Version 5.0.0
+> Version 5.1.0
 
-> You find Python's builtin `logging` module repetitive, tedious and ugly, and the logs you do write with it clash with your otherwise awesome style. `loggo` is here to help: it automates the boring stuff, simplifies the tricky stuff, hooks up effortlessly to [graylog](), and keeps an eye out for privacy and security if you need it to.
+> You find Python's builtin `logging` module repetitive, tedious and ugly, and the logs you do write with it clash with your otherwise awesome style. `loggo` is here to help: it automates the boring stuff, simplifies the tricky stuff, hooks up effortlessly to [graylog](https://www.graylog.org/), and keeps an eye out for privacy and security if you need it to.
 
 ## Install
 
@@ -19,7 +19,7 @@ python setup.py install
 
 ## Setup
 
-To get started, import and instantiate th main class, ideally somewhere at the core of your project. If you have a module with multiple files, do the initial configuration in the main `__init__.py`, or in a file called `log.py`. so you can import the same, ready-set-up logger easily.
+To get started, import and instantiate the main class, ideally somewhere at the core of your project. If you have a module with multiple files, do the initial configuration in the main `__init__.py`, or in a file called `log.py`. so you can import the same, ready-set-up logger easily.
 
 For example, if your app was called `tester`, you could add the following to `tester/__init__.py`:
 
@@ -34,7 +34,7 @@ loggo = Loggo(facility='tester',         # name of program logging the message
               logfile='mylog.txt',       # custom path to logfile
               line_length=200,           # line truncation for console logging
               truncation=1000,           # longest possible value in extra data
-              private_data=['password'], # list of sensitive args/kwargs
+              private_data={'password'}, # set of sensitive args/kwargs
               obscured='******')         # string with which to obscure data
 ```
 
@@ -140,6 +140,9 @@ Notice, in the example above, you can include particular format strings in the l
 * `exception_msg`: details about the thrown exception
 * `level`: the alert level associated with this log
 * `timestamp`: time at time of logging
+* `couplet`: `uuid.uuid1()` for the called and returned/errored pair
+* `number_of_params`: total `args + kwargs` as int
+* `private_keys`: list of identified private argument names
 
 Adding more such strings is trivial; submit an issue if there is something else you need.
 
