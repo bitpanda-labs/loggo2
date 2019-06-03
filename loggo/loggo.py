@@ -64,10 +64,12 @@ class Loggo:
         - do_write: write logs to file
         - truncation: truncate value of log data fields to this length
         - private_data: key names that should be filtered out of logging. when not
-        - max_dict_depth: how deep into log data loggo will look for private data provided, nothing is censored
+        - max_dict_depth: how deep into log data loggo will look for private data provided, nothing
+            is censored
         - raise_logging_errors: should Loggo errors be allowed to happen?
         - obscure: a string to use instead of any private data
-        - log_if_graylog_disabled: boolean value, should a warning log be made when failing to connect to graylog
+        - log_if_graylog_disabled: boolean value, should a warning log be made when failing to
+            connect to graylog
         """
         self.stopped = False
         self.allow_errors = True
@@ -88,11 +90,12 @@ class Loggo:
         self.private_data = private_data or set()
         self.max_dict_depth = max_dict_depth
         self.log_if_graylog_disabled = log_if_graylog_disabled
-        self.logger = logging.getLogger(self.facility)  # pylint: disable=no-member
+        self.logger = logging.getLogger(self.facility)
         self.logger.setLevel(Loggo.log_threshold)
         self._add_graylog_handler()
 
-    def _best_returned_none(self, returned: Optional[str], returned_none: Optional[str]) -> Optional[str]:
+    @staticmethod
+    def _best_returned_none(returned: Optional[str], returned_none: Optional[str]) -> Optional[str]:
         """
         If the user has their own msg format for 'returned' logs, but not one
         for 'returned_none', we should use theirs over loggo's default
@@ -376,7 +379,11 @@ class Loggo:
 
         return '({})'.format(self._force_string_and_truncate(response, truncate, use_repr=True))
 
-    def _generate_log(self, where: str, returned: Any, formatters: Dict, safe_log_data: Dict[str, str]) -> None:
+    def _generate_log(self,
+                      where: str,
+                      returned: Any,
+                      formatters: Dict,
+                      safe_log_data: Dict[str, str]) -> None:
         """
         generate message, level and log data for automated logs
 
@@ -457,7 +464,8 @@ class Loggo:
         handler = graypy.GELFUDPHandler(self.ip, self.port, debugging_fields=False)
         self.logger.addHandler(handler)
 
-    def _force_string_and_truncate(self, obj: Any, truncate: Optional[int], use_repr: bool = False) -> str:
+    def _force_string_and_truncate(self, obj: Any, truncate: Optional[int], use_repr: bool = False
+                                   ) -> str:
         """
         Return stringified and truncated obj. If stringification fails, log a warning
         and return the string '<<Unstringable input>>'
@@ -465,7 +473,8 @@ class Loggo:
         try:
             obj = str(obj) if not use_repr else repr(obj)
         except Exception as exc:
-            self.warning('Object could not be cast to string', extra=dict(exception_type=type(exc), exception=exc))
+            self.warning('Object could not be cast to string', extra=dict(exception_type=type(exc),
+                                                                          exception=exc))
             return '<<Unstringable input>>'
         if truncate is None:
             return obj
