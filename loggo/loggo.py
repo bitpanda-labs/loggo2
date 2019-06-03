@@ -39,10 +39,10 @@ class Loggo:
                  returned: Optional[str] = FORMS['returned'],
                  returned_none: Optional[str] = FORMS['returned_none'],
                  errored: Optional[str] = FORMS['errored'],
-                 error_level: Optional[int] = logging.INFO,
+                 error_level: int = logging.INFO,
                  facility: str = 'loggo',
                  ip: Optional[str] = None,
-                 port: Optional[str] = None,
+                 port: Optional[int] = None,
                  do_print: bool = False,
                  do_write: bool = False,
                  truncation: int = 7500,
@@ -412,7 +412,7 @@ class Loggo:
         if where == 'errored':
             formatters['exception_type'] = type(returned).__name__
             formatters['exception_msg'] = str(returned)
-            formatters['level'] = self.error_level if self.error_level is not None else logging.INFO
+            formatters['level'] = self.error_level
         else:
             formatters['level'] = logging.INFO
 
