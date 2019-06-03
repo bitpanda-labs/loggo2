@@ -266,20 +266,19 @@ class Loggo:
             formatters = self._make_call_signature(function, param_strings)
             privates = [key for key in param_strings if key not in bound]
             is_init = formatters['callable'].endswith('__init__')
-
             # add more format strings
             more = dict(decorated=True,
                         couplet=uuid.uuid1(),
                         number_of_params=len(args) + len(kwargs),
                         private_keys=', '.join(privates),
                         timestamp=datetime.now().strftime('%d.%m %Y %H:%M:%S'),
-                        instantiation=True)
+                        instantiation=is_init)
             formatters.update(more)
 
             # 'called' log tells you what was called and with what arguments
             if not just_errors:
+                where = 'called' if not is_init else 'instantiated'
                 self._generate_log(where, None, formatters, param_strings)
-
             try:
                 # where the original function is actually run
                 response = function(*args, **kwargs)
