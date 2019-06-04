@@ -464,8 +464,7 @@ class Loggo:
         handler = graypy.GELFUDPHandler(self.ip, self.port, debugging_fields=False)
         self.logger.addHandler(handler)
 
-    def _force_string_and_truncate(self, obj: Any, truncate: Optional[int], use_repr: bool = False
-                                   ) -> str:
+    def _force_string_and_truncate(self, obj: Any, truncate: Optional[int], use_repr: bool = False) -> str:
         """
         Return stringified and truncated obj. If stringification fails, log a warning
         and return the string '<<Unstringable input>>'
