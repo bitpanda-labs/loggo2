@@ -48,7 +48,7 @@ class Loggo:
                  truncation: int = 7500,
                  raise_logging_errors: bool = False,
                  logfile: str = './logs/logs.txt',
-                 obscured: Optional[str] = '********',
+                 obscured: str = '********',
                  private_data: Optional[Set[str]] = None,
                  max_dict_depth: int = 5,
                  log_if_graylog_disabled: bool = True) -> None:
