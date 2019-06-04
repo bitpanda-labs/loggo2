@@ -23,6 +23,7 @@ DEFAULT_FORMS = dict(called='*Called {call_signature}',
                      returned='*Returned from {call_signature} with {return_type} {return_value}',
                      returned_none='*Returned None from {call_signature}',
                      errored='*Errored during {call_signature} with {exception_type} "{exception_msg}"')
+DEFAULT_LOG_LEVEL = logging.INFO
 
 
 class Loggo:
@@ -39,7 +40,7 @@ class Loggo:
                  returned: Optional[str] = DEFAULT_FORMS['returned'],
                  returned_none: Optional[str] = DEFAULT_FORMS['returned_none'],
                  errored: Optional[str] = DEFAULT_FORMS['errored'],
-                 error_level: int = logging.INFO,
+                 error_level: int = DEFAULT_LOG_LEVEL,
                  facility: str = 'loggo',
                  ip: Optional[str] = None,
                  port: Optional[int] = None,
@@ -406,7 +407,7 @@ class Loggo:
             formatters['exception_msg'] = str(returned)
             formatters['level'] = self.error_level
         else:
-            formatters['level'] = logging.INFO
+            formatters['level'] = DEFAULT_LOG_LEVEL
 
         # format the string template
         msg = msg.format(**formatters).replace('  ', ' ')
@@ -421,7 +422,7 @@ class Loggo:
         # turn it on just for now, as if we shouldn't log we'd have returned
         self.stopped = False
         # do logging
-        self.info(msg, extra=log_data, safe=True)
+        self.log(DEFAULT_LOG_LEVEL, msg, extra=log_data, safe=True)
         # restore old stopped state
         self.stopped = original_state
 
