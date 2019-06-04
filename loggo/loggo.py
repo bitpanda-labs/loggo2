@@ -19,10 +19,11 @@ except ImportError:
     graypy = None
 
 # Strings to be formatted for pre function, post function and error during function
-FORMS = dict(called='*Called {call_signature}',
-             returned='*Returned from {call_signature} with {return_type} {return_value}',
-             returned_none='*Returned None from {call_signature}',
-             errored='*Errored during {call_signature} with {exception_type} "{exception_msg}"')
+DEFAULT_FORMS = dict(called='*Called {call_signature}',
+                     returned='*Returned from {call_signature} with {return_type} {return_value}',
+                     returned_none='*Returned None from {call_signature}',
+                     errored='*Errored during {call_signature} with {exception_type} "{exception_msg}"')
+DEFAULT_LOG_LEVEL = logging.INFO
 
 
 class Loggo:
@@ -35,11 +36,11 @@ class Loggo:
     log_threshold = logging.DEBUG
 
     def __init__(self,
-                 called: Optional[str] = FORMS['called'],
-                 returned: Optional[str] = FORMS['returned'],
-                 returned_none: Optional[str] = FORMS['returned_none'],
-                 errored: Optional[str] = FORMS['errored'],
-                 error_level: int = logging.INFO,
+                 called: Optional[str] = DEFAULT_FORMS['called'],
+                 returned: Optional[str] = DEFAULT_FORMS['returned'],
+                 returned_none: Optional[str] = DEFAULT_FORMS['returned_none'],
+                 errored: Optional[str] = DEFAULT_FORMS['errored'],
+                 error_level: int = DEFAULT_LOG_LEVEL,
                  facility: str = 'loggo',
                  ip: Optional[str] = None,
                  port: Optional[int] = None,
@@ -48,7 +49,7 @@ class Loggo:
                  truncation: int = 7500,
                  raise_logging_errors: bool = False,
                  logfile: str = './logs/logs.txt',
-                 obscured: Optional[str] = '********',
+                 obscured: str = '********',
                  private_data: Optional[Set[str]] = None,
                  max_dict_depth: int = 5,
                  log_if_graylog_disabled: bool = True) -> None:
@@ -104,10 +105,10 @@ class Loggo:
         if not returned_none or not returned:
             return None
         # if they provided their own, use that
-        if returned_none != FORMS['returned_none']:
+        if returned_none != DEFAULT_FORMS['returned_none']:
             return returned_none
         # if the user just used the defaults, use those
-        if returned == FORMS['returned']:
+        if returned == DEFAULT_FORMS['returned']:
             return returned_none
         # the switch: use the user provided returned for returned_none
         return returned
@@ -167,21 +168,6 @@ class Loggo:
         """
         original = self.allow_errors, self.stopped
         self.stopped = True
-        self.allow_errors = allow_errors
-        try:
-            yield
-        finally:
-            self.allow_errors, self.stopped = original
-
-    @contextmanager
-    def verbose(self, allow_errors: bool = True) -> Generator[None, None, None]:
-        """
-        Context manager that makes, rather than suppresses, logs. The only real
-        use case for this is rare---the user has put the logger in a stopped
-        state, but wants to log something within the otherwise stopped section
-        """
-        original = self.allow_errors, self.stopped
-        self.stopped = False
         self.allow_errors = allow_errors
         try:
             yield
@@ -421,7 +407,7 @@ class Loggo:
             formatters['exception_msg'] = str(returned)
             formatters['level'] = self.error_level
         else:
-            formatters['level'] = logging.INFO
+            formatters['level'] = DEFAULT_LOG_LEVEL
 
         # format the string template
         msg = msg.format(**formatters).replace('  ', ' ')
@@ -436,7 +422,7 @@ class Loggo:
         # turn it on just for now, as if we shouldn't log we'd have returned
         self.stopped = False
         # do logging
-        self.info(msg, extra=log_data, safe=True)
+        self.log(DEFAULT_LOG_LEVEL, msg, extra=log_data, safe=True)
         # restore old stopped state
         self.stopped = original_state
 
