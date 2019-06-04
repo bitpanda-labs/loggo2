@@ -19,10 +19,10 @@ except ImportError:
     graypy = None
 
 # Strings to be formatted for pre function, post function and error during function
-FORMS = dict(called='*Called {call_signature}',
-             returned='*Returned from {call_signature} with {return_type} {return_value}',
-             returned_none='*Returned None from {call_signature}',
-             errored='*Errored during {call_signature} with {exception_type} "{exception_msg}"')
+DEFAULT_FORMS = dict(called='*Called {call_signature}',
+                     returned='*Returned from {call_signature} with {return_type} {return_value}',
+                     returned_none='*Returned None from {call_signature}',
+                     errored='*Errored during {call_signature} with {exception_type} "{exception_msg}"')
 
 
 class Loggo:
@@ -35,10 +35,10 @@ class Loggo:
     log_threshold = logging.DEBUG
 
     def __init__(self,
-                 called: Optional[str] = FORMS['called'],
-                 returned: Optional[str] = FORMS['returned'],
-                 returned_none: Optional[str] = FORMS['returned_none'],
-                 errored: Optional[str] = FORMS['errored'],
+                 called: Optional[str] = DEFAULT_FORMS['called'],
+                 returned: Optional[str] = DEFAULT_FORMS['returned'],
+                 returned_none: Optional[str] = DEFAULT_FORMS['returned_none'],
+                 errored: Optional[str] = DEFAULT_FORMS['errored'],
                  error_level: int = logging.INFO,
                  facility: str = 'loggo',
                  ip: Optional[str] = None,
@@ -104,10 +104,10 @@ class Loggo:
         if not returned_none or not returned:
             return None
         # if they provided their own, use that
-        if returned_none != FORMS['returned_none']:
+        if returned_none != DEFAULT_FORMS['returned_none']:
             return returned_none
         # if the user just used the defaults, use those
-        if returned == FORMS['returned']:
+        if returned == DEFAULT_FORMS['returned']:
             return returned_none
         # the switch: use the user provided returned for returned_none
         return returned
