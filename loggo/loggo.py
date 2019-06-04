@@ -174,21 +174,6 @@ class Loggo:
             self.allow_errors, self.stopped = original
 
     @contextmanager
-    def verbose(self, allow_errors: bool = True) -> Generator[None, None, None]:
-        """
-        Context manager that makes, rather than suppresses, logs. The only real
-        use case for this is rare---the user has put the logger in a stopped
-        state, but wants to log something within the otherwise stopped section
-        """
-        original = self.allow_errors, self.stopped
-        self.stopped = False
-        self.allow_errors = allow_errors
-        try:
-            yield
-        finally:
-            self.allow_errors, self.stopped = original
-
-    @contextmanager
     def log_errors(self) -> Generator[None, None, None]:
         """
         Context manager that logs errors only
