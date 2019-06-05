@@ -447,25 +447,23 @@ class TestLog(unittest.TestCase):
             self.assertTrue(logged_msg.startswith('*Called'))
             (alert, logged_msg), extras = logger.call_args_list[-1]
             self.assertTrue(logged_msg.startswith('*Returned'))
-        return True
 
     def _not_logging(self):
         with patch('logging.Logger.log') as logger:
             res = aaa()
             self.assertEqual(res, 'this')
             logger.assert_not_called()
-        return True
 
     def test_stop_and_start(self):
         """
         Check that the start and stop commands actually do something
         """
         loggo.start()
-        self.assertTrue(self._working_normally())
+        self._working_normally()
         loggo.stop()
-        self.assertTrue(self._not_logging())
+        self._not_logging()
         loggo.start()
-        self.assertTrue(self._working_normally())
+        self._working_normally()
 
     def test_debug(self):
         with patch('loggo.Loggo.log') as logger:
