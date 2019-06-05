@@ -438,6 +438,33 @@ class TestLog(unittest.TestCase):
         with self.assertRaises(TypeError):
             dummy()
 
+    def _working_normally(self):
+        with patch('logging.Logger.log') as logger:
+            res = aaa()
+            self.assertEqual(res, 'this')
+            self.assertEqual(logger.call_count, 2)
+            (alert, logged_msg), extras = logger.call_args_list[0]
+            self.assertTrue(logged_msg.startswith('*Called'))
+            (alert, logged_msg), extras = logger.call_args_list[-1]
+            self.assertTrue(logged_msg.startswith('*Returned'))
+
+    def _not_logging(self):
+        with patch('logging.Logger.log') as logger:
+            res = aaa()
+            self.assertEqual(res, 'this')
+            logger.assert_not_called()
+
+    def test_stop_and_start(self):
+        """
+        Check that the start and stop commands actually do something
+        """
+        loggo.start()
+        self._working_normally()
+        loggo.stop()
+        self._not_logging()
+        loggo.start()
+        self._working_normally()
+
     def test_debug(self):
         with patch('loggo.Loggo.log') as logger:
             self.loggo.debug(self.log_msg, self.log_data)
