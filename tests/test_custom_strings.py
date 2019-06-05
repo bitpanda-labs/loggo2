@@ -15,7 +15,13 @@ nocalled = dict(called=None,
                 returned_none='Returned none!',
                 errored='Log string on exception')  # type: Mapping[str, Optional[str]]
 
+no_return = dict(called='called fine',
+                 returned=None,
+                 returned_none=None)  # type: Mapping[str, Optional[str]]
+
 custom_none_string = Loggo(log_if_graylog_disabled=False, **nocalled)
+
+custom_no_return = Loggo(log_if_graylog_disabled=False, **no_return)
 
 
 # custom message test data
@@ -37,6 +43,11 @@ def custom_fail():
 @custom_none_string
 def custom_none_default():
     return
+
+
+@custom_no_return
+def custom_without_return():
+    return 1
 
 
 class TestCustomStrings(unittest.TestCase):
@@ -79,6 +90,14 @@ class TestCustomStrings(unittest.TestCase):
             (alert, logged_msg), extras = logger.call_args_list[1]
             self.assertEqual(logged_msg, 'Log string on exception')
             self.assertEqual(alert, 20)
+
+    def test_no_return_string(self):
+        with patch('logging.Logger.log') as logger:
+            n = custom_without_return()
+            self.assertEqual(n, 1)
+            self.assertEqual(logger.call_count, 1)
+            (alert, logged_msg), extras = logger.call_args_list[0]
+            self.assertEqual(logged_msg, 'called fine')
 
 
 if __name__ == '__main__':
