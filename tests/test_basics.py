@@ -86,9 +86,6 @@ class DummyClass:
     """
     non_callable = False
 
-    def non_writeable(self):
-        raise AttributeError('as if this was non-writeable')
-
     def add(self, a, b):
         return a + b
 
