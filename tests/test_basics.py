@@ -84,6 +84,7 @@ class DummyClass:
     """
     A class with regular methods, static methods and errors
     """
+    non_callable = False
 
     def add(self, a, b):
         return a + b
@@ -114,6 +115,15 @@ class DummyClass:
 class DummyClass2:
     def add(self, a, b, c):
         return a + b + c
+
+
+@loggo.errors
+class ForErrors:
+    def one(self):
+        raise ValueError('Boom!')
+
+    def two(self):
+        return True
 
 
 @loggo.errors
@@ -158,6 +168,19 @@ dummy = DummyClass()
 
 
 class TestDecoration(unittest.TestCase):
+
+    def test_decorate_module(self):
+        """
+        Test that a module is (currently) not altered if decorated
+        """
+        self.assertIs(logging, loggo(logging))
+
+    def test_decorate_non_callable(self):
+        """
+        Test that an object is not altered if it's not callable
+        """
+        anything = 'a string'
+        self.assertIs(anything, loggo(anything))
 
     def test_inheritance_signature_change(self):
         d2 = DummyClass2()
@@ -266,6 +289,20 @@ class TestDecoration(unittest.TestCase):
             expected_msg = ('*Errored during DummyClass.hopefully_only_'
                             'errors(n=5) with ValueError "Bam!"')
             self.assertEqual(expected_msg, logged_msg)
+
+    def test_error_deco(self):
+        """
+        Test that @loggo.errors logs only errors when decorating a class
+        """
+        with patch('logging.Logger.log') as logger:
+            fe = ForErrors()
+            self.assertTrue(fe.two())
+            logger.assert_not_called()
+            with self.assertRaises(ValueError):
+                fe.one()
+            self.assertEqual(logger.call_count, 1)
+            (alert, logged_msg), extras = logger.call_args
+            self.assertEqual(logged_msg, '*Errored during ForErrors.one() with ValueError "Boom!"')
 
     def test_private_keyword_removal(self):
         with patch('logging.Logger.log') as logger:
@@ -437,6 +474,33 @@ class TestLog(unittest.TestCase):
             return needed
         with self.assertRaises(TypeError):
             dummy()
+
+    def _working_normally(self):
+        with patch('logging.Logger.log') as logger:
+            res = aaa()
+            self.assertEqual(res, 'this')
+            self.assertEqual(logger.call_count, 2)
+            (alert, logged_msg), extras = logger.call_args_list[0]
+            self.assertTrue(logged_msg.startswith('*Called'))
+            (alert, logged_msg), extras = logger.call_args_list[-1]
+            self.assertTrue(logged_msg.startswith('*Returned'))
+
+    def _not_logging(self):
+        with patch('logging.Logger.log') as logger:
+            res = aaa()
+            self.assertEqual(res, 'this')
+            logger.assert_not_called()
+
+    def test_stop_and_start(self):
+        """
+        Check that the start and stop commands actually do something
+        """
+        loggo.start()
+        self._working_normally()
+        loggo.stop()
+        self._not_logging()
+        loggo.start()
+        self._working_normally()
 
     def test_debug(self):
         with patch('loggo.Loggo.log') as logger:
