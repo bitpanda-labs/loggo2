@@ -19,10 +19,12 @@ except ImportError:
     graypy = None
 
 # Strings to be formatted for pre function, post function and error during function
-DEFAULT_FORMS = dict(called='*Called {call_signature}',
-                     returned='*Returned from {call_signature} with {return_type} {return_value}',
-                     returned_none='*Returned None from {call_signature}',
-                     errored='*Errored during {call_signature} with {exception_type} "{exception_msg}"')
+DEFAULT_FORMS = dict(
+    called="*Called {call_signature}",
+    returned="*Returned from {call_signature} with {return_type} {return_value}",
+    returned_none="*Returned None from {call_signature}",
+    errored='*Errored during {call_signature} with {exception_type} "{exception_msg}"',
+)
 DEFAULT_LOG_LEVEL = logging.INFO
 
 
@@ -30,30 +32,33 @@ class Loggo:
     """
     A class for logging
     """
+
     # Callables with an attribute of this name set to True will not be logged by Loggo
-    no_logs_attribute_name = '_do_not_log_this_callable'
+    no_logs_attribute_name = "_do_not_log_this_callable"
     # Only log when log level is this or higher
     log_threshold = logging.DEBUG
 
-    def __init__(self,
-                 *,  # Reject positional arguments
-                 called: Optional[str] = DEFAULT_FORMS['called'],
-                 returned: Optional[str] = DEFAULT_FORMS['returned'],
-                 returned_none: Optional[str] = DEFAULT_FORMS['returned_none'],
-                 errored: Optional[str] = DEFAULT_FORMS['errored'],
-                 error_level: int = DEFAULT_LOG_LEVEL,
-                 facility: str = 'loggo',
-                 ip: Optional[str] = None,
-                 port: Optional[int] = None,
-                 do_print: bool = False,
-                 do_write: bool = False,
-                 truncation: int = 7500,
-                 raise_logging_errors: bool = False,
-                 logfile: str = './logs/logs.txt',
-                 obscured: str = '********',
-                 private_data: Optional[Set[str]] = None,
-                 max_dict_depth: int = 5,
-                 log_if_graylog_disabled: bool = True) -> None:
+    def __init__(
+        self,
+        *,  # Reject positional arguments
+        called: Optional[str] = DEFAULT_FORMS["called"],
+        returned: Optional[str] = DEFAULT_FORMS["returned"],
+        returned_none: Optional[str] = DEFAULT_FORMS["returned_none"],
+        errored: Optional[str] = DEFAULT_FORMS["errored"],
+        error_level: int = DEFAULT_LOG_LEVEL,
+        facility: str = "loggo",
+        ip: Optional[str] = None,
+        port: Optional[int] = None,
+        do_print: bool = False,
+        do_write: bool = False,
+        truncation: int = 7500,
+        raise_logging_errors: bool = False,
+        logfile: str = "./logs/logs.txt",
+        obscured: str = "********",
+        private_data: Optional[Set[str]] = None,
+        max_dict_depth: int = 5,
+        log_if_graylog_disabled: bool = True,
+    ) -> None:
         """
         On instantiation, pass in a dictionary containing the config. Currently
         accepted config values are:
@@ -106,10 +111,10 @@ class Loggo:
         if not returned_none or not returned:
             return None
         # if they provided their own, use that
-        if returned_none != DEFAULT_FORMS['returned_none']:
+        if returned_none != DEFAULT_FORMS["returned_none"]:
             return returned_none
         # if the user just used the defaults, use those
-        if returned == DEFAULT_FORMS['returned']:
+        if returned == DEFAULT_FORMS["returned"]:
             return returned_none
         # the switch: use the user provided returned for returned_none
         return returned
@@ -120,10 +125,10 @@ class Loggo:
 
         Must have non private name and be callable
         """
-        name = name or getattr(candidate, '__name__', None)
+        name = name or getattr(candidate, "__name__", None)
         if not name:
             return False
-        if name.startswith('__') and name.endswith('__'):
+        if name.startswith("__") and name.endswith("__"):
             return False
         if not callable(candidate):
             return False
@@ -253,21 +258,23 @@ class Loggo:
             privates = [key for key in param_strings if key not in bound]
 
             # add more format strings
-            more = dict(decorated=True,
-                        couplet=uuid.uuid1(),
-                        number_of_params=len(args) + len(kwargs),
-                        private_keys=', '.join(privates),
-                        timestamp=datetime.now().strftime('%d.%m %Y %H:%M:%S'))
+            more = dict(
+                decorated=True,
+                couplet=uuid.uuid1(),
+                number_of_params=len(args) + len(kwargs),
+                private_keys=", ".join(privates),
+                timestamp=datetime.now().strftime("%d.%m %Y %H:%M:%S"),
+            )
             formatters.update(more)
 
             # 'called' log tells you what was called and with what arguments
             if not just_errors:
-                self._generate_log('called', None, formatters, param_strings)
+                self._generate_log("called", None, formatters, param_strings)
 
             try:
                 # where the original function is actually run
                 response = function(*args, **kwargs)
-                where = 'returned_none' if response is None else 'returned'
+                where = "returned_none" if response is None else "returned"
                 # the successful return log
                 if not just_errors:
                     self._generate_log(where, response, formatters, param_strings)
@@ -275,9 +282,10 @@ class Loggo:
                 return response
             # handle any possible error
             except Exception as error:
-                formatters['traceback'] = traceback.format_exc()
-                self._generate_log('errored', error, formatters, param_strings)
+                formatters["traceback"] = traceback.format_exc()
+                self._generate_log("errored", error, formatters, param_strings)
                 raise
+
         return full_decoration
 
     def _string_params(self, non_private_params: Dict, use_repr: bool = True) -> Dict[str, str]:
@@ -286,7 +294,7 @@ class Loggo:
         """
         params = dict()
         for key, val in non_private_params.items():
-            truncation = self.truncation if key not in {'trace', 'traceback'} else None
+            truncation = self.truncation if key not in {"trace", "traceback"} else None
             safe_key = self._force_string_and_truncate(key, 50, use_repr=False)
             safe_val = self._force_string_and_truncate(val, truncation, use_repr=use_repr)
             params[safe_key] = safe_val
@@ -299,11 +307,12 @@ class Loggo:
 
         Return it within a dict containing some other format strings.
         """
-        signature = '{callable}({params})'
-        param_str = ', '.join(f'{k}={v}' for k, v in param_strings.items())
-        format_strings = dict(callable=getattr(function, '__qualname__', 'unknown_callable'),
-                              params=param_str)
-        format_strings['call_signature'] = signature.format(**format_strings)
+        signature = "{callable}({params})"
+        param_str = ", ".join(f"{k}={v}" for k, v in param_strings.items())
+        format_strings = dict(
+            callable=getattr(function, "__qualname__", "unknown_callable"), params=param_str
+        )
+        format_strings["call_signature"] = signature.format(**format_strings)
         return format_strings
 
     def listen_to(loggo_self, facility: str) -> None:
@@ -311,18 +320,36 @@ class Loggo:
         This method can hook the logger up to anything else that logs using the
         Python logging module (i.e. another logger) and steals its logs
         """
+
         class LoggoHandler(logging.Handler):
             def emit(handler_self, record: logging.LogRecord) -> None:
-                attributes = {'msg', 'created', 'msecs', 'stack_info',
-                              'levelname', 'filename', 'module', 'args',
-                              'funcName', 'process', 'relativeCreated',
-                              'exc_info', 'name', 'processName', 'threadName',
-                              'lineno', 'exc_text', 'pathname', 'thread',
-                              'levelno'}
+                attributes = {
+                    "msg",
+                    "created",
+                    "msecs",
+                    "stack_info",
+                    "levelname",
+                    "filename",
+                    "module",
+                    "args",
+                    "funcName",
+                    "process",
+                    "relativeCreated",
+                    "exc_info",
+                    "name",
+                    "processName",
+                    "threadName",
+                    "lineno",
+                    "exc_text",
+                    "pathname",
+                    "thread",
+                    "levelno",
+                }
                 extra = dict(record.__dict__)
                 [extra.pop(attrib, None) for attrib in attributes]
-                extra['sublogger'] = facility
+                extra["sublogger"] = facility
                 loggo_self.log(record.levelno, record.msg, extra)
+
         other_loggo = logging.getLogger(facility)
         other_loggo.setLevel(Loggo.log_threshold)
         other_loggo.addHandler(LoggoHandler())
@@ -335,10 +362,10 @@ class Loggo:
         bound = sig.bind(*args, **kwargs).arguments
         if bound:
             first = list(bound)[0]
-            if first == 'self':
-                bound.pop('self')
-            elif first == 'cls':
-                bound.pop('cls')
+            if first == "self":
+                bound.pop("self")
+            elif first == "cls":
+                bound.pop("cls")
         return bound
 
     def _obscure_private_keys(self, log_data: Any, dict_depth: int = 0) -> Any:
@@ -364,13 +391,11 @@ class Loggo:
         if str(type(response)) == "<class 'requests.models.Response'>":
             response = response.text
 
-        return '({})'.format(self._force_string_and_truncate(response, truncate, use_repr=True))
+        return "({})".format(self._force_string_and_truncate(response, truncate, use_repr=True))
 
-    def _generate_log(self,
-                      where: str,
-                      returned: Any,
-                      formatters: Dict,
-                      safe_log_data: Dict[str, str]) -> None:
+    def _generate_log(
+        self, where: str, returned: Any, formatters: Dict, safe_log_data: Dict[str, str]
+    ) -> None:
         """
         generate message, level and log data for automated logs
 
@@ -385,33 +410,33 @@ class Loggo:
             return
 
         # if errors not to be shown and this is an error, quit
-        if not self.allow_errors and where == 'errored':
+        if not self.allow_errors and where == "errored":
             return
 
         # if state is stopped and not an error, quit
-        if self.stopped and where != 'errored':
+        if self.stopped and where != "errored":
             return
 
         # do not log loggo, because why would you ever want that?
-        if 'loggo.loggo' in formatters['call_signature']:
+        if "loggo.loggo" in formatters["call_signature"]:
             return
 
         # return value for log message
-        if 'returned' in where:
+        if "returned" in where:
             ret_str = self._represent_return_value(returned, truncate=None)
-            formatters['return_value'] = ret_str
-            formatters['return_type'] = type(returned).__name__
+            formatters["return_value"] = ret_str
+            formatters["return_type"] = type(returned).__name__
 
         # if what is 'returned' is an exception, get the error formatters
-        if where == 'errored':
-            formatters['exception_type'] = type(returned).__name__
-            formatters['exception_msg'] = str(returned)
-            formatters['level'] = self.error_level
+        if where == "errored":
+            formatters["exception_type"] = type(returned).__name__
+            formatters["exception_msg"] = str(returned)
+            formatters["level"] = self.error_level
         else:
-            formatters['level'] = DEFAULT_LOG_LEVEL
+            formatters["level"] = DEFAULT_LOG_LEVEL
 
         # format the string template
-        msg = msg.format(**formatters).replace('  ', ' ')
+        msg = msg.format(**formatters).replace("  ", " ")
 
         # make the log data
         log_data = {**formatters, **safe_log_data}
@@ -440,13 +465,13 @@ class Loggo:
         needed_dir = os.path.dirname(self.logfile)
         if needed_dir and not os.path.isdir(needed_dir):
             os.makedirs(os.path.dirname(self.logfile))
-        with open(self.logfile, 'a') as fo:
-            fo.write(line.rstrip('\n') + '\n')
+        with open(self.logfile, "a") as fo:
+            fo.write(line.rstrip("\n") + "\n")
 
     def _add_graylog_handler(self) -> None:
         if not self.ip or not self.port or not graypy:
             if self.log_if_graylog_disabled:
-                self.warning('Graylog not configured! Disabling it')
+                self.warning("Graylog not configured! Disabling it")
             return
         handler = graypy.GELFUDPHandler(self.ip, self.port, debugging_fields=False)
         self.logger.addHandler(handler)
@@ -459,13 +484,14 @@ class Loggo:
         try:
             obj = str(obj) if not use_repr else repr(obj)
         except Exception as exc:
-            self.warning('Object could not be cast to string', extra=dict(exception_type=type(exc),
-                                                                          exception=exc))
-            return '<<Unstringable input>>'
+            self.warning(
+                "Object could not be cast to string", extra=dict(exception_type=type(exc), exception=exc)
+            )
+            return "<<Unstringable input>>"
         if truncate is None:
             return obj
         # truncate and return
-        return (obj[:truncate] + '...') if len(obj) > (truncate + 3) else obj
+        return (obj[:truncate] + "...") if len(obj) > (truncate + 3) else obj
 
     @staticmethod
     def _rename_protected_keys(log_data: Dict) -> Dict:
@@ -474,10 +500,10 @@ class Loggo:
         """
         out = dict()
         # names that logger will not like
-        protected = {'name', 'message', 'asctime', 'msg', 'module', 'args', 'exc_info'}
+        protected = {"name", "message", "asctime", "msg", "module", "args", "exc_info"}
         for key, value in log_data.items():
             if key in protected:
-                key = 'protected_' + key
+                key = "protected_" + key
             out[key] = value
         return out
 
@@ -522,11 +548,11 @@ class Loggo:
 
         # format logs for printing/writing to file
         if self.do_write or self.do_print:
-            ts = extra.get('timestamp', datetime.now().strftime('%d.%m %Y %H:%M:%S'))
-            line = f'{ts}\t{msg}\t{level}'
-            trace = extra.get('traceback')
+            ts = extra.get("timestamp", datetime.now().strftime("%d.%m %Y %H:%M:%S"))
+            line = f"{ts}\t{msg}\t{level}"
+            trace = extra.get("traceback")
             if trace:
-                line = f'{line} -- see below: \n{trace}\n'
+                line = f"{line} -- see below: \n{trace}\n"
         # do printing and writing to file
         if self.do_print:
             print(line)

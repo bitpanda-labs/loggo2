@@ -1,7 +1,11 @@
+# Tests and CI
+pre-commit
+black
 flake8
-flake8-commas
 flake8-bugbear
 flake8-mutable
 mypy
 codecov
+
+# Requirements of the package
 graypy>=1.1.2
