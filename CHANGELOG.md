@@ -13,6 +13,7 @@ x.x.x (unreleased)
     - do not pass a config dict on instantiation, instead just keyword arguments
     - tests split into three separete files for maintainability
     - default obscured data string `[PRIVATE_DATA] -> ********` 
+    - Loggo init does not accept positional args. Args must be named.
 
 - Removed
     - loggo.events; its functionality is still available during instantiation

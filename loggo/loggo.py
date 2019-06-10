@@ -36,6 +36,7 @@ class Loggo:
     log_threshold = logging.DEBUG
 
     def __init__(self,
+                 *,  # Reject positional arguments
                  called: Optional[str] = DEFAULT_FORMS['called'],
                  returned: Optional[str] = DEFAULT_FORMS['returned'],
                  returned_none: Optional[str] = DEFAULT_FORMS['returned_none'],
