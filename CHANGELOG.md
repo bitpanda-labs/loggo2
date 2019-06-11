@@ -11,6 +11,7 @@ x.x.x (unreleased)
 
 - Changed
     - do not pass a config dict on instantiation, instead just keyword arguments
+    - Graylog address is given to init as tuple named graylog_address instead of having the ip and port in separate arguments.
     - tests split into three separete files for maintainability
     - default obscured data string `[PRIVATE_DATA] -> ********` 
 

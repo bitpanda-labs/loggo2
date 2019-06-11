@@ -10,7 +10,7 @@ import uuid
 from contextlib import contextmanager
 from datetime import datetime
 from functools import wraps
-from typing import Optional, Set, Dict, Union, Callable, Generator, Any, cast, Mapping
+from typing import Optional, Set, Dict, Union, Callable, Generator, Any, cast, Mapping, Tuple
 
 # you don't need graylog installed
 try:
@@ -47,8 +47,7 @@ class Loggo:
         errored: Optional[str] = DEFAULT_FORMS["errored"],
         error_level: int = DEFAULT_LOG_LEVEL,
         facility: str = "loggo",
-        ip: Optional[str] = None,
-        port: Optional[int] = None,
+        graylog_address: Optional[Tuple[str, int]] = None,
         do_print: bool = False,
         do_write: bool = False,
         truncation: int = 7500,
@@ -64,8 +63,7 @@ class Loggo:
         accepted config values are:
 
         - facility: name of the app the log is coming from
-        - ip: ip address for graylog
-        - port: port for graylog
+        - graylog_address: A tuple (ip, port). Address for graylog.
         - logfile: path to a file to which logs will be written
         - do_print: print logs to console
         - do_write: write logs to file
@@ -86,8 +84,7 @@ class Loggo:
         self.errored = errored
         self.error_level = error_level
         self.facility = facility
-        self.ip = ip
-        self.port = port
+        self.graylog_address = graylog_address
         self.do_print = do_print
         self.do_write = do_write
         self.truncation = truncation
@@ -469,11 +466,11 @@ class Loggo:
             fo.write(line.rstrip("\n") + "\n")
 
     def _add_graylog_handler(self) -> None:
-        if not self.ip or not self.port or not graypy:
+        if not self.graylog_address or not graypy:
             if self.log_if_graylog_disabled:
                 self.warning("Graylog not configured! Disabling it")
             return
-        handler = graypy.GELFUDPHandler(self.ip, self.port, debugging_fields=False)
+        handler = graypy.GELFUDPHandler(*self.graylog_address, debugging_fields=False)
         self.logger.addHandler(handler)
 
     def _force_string_and_truncate(self, obj: Any, truncate: Optional[int], use_repr: bool = False) -> str:
