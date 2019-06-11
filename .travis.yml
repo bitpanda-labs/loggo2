@@ -15,6 +15,7 @@ jobs:
       script:
         - flake8 loggo/ tests/
         - mypy loggo/ tests/
+        - black --check .
     - stage: test
       script:
         - coverage run -m unittest
