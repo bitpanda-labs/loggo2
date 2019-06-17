@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 import unittest
 from typing import Mapping, Any
 
@@ -538,6 +539,25 @@ class TestLog(unittest.TestCase):
         warn = "The parent logger should log this message after sublogger logs it"
         sub_loggo.log(logging.WARNING, warn)
         self.loggo.log.assert_called_with(logging.WARNING, warn, ANY)
+
+
+class TestWithoutGraypy(unittest.TestCase):
+    def setUp(self):
+        self._temp_graypy = None
+        if sys.modules.get("graypy"):
+            self._temp_graypy = sys.modules["graypy"]
+        sys.modules["graypy"] = None
+
+    def tearDown(self):
+        if self._temp_graypy:
+            sys.modules["graypy"] = self._temp_graypy
+        else:
+            del sys.modules["graypy"]
+
+    def tests_using_graypy(self):
+        from loggo.loggo import graypy
+
+        self.assertEqual(graypy, None)
 
 
 if __name__ == "__main__":
