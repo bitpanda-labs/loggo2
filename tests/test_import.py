@@ -21,8 +21,5 @@ class TestWithoutGraypy(unittest.TestCase):
         self.assertEqual(graypy, None)
 
 
-class TestWithGraypy(unittest.TestCase):
-    def tests_using_graypy(self):
-        from loggo.loggo import graypy
-
-        self.assertIsNotNone(graypy)
+if __name__ == "__main__":
+    unittest.main()
