@@ -16,19 +16,13 @@ class TestWithoutGraypy(unittest.TestCase):
             del sys.modules["graypy"]
 
     def tests_using_graypy(self):
-        flag = False
-        try:
-            import loggo
-        except ImportError:
-            flag = True
-        self.assertTrue(flag)
+        from loggo.loggo import graypy
+
+        self.assertEqual(graypy, None)
 
 
 class TestWithGraypy(unittest.TestCase):
     def tests_using_graypy(self):
-        flag = False
-        try:
-            import loggo
-        except ImportError:
-            flag = True
-        self.assertFalse(flag)
+        from loggo.loggo import graypy
+
+        self.assertIsNotNone(graypy)
