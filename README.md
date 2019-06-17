@@ -37,8 +37,8 @@ loggo = Loggo(
     line_length=200,  # line truncation for console logging
     truncation=1000,  # longest possible value in extra data
     private_data={"password"},  # set of sensitive args/kwargs
-    obscured="******",
-)  # string with which to obscure data
+    obscured="******", # string with which to obscure data
+)
 
 ```
 
