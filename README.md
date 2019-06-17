@@ -26,16 +26,20 @@ For example, if your app was called `tester`, you could add the following to `te
 
 ```python
 from loggo import Loggo
+
 # all setup values are optional
-loggo = Loggo(facility='tester',                 # name of program logging the message
-              graylog_address=('0.0.0.0', 9999), # address for graylog (ip, port)
-              do_print=True,                     # print each log to console
-              do_write=True,                     # write each log to file
-              logfile='mylog.txt',               # custom path to logfile
-              line_length=200,                   # line truncation for console logging
-              truncation=1000,                   # longest possible value in extra data
-              private_data={'password'},         # set of sensitive args/kwargs
-              obscured='******')                 # string with which to obscure data
+loggo = Loggo(
+    facility="tester",  # name of program logging the message
+    graylog_address=("0.0.0.0", 9999),  # address for graylog (ip, port)
+    do_print=True,  # print each log to console
+    do_write=True,  # write each log to file
+    logfile="mylog.txt",  # custom path to logfile
+    line_length=200,  # line truncation for console logging
+    truncation=1000,  # longest possible value in extra data
+    private_data={"password"},  # set of sensitive args/kwargs
+    obscured="******",
+)  # string with which to obscure data
+
 ```
 
 ## Usage
@@ -57,31 +61,32 @@ For an example use-case, let's make a simple class that multiplies two numbers, 
 ```python
 @loggo
 class Multiplier(object):
-
     def __init__(self, base):
         self.base = base
-        
+
     def multiply(self, n, password):
         """
         Multiply by the number given during initialisation--requires password
         """
         self.authenticated = self._do_authentication(password)
         if not self.authenticated:
-            raise ValueError('Not authenticated!')
+            raise ValueError("Not authenticated!")
         return self.base * n
 
     @loggo.ignore
     def _do_authentication(self, password):
         """Not exactly Fort Knox"""
-        return password == 'tOpSeCrEt'
+        return password == "tOpSeCrEt"
+
 ```
 
 First, let's use it properly, with our secret password passed in:
 
 ```python
 mult = Multiplier(50)
-result = mult.multiply(50, 'tOpSeCrEt')
-assert result == 2500 # True
+result = mult.multiply(50, "tOpSeCrEt")
+assert result == 2500  # True
+
 ```
 
 We'll get some nice text in the console:
@@ -94,7 +99,7 @@ We'll get some nice text in the console:
 Notice that our private argument `password` was successfully obscured, even without us naming the argument when we called the method. If you used `do_write=True`, this log will also be in your specified log file, also with password obscured.
 
 ```python
-result = mult.multiply(7, 'password123')
+result = mult.multiply(7, "password123")
 ```
 
 Here an error will raise, a log will be generated, and we'll get extra info in the console, including traceback:
@@ -117,13 +122,18 @@ If you're using [graypy](https://github.com/severb/graypy/), you'll get a lot of
 When configuring `loggo`, you can use your own message format for the auto-generated logs. There are four keys, one for each autolog type:
 
 ```python
-loggo = Loggo(called='Log before callable is run',
-              returned='Log for return from {call_signature} at {timestamp}',
-              returned_none='Log when the return value of the callable is None',
-              errored='Log string on exception: {exception_type}')
+loggo = Loggo(
+    called="Log before callable is run",
+    returned="Log for return from {call_signature} at {timestamp}",
+    returned_none="Log when the return value of the callable is None",
+    errored="Log string on exception: {exception_type}",
+)
+
+
 @loggo
 def test():
     pass
+
 ```
 
 If you pass `None` for any of these keyword arguments, logs of that time will be completely suppressed. If you do not provide a value for `returned_none`, `loggo` will use the value you provided for `returned`, or fall back to its own default.
@@ -151,8 +161,8 @@ For logging manually, `loggo` provides methods similar to the logging functions 
 
 ```python
 level = 50
-msg = 'Message to log'
-extra = dict(some='data', that='will', be='logged')
+msg = "Message to log"
+extra = dict(some="data", that="will", be="logged")
 loggo.log(level, msg, extra)
 # console: 11.05 2018 17:36:24 Message to log  50
 # extra_data in log file if `do_print` setting is True
@@ -161,13 +171,13 @@ loggo.log(level, msg, extra)
 Methods `loggo.debug`, `loggo.info`, `loggo.warning`, `loggo.error` and `loggo.critical` are convenience methods for setting the log level. For instance,
 
 ```python
-loggo.warning('A message', dict(some='data'))
+loggo.warning("A message", dict(some="data"))
 ```
 
 is equivalent to
 
 ```python
-loggo.log(logging.WARNING, 'A message', dict(some='data'))
+loggo.log(logging.WARNING, "A message", dict(some="data"))
 ```
 
 where `logging.WARNING` is an integer constant imported from the standard library.
