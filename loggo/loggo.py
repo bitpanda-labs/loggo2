@@ -271,17 +271,17 @@ class Loggo:
             try:
                 # where the original function is actually run
                 response = function(*args, **kwargs)
-                where = "returned_none" if response is None else "returned"
-                # the successful return log
-                if not just_errors:
-                    self._generate_log(where, response, formatters, param_strings)
-                # return whatever the original callable did
-                return response
-            # handle any possible error
+            # handle any possible error in the original function
             except Exception as error:
                 formatters["traceback"] = traceback.format_exc()
                 self._generate_log("errored", error, formatters, param_strings)
                 raise
+            where = "returned_none" if response is None else "returned"
+            # the successful return log
+            if not just_errors:
+                self._generate_log(where, response, formatters, param_strings)
+            # return whatever the original callable did
+            return response
 
         return full_decoration
 
