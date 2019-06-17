@@ -60,7 +60,7 @@ For an example use-case, let's make a simple class that multiplies two numbers, 
 
 ```python
 @loggo
-class Multiplier():
+class Multiplier:
     def __init__(self, base):
         self.base = base
 
