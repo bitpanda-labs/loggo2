@@ -132,11 +132,6 @@ def first_test_func(number):
     raise ValueError("Broken!")
 
 
-@loggo.errors
-def second_test_func(number):
-    raise ValueError("Broken!")
-
-
 @loggo
 def test_func3(number):
     raise ValueError("Broken!")
@@ -193,12 +188,6 @@ class TestDecoration(unittest.TestCase):
             (alert, logged_msg), extras = logger.call_args_list[-1]
             expected_msg = '*Errored during first_test_func(number=5) with ValueError "Broken!"'
             self.assertEqual(logged_msg, expected_msg)
-
-    def test_log_errors(self):
-        with patch("logging.Logger.log"):
-            with self.assertRaises(ValueError):
-                with loggo.log_errors():
-                    second_test_func(5)
 
     def test_one(self):
         """

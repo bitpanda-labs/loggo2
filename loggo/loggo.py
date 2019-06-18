@@ -177,17 +177,6 @@ class Loggo:
         finally:
             self.allow_errors, self.stopped = original
 
-    @contextmanager
-    def log_errors(self) -> Generator[None, None, None]:
-        """
-        Context manager that logs errors only
-        """
-        original = self.allow_errors, self.stopped
-        try:
-            yield
-        finally:
-            self.allow_errors, self.stopped = original
-
     def stop(self, allow_errors: bool = True) -> None:
         """
         Normal function: manually stop loggo from logging, but by default allow
