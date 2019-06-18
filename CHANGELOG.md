@@ -19,6 +19,7 @@ x.x.x (unreleased)
     - loggo.events; its functionality is still available during instantiation
     - line_length config, which was not respected anyway, and not really needed.
     - Loggo.verbose contextmanager
+    - Loggo.log_errors contextmanager
 
 5.0.0
 -----
