@@ -1,0 +1,8 @@
+site_name: Loggo docs
+nav:
+    - Home: index.md
+    - Installing Loggo: install.md
+    - Setup: setup.md
+    - Usage: usage.md
+    - About: about.md
+theme: readthedocs
