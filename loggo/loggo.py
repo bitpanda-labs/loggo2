@@ -14,7 +14,7 @@ from typing import Optional, Set, Dict, Union, Callable, Generator, Any, cast, M
 
 # you don't need graylog installed
 try:
-    import graypy  # type: ignore
+    import graypy
 except ImportError:
     graypy = None
 
