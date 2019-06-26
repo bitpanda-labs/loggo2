@@ -1,0 +1,4 @@
+[flake8]
+max-line-length = 110
+# These checks violate PEP8 so let's ignore them
+ignore = W503,E203
