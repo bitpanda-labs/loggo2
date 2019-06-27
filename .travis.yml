@@ -13,8 +13,8 @@ jobs:
         - python setup.py install
     - stage: static-checks
       script:
-        - flake8 loggo/ tests/
-        - mypy loggo/ tests/
+        - flake8 loggo/ tests/ setup.py
+        - mypy loggo/ tests/ setup.py
         - black --check .
     - stage: test
       script:
