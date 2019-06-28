@@ -197,7 +197,7 @@ class TestDecoration(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "no good"):
                 may_or_may_not_error_test("astadh", 1331)
             (alert, logged_msg), extras = logger.call_args
-            self.assertEqual(alert, 20)
+            self.assertEqual(alert, 10)
             expected_msg = (
                 "*Errored during may_or_may_not_error_test(first='astadh', "
                 'other=1331) with ValueError "no good"'
