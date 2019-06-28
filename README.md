@@ -34,12 +34,9 @@ loggo = Loggo(
     do_print=True,  # print each log to console
     do_write=True,  # write each log to file
     logfile="mylog.txt",  # custom path to logfile
-    line_length=200,  # line truncation for console logging
     truncation=1000,  # longest possible value in extra data
     private_data={"password"},  # set of sensitive args/kwargs
-    obscured="******", # string with which to obscure data
 )
-
 ```
 
 ## Usage
@@ -77,7 +74,6 @@ class Multiplier:
     def _do_authentication(self, password):
         """Not exactly Fort Knox"""
         return password == "tOpSeCrEt"
-
 ```
 
 First, let's use it properly, with our secret password passed in:
@@ -86,7 +82,6 @@ First, let's use it properly, with our secret password passed in:
 mult = Multiplier(50)
 result = mult.multiply(50, "tOpSeCrEt")
 assert result == 2500  # True
-
 ```
 
 We'll get some nice text in the console:
@@ -133,7 +128,6 @@ loggo = Loggo(
 @loggo
 def test():
     pass
-
 ```
 
 If you pass `None` for any of these keyword arguments, logs of that time will be completely suppressed. If you do not provide a value for `returned_none`, `loggo` will use the value you provided for `returned`, or fall back to its own default.

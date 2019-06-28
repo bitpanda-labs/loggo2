@@ -5,19 +5,20 @@ This log should always be updated when doing backwards incompatible changes, res
 
 x.x.x (unreleased)
 -----
-
 - Added
     - `called`, `returned`, `returned_none` and `errored` kwargs on instantiation for custom log strings
 
 - Changed
     - do not pass a config dict on instantiation, instead just keyword arguments
     - Graylog address is given to init as tuple named graylog_address instead of having the ip and port in separate arguments.
-    - tests split into three separete files for maintainability
-    - default obscured data string `[PRIVATE_DATA] -> ********` 
+    - default obscured data string `[PRIVATE_DATA] -> ********`. This string is not configurable anymore.
+    - default log level changed from logging.INFO to logging.DEBUG
 
 - Removed
     - loggo.events; its functionality is still available during instantiation
     - line_length config, which was not respected anyway, and not really needed.
+    - max_dict_depth config. Now always set to the previous default value 5.
+    - error_level config. Now always set to the LOG_LEVEL
     - Loggo.verbose contextmanager
     - Loggo.log_errors contextmanager
 

@@ -18,6 +18,7 @@ try:
 except ImportError:
     graypy = None
 
+
 # Strings to be formatted for pre function, post function and error during function
 DEFAULT_FORMS = dict(
     called="*Called {call_signature}",
@@ -25,18 +26,18 @@ DEFAULT_FORMS = dict(
     returned_none="*Returned None from {call_signature}",
     errored='*Errored during {call_signature} with {exception_type} "{exception_msg}"',
 )
-DEFAULT_LOG_LEVEL = logging.INFO
+LOG_LEVEL = logging.DEBUG
+LOG_THRESHOLD = logging.DEBUG  # Only log when log level is this or higher
+MAX_DICT_OBSCURATION_DEPTH = 5
+OBSCURED_STRING = "********"
+# Callables with an attribute of this name set to True will not be logged by Loggo
+NO_LOGS_ATTR_NAME = "_do_not_log_this_callable"
 
 
 class Loggo:
     """
     A class for logging
     """
-
-    # Callables with an attribute of this name set to True will not be logged by Loggo
-    no_logs_attribute_name = "_do_not_log_this_callable"
-    # Only log when log level is this or higher
-    log_threshold = logging.DEBUG
 
     def __init__(
         self,
@@ -45,7 +46,6 @@ class Loggo:
         returned: Optional[str] = DEFAULT_FORMS["returned"],
         returned_none: Optional[str] = DEFAULT_FORMS["returned_none"],
         errored: Optional[str] = DEFAULT_FORMS["errored"],
-        error_level: int = DEFAULT_LOG_LEVEL,
         facility: str = "loggo",
         graylog_address: Optional[Tuple[str, int]] = None,
         do_print: bool = False,
@@ -53,9 +53,7 @@ class Loggo:
         truncation: int = 7500,
         raise_logging_errors: bool = False,
         logfile: str = "./logs/logs.txt",
-        obscured: str = "********",
         private_data: Optional[Set[str]] = None,
-        max_dict_depth: int = 5,
         log_if_graylog_disabled: bool = True,
     ) -> None:
         """
@@ -69,10 +67,7 @@ class Loggo:
         - do_write: write logs to file
         - truncation: truncate value of log data fields to this length
         - private_data: key names that should be filtered out of logging. when not
-        - max_dict_depth: how deep into log data loggo will look for private data provided, nothing
-            is censored
         - raise_logging_errors: should Loggo errors be allowed to happen?
-        - obscure: a string to use instead of any private data
         - log_if_graylog_disabled: boolean value, should a warning log be made when failing to
             connect to graylog
         """
@@ -82,7 +77,6 @@ class Loggo:
         self.returned = returned
         self.returned_none = self._best_returned_none(returned, returned_none)
         self.errored = errored
-        self.error_level = error_level
         self.facility = facility
         self.graylog_address = graylog_address
         self.do_print = do_print
@@ -90,12 +84,10 @@ class Loggo:
         self.truncation = truncation
         self.raise_logging_errors = raise_logging_errors
         self.logfile = logfile
-        self.obscured = obscured
         self.private_data = private_data or set()
-        self.max_dict_depth = max_dict_depth
         self.log_if_graylog_disabled = log_if_graylog_disabled
         self.logger = logging.getLogger(self.facility)
-        self.logger.setLevel(Loggo.log_threshold)
+        self.logger.setLevel(LOG_THRESHOLD)
         self._add_graylog_handler()
 
     @staticmethod
@@ -198,7 +190,7 @@ class Loggo:
         A decorator that will override Loggo class deco, in case you do not want
         to log one particular method for some reason
         """
-        setattr(function, Loggo.no_logs_attribute_name, True)
+        setattr(function, NO_LOGS_ATTR_NAME, True)
         return function
 
     def errors(self, class_or_func: Union[Callable, type]) -> Union[Callable, type]:
@@ -221,7 +213,7 @@ class Loggo:
         """
 
         # if logging has been turned off, just do nothing
-        if getattr(function, Loggo.no_logs_attribute_name, False):
+        if getattr(function, NO_LOGS_ATTR_NAME, False):
             return function
 
         @wraps(function)
@@ -337,7 +329,7 @@ class Loggo:
                 loggo_self.log(record.levelno, record.msg, extra)
 
         other_loggo = logging.getLogger(facility)
-        other_loggo.setLevel(Loggo.log_threshold)
+        other_loggo.setLevel(LOG_THRESHOLD)
         other_loggo.addHandler(LoggoHandler())
 
     def _params_to_dict(self, function: Callable, *args: Any, **kwargs: Any) -> Mapping:
@@ -358,13 +350,13 @@ class Loggo:
         """
         Obscure any private values in a dictionary recursively
         """
-        if not isinstance(log_data, dict) or dict_depth >= self.max_dict_depth:
+        if not isinstance(log_data, dict) or dict_depth >= MAX_DICT_OBSCURATION_DEPTH:
             return log_data
 
         out = dict()
         for key, value in log_data.items():
             if key in self.private_data:
-                out[key] = self.obscured
+                out[key] = OBSCURED_STRING
             else:
                 out[key] = self._obscure_private_keys(value, dict_depth + 1)
         return out
@@ -417,9 +409,7 @@ class Loggo:
         if where == "errored":
             formatters["exception_type"] = type(returned).__name__
             formatters["exception_msg"] = str(returned)
-            formatters["level"] = self.error_level
-        else:
-            formatters["level"] = DEFAULT_LOG_LEVEL
+        formatters["level"] = LOG_LEVEL
 
         # format the string template
         msg = msg.format(**formatters).replace("  ", " ")
@@ -434,7 +424,7 @@ class Loggo:
         # turn it on just for now, as if we shouldn't log we'd have returned
         self.stopped = False
         # do logging
-        self.log(DEFAULT_LOG_LEVEL, msg, extra=log_data, safe=True)
+        self.log(LOG_LEVEL, msg, extra=log_data, safe=True)
         # restore old stopped state
         self.stopped = original_state
 
