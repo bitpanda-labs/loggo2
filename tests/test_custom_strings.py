@@ -88,7 +88,7 @@ class TestCustomStrings(unittest.TestCase):
             self.assertEqual(logged_msg, "Log string custom_fail()")
             (alert, logged_msg), extras = logger.call_args_list[1]
             self.assertEqual(logged_msg, "Log string on exception")
-            self.assertEqual(alert, 20)
+            self.assertEqual(alert, 10)
 
     def test_no_return_string(self):
         with patch("logging.Logger.log") as logger:
