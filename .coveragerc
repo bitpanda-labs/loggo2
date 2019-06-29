@@ -1,3 +1,5 @@
 [report]
 omit =
     tests/*
+    venv/*
+    */site-packages/*
