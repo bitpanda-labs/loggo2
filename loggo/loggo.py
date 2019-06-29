@@ -10,7 +10,7 @@ import uuid
 from contextlib import contextmanager
 from datetime import datetime
 from functools import wraps
-from typing import Optional, Set, Dict, Union, Callable, Generator, Any, cast, Mapping, Tuple
+from typing import Optional, Set, Dict, Union, Callable, Generator, Any, Mapping, Tuple
 
 # you don't need graylog installed
 try:
@@ -127,7 +127,6 @@ class Loggo:
         """
         Decorate all viable methods in a class
         """
-        assert inspect.isclass(cls)
         members = inspect.getmembers(cls)
         members = [(k, v) for k, v in members if self._can_decorate(v, name=k)]
         for name, candidate in members:
@@ -149,8 +148,8 @@ class Loggo:
         Make Loggo itself a decorator of either a class or a method/function, so
         you can just use @Loggo on both classes and functions
         """
-        if inspect.isclass(class_or_func):
-            return self._decorate_all_methods(cast(type, class_or_func))
+        if isinstance(class_or_func, type):
+            return self._decorate_all_methods(class_or_func)
         if self._can_decorate(class_or_func):
             return self.logme(class_or_func)
         return class_or_func
@@ -197,8 +196,8 @@ class Loggo:
         """
         Decorator: only log errors within a given method
         """
-        if inspect.isclass(class_or_func):
-            return self._decorate_all_methods(cast(type, class_or_func), just_errors=True)
+        if isinstance(class_or_func, type):
+            return self._decorate_all_methods(class_or_func, just_errors=True)
         return self.logme(class_or_func, just_errors=True)
 
     def logme(self, function: Callable, just_errors: bool = False) -> Callable:
