@@ -360,7 +360,7 @@ class Loggo:
                 out[key] = self._obscure_private_keys(value, dict_depth + 1)
         return out
 
-    def _represent_return_value(self, response: Any, truncate: Optional[int] = 140) -> str:
+    def _represent_return_value(self, response: Any) -> str:
         """
         Make a string representation of whatever a method returns
         """
@@ -368,7 +368,7 @@ class Loggo:
         if str(type(response)) == "<class 'requests.models.Response'>":
             response = response.text
 
-        return "({})".format(self._force_string_and_truncate(response, truncate, use_repr=True))
+        return "({})".format(self._force_string_and_truncate(response, truncate=None, use_repr=True))
 
     def _generate_log(
         self, where: str, returned: Any, formatters: Dict, safe_log_data: Dict[str, str]
@@ -400,7 +400,7 @@ class Loggo:
 
         # return value for log message
         if "returned" in where:
-            ret_str = self._represent_return_value(returned, truncate=None)
+            ret_str = self._represent_return_value(returned)
             formatters["return_value"] = ret_str
             formatters["return_type"] = type(returned).__name__
 
