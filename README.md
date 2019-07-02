@@ -191,15 +191,31 @@ with loggo.pause(allow_errors=False):
     do_something()
 ```
 
-## Tests
+## Contributing
 
+Issues, feature requests and code contributions are welcomed. Follow these steps to make a pull request:
+
+* Fork/clone the repository.
+
+* Install dependencies (you'll probably want to create a virtual environment, using your preferred method, first).
+```bash
+pip install -r requirements.txt
+```
+
+* Install pre-commit hooks
+```bash
+pre-commit install
+```
+
+* After making changes and having written tests, make sure tests pass:
 ```bash
 python -m unittest
 ```
 
-## Contributing
+* Commit, push, and make a PR.
 
-Issues, feature requests and code contributions are welcomed.
+
+### Version bumping
 
 `loggo` adheres to semantic versioning, ideally via the `bump2version` utility. Install it with pip:
 
