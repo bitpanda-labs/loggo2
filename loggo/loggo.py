@@ -10,7 +10,7 @@ import uuid
 from contextlib import contextmanager
 from datetime import datetime
 from functools import wraps
-from typing import Optional, Set, Dict, Union, Callable, Generator, Any, cast, Mapping, Tuple
+from typing import Optional, Set, Dict, Union, Callable, Generator, Any, Mapping, Tuple
 
 # you don't need graylog installed
 try:
@@ -127,7 +127,6 @@ class Loggo:
         """
         Decorate all viable methods in a class
         """
-        assert inspect.isclass(cls)
         members = inspect.getmembers(cls)
         members = [(k, v) for k, v in members if self._can_decorate(v, name=k)]
         for name, candidate in members:
@@ -149,8 +148,8 @@ class Loggo:
         Make Loggo itself a decorator of either a class or a method/function, so
         you can just use @Loggo on both classes and functions
         """
-        if inspect.isclass(class_or_func):
-            return self._decorate_all_methods(cast(type, class_or_func))
+        if isinstance(class_or_func, type):
+            return self._decorate_all_methods(class_or_func)
         if self._can_decorate(class_or_func):
             return self.logme(class_or_func)
         return class_or_func
@@ -197,8 +196,8 @@ class Loggo:
         """
         Decorator: only log errors within a given method
         """
-        if inspect.isclass(class_or_func):
-            return self._decorate_all_methods(cast(type, class_or_func), just_errors=True)
+        if isinstance(class_or_func, type):
+            return self._decorate_all_methods(class_or_func, just_errors=True)
         return self.logme(class_or_func, just_errors=True)
 
     def logme(self, function: Callable, just_errors: bool = False) -> Callable:
@@ -361,7 +360,7 @@ class Loggo:
                 out[key] = self._obscure_private_keys(value, dict_depth + 1)
         return out
 
-    def _represent_return_value(self, response: Any, truncate: Optional[int] = 140) -> str:
+    def _represent_return_value(self, response: Any) -> str:
         """
         Make a string representation of whatever a method returns
         """
@@ -369,7 +368,7 @@ class Loggo:
         if str(type(response)) == "<class 'requests.models.Response'>":
             response = response.text
 
-        return "({})".format(self._force_string_and_truncate(response, truncate, use_repr=True))
+        return "({})".format(self._force_string_and_truncate(response, truncate=None, use_repr=True))
 
     def _generate_log(
         self, where: str, returned: Any, formatters: Dict, safe_log_data: Dict[str, str]
@@ -401,7 +400,7 @@ class Loggo:
 
         # return value for log message
         if "returned" in where:
-            ret_str = self._represent_return_value(returned, truncate=None)
+            ret_str = self._represent_return_value(returned)
             formatters["return_value"] = ret_str
             formatters["return_type"] = type(returned).__name__
 
