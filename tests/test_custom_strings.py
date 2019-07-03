@@ -3,21 +3,20 @@ from unittest.mock import patch
 from typing import Mapping, Optional
 from loggo import Loggo
 
-# without the Mapping annotation this fails, apparently due to mypy problems
-strings = dict(
+strings: Mapping[str, str] = dict(
     called="Log string {call_signature}", returned="Log string for return", errored="Log string on exception"
-)  # type: Mapping[str, str]
+)
 
 custom_strings = Loggo(log_if_graylog_disabled=False, **strings)
 
-nocalled = dict(
+nocalled: Mapping[str, Optional[str]] = dict(
     called=None,
     returned="Log string for return",
     returned_none="Returned none!",
     errored="Log string on exception",
-)  # type: Mapping[str, Optional[str]]
+)
 
-no_return = dict(called="called fine", returned=None, returned_none=None)  # type: Mapping[str, Optional[str]]
+no_return: Mapping[str, Optional[str]] = dict(called="called fine", returned=None, returned_none=None)
 
 custom_none_string = Loggo(log_if_graylog_disabled=False, **nocalled)
 

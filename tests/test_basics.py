@@ -7,9 +7,9 @@ from unittest.mock import ANY, Mock, mock_open, patch
 
 from loggo import Loggo
 
-test_setup = dict(
+test_setup: Mapping[str, Any] = dict(
     do_write=True, log_if_graylog_disabled=False, private_data={"mnemonic", "priv"}
-)  # type: Mapping[str, Any]
+)
 
 loggo = Loggo(**test_setup)
 
