@@ -19,4 +19,5 @@ jobs:
     - stage: test
       script:
         - coverage run -m unittest
+        - coverage report --fail-under=95
         - codecov
