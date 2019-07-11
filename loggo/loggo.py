@@ -12,6 +12,8 @@ from datetime import datetime
 from functools import wraps
 from typing import Optional, Set, Dict, Union, Callable, Generator, Any, Mapping, Tuple
 
+from typing_extensions import Literal
+
 # you don't need graylog installed
 try:
     import graypy
@@ -32,6 +34,8 @@ MAX_DICT_OBSCURATION_DEPTH = 5
 OBSCURED_STRING = "********"
 # Callables with an attribute of this name set to True will not be logged by Loggo
 NO_LOGS_ATTR_NAME = "_do_not_log_this_callable"
+
+CallableEvent = Literal["called", "errored", "returned", "returned_none"]
 
 
 class Loggo:
@@ -256,7 +260,7 @@ class Loggo:
                 formatters["traceback"] = traceback.format_exc()
                 self._generate_log("errored", error, formatters, param_strings)
                 raise
-            where = "returned_none" if response is None else "returned"
+            where: CallableEvent = "returned_none" if response is None else "returned"
             # the successful return log
             if not just_errors:
                 self._generate_log(where, response, formatters, param_strings)
@@ -371,7 +375,7 @@ class Loggo:
         return "({})".format(self._force_string_and_truncate(response, truncate=None, use_repr=True))
 
     def _generate_log(
-        self, where: str, returned: Any, formatters: Dict, safe_log_data: Dict[str, str]
+        self, where: CallableEvent, returned: Any, formatters: Dict, safe_log_data: Dict[str, str]
     ) -> None:
         """
         generate message, level and log data for automated logs
