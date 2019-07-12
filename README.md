@@ -133,19 +133,24 @@ def test():
 If you pass `None` for any of these keyword arguments, logs of that time will be completely suppressed. If you do not provide a value for `returned_none`, `loggo` will use the value you provided for `returned`, or fall back to its own default.
 
 Notice, in the example above, you can include particular format strings in the log message. Currently supported are:
-
 * `call_signature`: the callable name and its arguments and keyword arguments
 * `callable`: the `__qualname__` of the decorated object
 * `params`: comma separated key value pairs for arguments passed
-* `return_value`: the object returned by the callable
-* `return_type`: type of returned object
-* `exception_type`: `ValueError`, `AttributeError`, etc.
-* `exception_msg`: details about the thrown exception
 * `level`: the alert level associated with this log
 * `timestamp`: time at time of logging
 * `couplet`: `uuid.uuid1()` for the called and returned/errored pair
 * `number_of_params`: total `args + kwargs` as int
 * `private_keys`: list of identified private argument names
+* `decorated`: always `True`
+
+The `errored` log additionally supports:
+* `exception_type`: `ValueError`, `AttributeError`, etc.
+* `exception_msg`: details about the thrown exception
+* `traceback`: exception traceback
+
+And the `returned` and `returned_none` logs support:
+* `return_value`: the object returned by the callable
+* `return_type`: type of returned object
 
 Adding more such strings is trivial; submit an issue if there is something else you need.
 
