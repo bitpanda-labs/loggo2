@@ -12,7 +12,7 @@ from datetime import datetime
 from functools import wraps
 from typing import Optional, Set, Dict, Union, Callable, Generator, Any, Mapping, Tuple
 
-from typing_extensions import Literal
+from typing_extensions import Literal, TypedDict
 
 # you don't need graylog installed
 try:
@@ -34,6 +34,29 @@ MAX_DICT_OBSCURATION_DEPTH = 5
 OBSCURED_STRING = "********"
 # Callables with an attribute of this name set to True will not be logged by Loggo
 NO_LOGS_ATTR_NAME = "_do_not_log_this_callable"
+
+
+class Formatters(TypedDict, total=False):
+    call_signature: str
+    callable: str
+    params: str
+
+    decorated: bool
+    couplet: uuid.UUID
+    number_of_params: int
+    private_keys: str
+    timestamp: str
+    level: int
+
+    # Only available if 'errored'
+    traceback: str
+    exception_type: str
+    exception_msg: str
+
+    # Only available if 'returned' or 'returned_none'
+    return_value: str
+    return_type: str
+
 
 CallableEvent = Literal["called", "errored", "returned", "returned_none"]
 
@@ -239,7 +262,7 @@ class Loggo:
             privates = [key for key in param_strings if key not in bound]
 
             # add more format strings
-            more = dict(
+            more = Formatters(
                 decorated=True,
                 couplet=uuid.uuid1(),
                 number_of_params=len(args) + len(kwargs),
@@ -282,7 +305,7 @@ class Loggo:
         return params
 
     @staticmethod
-    def _make_call_signature(function: Callable, param_strings: Dict[str, str]) -> Dict:
+    def _make_call_signature(function: Callable, param_strings: Dict[str, str]) -> Formatters:
         """
         Represent the call as a string mimicking how it is written in Python.
 
@@ -290,7 +313,7 @@ class Loggo:
         """
         signature = "{callable}({params})"
         param_str = ", ".join(f"{k}={v}" for k, v in param_strings.items())
-        format_strings = dict(
+        format_strings = Formatters(
             callable=getattr(function, "__qualname__", "unknown_callable"), params=param_str
         )
         format_strings["call_signature"] = signature.format(**format_strings)
@@ -375,7 +398,7 @@ class Loggo:
         return "({})".format(self._force_string_and_truncate(response, truncate=None, use_repr=True))
 
     def _generate_log(
-        self, where: CallableEvent, returned: Any, formatters: Dict, safe_log_data: Dict[str, str]
+        self, where: CallableEvent, returned: Any, formatters: Formatters, safe_log_data: Dict[str, str]
     ) -> None:
         """
         generate message, level and log data for automated logs
@@ -403,7 +426,7 @@ class Loggo:
             return
 
         # return value for log message
-        if "returned" in where:
+        if where in {"returned", "returned_none"}:
             ret_str = self._represent_return_value(returned)
             formatters["return_value"] = ret_str
             formatters["return_type"] = type(returned).__name__
