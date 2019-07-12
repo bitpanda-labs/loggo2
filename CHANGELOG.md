@@ -3,7 +3,7 @@ Changelog
 
 This log should always be updated when doing backwards incompatible changes, resulting in a major version bump. Feel free to add a log for lesser version bumps as well, but for major bumps it's a must.
 
-x.x.x (unreleased)
+6.0.0
 -----
 - Added
     - `called`, `returned`, `returned_none` and `errored` kwargs on instantiation for custom log strings
