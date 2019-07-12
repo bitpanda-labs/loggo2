@@ -46,7 +46,7 @@ class Formatters(TypedDict, total=False):
     number_of_params: int
     private_keys: str
     timestamp: str
-    level: int
+    log_level: int
 
     # Only available if 'errored'
     traceback: str
@@ -435,7 +435,7 @@ class Loggo:
         if where == "errored":
             formatters["exception_type"] = type(returned).__name__
             formatters["exception_msg"] = str(returned)
-        formatters["level"] = LOG_LEVEL
+        formatters["log_level"] = LOG_LEVEL
 
         # format the string template
         msg = msg.format(**formatters).replace("  ", " ")
@@ -546,7 +546,7 @@ class Loggo:
             extra = self.sanitise(extra, use_repr=False)
             msg = self.sanitise_msg(msg)
 
-        extra.update(dict(level=str(level), loggo=str(True)))
+        extra.update(dict(log_level=str(level), loggo="True"))
 
         # format logs for printing/writing to file
         if self.do_write or self.do_print:
