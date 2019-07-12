@@ -136,7 +136,7 @@ Notice, in the example above, you can include particular format strings in the l
 * `call_signature`: the callable name and its arguments and keyword arguments
 * `callable`: the `__qualname__` of the decorated object
 * `params`: comma separated key value pairs for arguments passed
-* `level`: the alert level associated with this log
+* `log_level`: the log level associated with this log
 * `timestamp`: time at time of logging
 * `couplet`: `uuid.uuid1()` for the called and returned/errored pair
 * `number_of_params`: total `args + kwargs` as int
