@@ -28,7 +28,7 @@ DEFAULT_FORMS = dict(
     returned_none="*Returned None from {call_signature}",
     errored='*Errored during {call_signature} with {exception_type} "{exception_msg}"',
 )
-LOG_LEVEL = logging.DEBUG
+LOG_LEVEL = logging.DEBUG  # Log level used for Loggo decoration logs
 LOG_THRESHOLD = logging.DEBUG  # Only log when log level is this or higher
 MAX_DICT_OBSCURATION_DEPTH = 5
 OBSCURED_STRING = "********"
@@ -137,16 +137,12 @@ class Loggo:
 
     def _can_decorate(self, candidate: Callable, name: Optional[str] = None) -> bool:
         """
-        Decide if we can decorate a given object
-
-        Must have non private name and be callable
+        Decide if we can decorate a given callable. Must have non private name.
         """
         name = name or getattr(candidate, "__name__", None)
         if not name:
             return False
         if name.startswith("__") and name.endswith("__"):
-            return False
-        if not callable(candidate):
             return False
         return True
 
@@ -155,7 +151,7 @@ class Loggo:
         Decorate all viable methods in a class
         """
         members = inspect.getmembers(cls)
-        members = [(k, v) for k, v in members if self._can_decorate(v, name=k)]
+        members = [(k, v) for k, v in members if callable(v) and self._can_decorate(v, name=k)]
         for name, candidate in members:
             deco = self.logme(candidate, just_errors=just_errors)
             # somehow, decorating classmethods as staticmethods is the only way
@@ -252,9 +248,11 @@ class Loggo:
             Args and kwargs are for/from the decorated function
             """
             bound = self._params_to_dict(function, *args, **kwargs)
-            # bound will be none if inspect signature binding failed. in this
-            # case, error log was created, raised if self.raise_logging_errors
             if bound is None:
+                self.warning(
+                    "Binding arguments to parameters of the signature failed",
+                    extra={"callable_name": getattr(function, "__qualname__", "unknown_callable")},
+                )
                 return function(*args, **kwargs)
 
             param_strings = self.sanitise(bound)
@@ -358,12 +356,18 @@ class Loggo:
         other_loggo.setLevel(LOG_THRESHOLD)
         other_loggo.addHandler(LoggoHandler())
 
-    def _params_to_dict(self, function: Callable, *args: Any, **kwargs: Any) -> Mapping:
+    @staticmethod
+    def _params_to_dict(function: Callable, *args: Any, **kwargs: Any) -> Optional[Mapping]:
         """
-        Turn args and kwargs into an OrderedDict of {param_name: value}
+        Turn args and kwargs into an OrderedDict of {param_name: value}.
+        Returns None if binding arguments to function signature fails.
         """
         sig = inspect.signature(function)
-        bound = sig.bind(*args, **kwargs).arguments
+        try:
+            bound_obj = sig.bind(*args, **kwargs)
+        except TypeError:
+            return None
+        bound = bound_obj.arguments
         if bound:
             first = list(bound)[0]
             if first == "self":
