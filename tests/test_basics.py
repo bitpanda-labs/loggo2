@@ -164,19 +164,6 @@ dummy = DummyClass()
 
 
 class TestDecoration(unittest.TestCase):
-    def test_decorate_module(self):
-        """
-        Test that a module is (currently) not altered if decorated
-        """
-        self.assertIs(logging, loggo(logging))  # type: ignore  # decorating unsupported type
-
-    def test_decorate_non_callable(self):
-        """
-        Test that an object is not altered if it's not callable
-        """
-        anything = "a string"
-        self.assertIs(anything, loggo(anything))  # type: ignore  # decorating unsupported type
-
     def test_inheritance_signature_change(self):
         d2 = DummyClass2()
         self.assertEqual(6, d2.add(1, 2, 3))
