@@ -456,13 +456,14 @@ class Loggo:
         log_data.update(custom_log_data)
 
         # record if logging was on or off
-        original_state = bool(self.stopped)
+        original_state = self.stopped
         # turn it on just for now, as if we shouldn't log we'd have returned
         self.stopped = False
-        # do logging
-        self.log(LOG_LEVEL, msg, extra=log_data, safe=True)
-        # restore old stopped state
-        self.stopped = original_state
+        try:
+            self.log(LOG_LEVEL, msg, extra=log_data, safe=True)
+        finally:
+            # restore old stopped state
+            self.stopped = original_state
 
     def add_custom_log_data(self) -> Dict[str, str]:
         """
