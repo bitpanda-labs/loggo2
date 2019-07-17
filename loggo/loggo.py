@@ -259,7 +259,7 @@ class Loggo:
             bound = self._params_to_dict(function, *args, **kwargs)
             if bound is None:
                 self.warning(
-                    "Binding arguments to parameters of the signature failed",
+                    "Failed getting function signature, or coupling arguments with signature's parameters",
                     extra={"callable_name": getattr(function, "__qualname__", "unknown_callable")},
                 )
                 return function(*args, **kwargs)
@@ -369,13 +369,19 @@ class Loggo:
     def _params_to_dict(function: Callable, *args: Any, **kwargs: Any) -> Optional[Mapping]:
         """
         Turn args and kwargs into an OrderedDict of {param_name: value}.
-        Returns None if binding arguments to function signature fails.
+        Returns None if getting the signature, or binding arguments to
+        the signature's parameters fails.
         """
-        sig = inspect.signature(function)
+        try:
+            sig = inspect.signature(function)
+        except ValueError:
+            return None
+
         try:
             bound_obj = sig.bind(*args, **kwargs)
         except TypeError:
             return None
+
         bound = bound_obj.arguments
         if bound:
             first = list(bound)[0]
