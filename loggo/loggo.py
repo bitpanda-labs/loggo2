@@ -13,6 +13,7 @@ from functools import wraps
 from typing import Optional, Set, Dict, Union, Callable, Generator, Any, Mapping, Tuple
 
 from typing_extensions import Literal, TypedDict
+from dateutil.tz import tzlocal
 
 # you don't need graylog installed
 try:
@@ -116,6 +117,14 @@ class Loggo:
         self.logger = logging.getLogger(self.facility)
         self.logger.setLevel(LOG_THRESHOLD)
         self._add_graylog_handler()
+
+    @staticmethod
+    def _get_timestamp() -> str:
+        """
+        Return current time as a string formatted like:
+        "2019-07-17 09:35:06 CEST"
+        """
+        return datetime.now(tzlocal()).strftime("%Y-%m-%d %H:%M:%S %Z")
 
     @staticmethod
     def _best_returned_none(returned: Optional[str], returned_none: Optional[str]) -> Optional[str]:
@@ -265,7 +274,7 @@ class Loggo:
                 couplet=uuid.uuid1(),
                 number_of_params=len(args) + len(kwargs),
                 private_keys=", ".join(privates),
-                timestamp=datetime.now().strftime("%d.%m %Y %H:%M:%S"),
+                timestamp=self._get_timestamp(),
             )
             formatters.update(more)
 
@@ -561,7 +570,7 @@ class Loggo:
 
         # format logs for printing/writing to file
         if self.do_write or self.do_print:
-            ts = extra.get("timestamp", datetime.now().strftime("%d.%m %Y %H:%M:%S"))
+            ts = extra.get("timestamp", self._get_timestamp())
             line = f"{ts}\t{msg}\t{level}"
             trace = extra.get("traceback")
             if trace:
