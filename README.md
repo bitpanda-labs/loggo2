@@ -12,10 +12,15 @@
 
 ## Install
 
-```
+```bash
 pip install loggo
 # or
 python setup.py install
+```
+
+To install with Graylog support, do:
+```bash
+pip install loggo[graylog]
 ```
 
 ## Setup
