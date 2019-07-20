@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import patch
 from typing import Mapping, Optional
+
 from loggo import Loggo
 
 strings: Mapping[str, str] = dict(
