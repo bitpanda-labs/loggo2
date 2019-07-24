@@ -491,10 +491,16 @@ class Loggo:
             fo.write(line.rstrip("\n") + "\n")
 
     def _add_graylog_handler(self) -> None:
-        if not self.graylog_address or not graypy:
-            if self.log_if_graylog_disabled:
-                self.warning("Graylog not configured! Disabling it")
+        if not graypy:
+            if self.graylog_address:
+                raise ValueError("Misconfiguration: Graylog configured but graypy not installed")
             return
+
+        if not self.graylog_address:
+            if self.log_if_graylog_disabled:
+                self.warning("Graypy installed, but Graylog not configured! Disabling it")
+            return
+
         handler = graypy.GELFUDPHandler(*self.graylog_address, debugging_fields=False)
         self.logger.addHandler(handler)
 
