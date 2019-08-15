@@ -144,7 +144,8 @@ class Loggo:
         # the switch: use the user provided returned for returned_none
         return returned
 
-    def _can_decorate(self, candidate: Callable, name: Optional[str] = None) -> bool:
+    @staticmethod
+    def _can_decorate(candidate: Callable, name: Optional[str] = None) -> bool:
         """
         Decide if we can decorate a given callable. Must have non private name.
         """
@@ -178,7 +179,7 @@ class Loggo:
     def __call__(self, class_or_func: Union[Callable, type]) -> Union[Callable, type]:
         """
         Make Loggo itself a decorator of either a class or a method/function, so
-        you can just use @Loggo on both classes and functions
+        you can just use @loggo on both classes and functions
         """
         if isinstance(class_or_func, type):
             return self._decorate_all_methods(class_or_func)
@@ -237,7 +238,7 @@ class Loggo:
         This the function decorator. After having instantiated Loggo, use it as a
         decorator like so:
 
-        @Loggo.logme
+        @loggo.logme
         def f(): pass
 
         It will the call, return and errors that occurred during the function/method

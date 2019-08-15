@@ -3,10 +3,8 @@ import os
 from setuptools import setup
 
 
-def read(fname):
-    """
-    Helper to read README
-    """
+def read(fname: str) -> str:
+    """Helper to read README"""
     return open(os.path.join(os.path.dirname(__file__), fname)).read().strip()
 
 

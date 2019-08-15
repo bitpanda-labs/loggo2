@@ -1,7 +1,7 @@
 [![Build Status](https://travis-ci.org/bitpanda-labs/loggo.svg?branch=master)](https://travis-ci.org/bitpanda-labs/loggo)
 [![codecov.io](https://codecov.io/gh/bitpanda-labs/loggo/branch/master/graph/badge.svg)](https://codecov.io/gh/bitpanda-labs/loggo)
 [![PyPI version](https://badge.fury.io/py/loggo.svg)](https://badge.fury.io/py/loggo)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/python/black)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 # `@loggo`: automated logging for Python 3
 
@@ -204,7 +204,7 @@ with loggo.pause(allow_errors=False):
 ## Contributing
 
 ### Style
-The style is [Black](https://github.com/python/black), with the following exceptions and extra strictness:
+The style is [Black](https://github.com/psf/black), with the following exceptions and extra strictness:
 * Maximum line length is 110
 * The comment syntax for types should not be used unless ignoring with `# type: ignore`. That is, write this:
     ```python

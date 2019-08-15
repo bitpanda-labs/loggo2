@@ -8,8 +8,8 @@ script:
   # Build
   - python setup.py install
   # Static checks
-  - flake8 loggo/ tests/ setup.py
-  - mypy loggo/ tests/ setup.py
+  - flake8 .
+  - mypy .
   - black --check .
   # Tests
   - coverage run -m unittest
