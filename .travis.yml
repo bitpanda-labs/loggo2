@@ -7,10 +7,13 @@ python:
 script:
   # Build
   - python setup.py install
-  # Static checks
-  - flake8 loggo/ tests/ setup.py
-  - mypy loggo/ tests/ setup.py
-  - black --check .
+  # Static checks (only in Python 3.6 job)
+  - |
+    if [[ $TRAVIS_PYTHON_VERSION == '3.6' ]]; then
+      flake8 . &&
+      mypy . &&
+      black --check .
+    fi
   # Tests
   - coverage run -m unittest
   - coverage report --fail-under=95

@@ -2,6 +2,7 @@
 Loggo: safe and automatable logging
 """
 
+import sys
 import inspect
 import logging
 import os
@@ -12,8 +13,12 @@ from datetime import datetime
 from functools import wraps
 from typing import Optional, Set, Dict, Union, Callable, Generator, Any, Mapping, Tuple
 
-from typing_extensions import Literal, TypedDict
 from dateutil.tz import tzlocal
+
+if sys.version_info < (3, 8):
+    from typing_extensions import Literal, TypedDict
+else:
+    from typing import Literal, TypedDict
 
 # you don't need graylog installed
 try:
@@ -144,7 +149,8 @@ class Loggo:
         # the switch: use the user provided returned for returned_none
         return returned
 
-    def _can_decorate(self, candidate: Callable, name: Optional[str] = None) -> bool:
+    @staticmethod
+    def _can_decorate(candidate: Callable, name: Optional[str] = None) -> bool:
         """
         Decide if we can decorate a given callable. Must have non private name.
         """
@@ -178,7 +184,7 @@ class Loggo:
     def __call__(self, class_or_func: Union[Callable, type]) -> Union[Callable, type]:
         """
         Make Loggo itself a decorator of either a class or a method/function, so
-        you can just use @Loggo on both classes and functions
+        you can just use @loggo on both classes and functions
         """
         if isinstance(class_or_func, type):
             return self._decorate_all_methods(class_or_func)
@@ -237,7 +243,7 @@ class Loggo:
         This the function decorator. After having instantiated Loggo, use it as a
         decorator like so:
 
-        @Loggo.logme
+        @loggo.logme
         def f(): pass
 
         It will the call, return and errors that occurred during the function/method
