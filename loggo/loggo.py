@@ -116,7 +116,7 @@ class Loggo:
         self.do_write = do_write
         self.truncation = truncation
         self.raise_logging_errors = raise_logging_errors
-        self.logfile = logfile
+        self.logfile = os.path.abspath(os.path.expanduser(logfile))
         self.private_data = private_data or set()
         self.log_if_graylog_disabled = log_if_graylog_disabled
         self.logger = logging.getLogger(self.facility)
@@ -491,10 +491,10 @@ class Loggo:
         Very simple log writer, could expand. simple append the line to the file
         """
         needed_dir = os.path.dirname(self.logfile)
-        if needed_dir and not os.path.isdir(needed_dir):
-            os.makedirs(os.path.dirname(self.logfile))
+        if not os.path.isdir(needed_dir):
+            os.makedirs(needed_dir)
         with open(self.logfile, "a") as fo:
-            fo.write(line.rstrip("\n") + "\n")
+            fo.write(line + "\n")
 
     def _add_graylog_handler(self) -> None:
         if not graypy:
@@ -586,7 +586,8 @@ class Loggo:
             line = f"{ts}\t{msg}\t{level}"
             trace = extra.get("traceback")
             if trace:
-                line = f"{line} -- see below: \n{trace}\n"
+                line = f"{line} -- see below:\n{trace}"
+            line = line.rstrip("\n")
         # do printing and writing to file
         if self.do_print:
             print(line)
