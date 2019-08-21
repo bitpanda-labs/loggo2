@@ -1,11 +1,13 @@
-import os
+from os import path
 
 from setuptools import setup
 
 
 def read(fname: str) -> str:
     """Helper to read README"""
-    return open(os.path.join(os.path.dirname(__file__), fname)).read().strip()
+    this_directory = path.abspath(path.dirname(__file__))
+    with open(path.join(this_directory, fname), encoding="utf-8") as f:
+        return f.read()
 
 
 setup(
