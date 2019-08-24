@@ -1,5 +1,5 @@
-import unittest
 from typing import Mapping, Optional
+import unittest
 from unittest.mock import patch
 
 from loggo import Loggo

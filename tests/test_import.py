@@ -1,6 +1,6 @@
 import builtins
-import unittest
 from importlib import reload
+import unittest
 
 
 class TestWithoutGraypy(unittest.TestCase):
