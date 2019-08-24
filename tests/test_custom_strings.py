@@ -1,6 +1,6 @@
 import unittest
-from unittest.mock import patch
 from typing import Mapping, Optional
+from unittest.mock import patch
 
 from loggo import Loggo
 
