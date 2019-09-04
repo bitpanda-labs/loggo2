@@ -1,7 +1,7 @@
 import logging
 import os
+from typing import Any, Mapping
 import unittest
-from typing import Mapping, Any
 from unittest.mock import ANY, Mock, mock_open, patch
 
 from loggo import Loggo

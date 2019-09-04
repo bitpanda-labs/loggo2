@@ -2,16 +2,16 @@
 Loggo: safe and automatable logging
 """
 
-import sys
-import inspect
-import logging
-import os
-import traceback
-import uuid
 from contextlib import contextmanager
 from datetime import datetime
 from functools import wraps
-from typing import Optional, Set, Dict, Union, Callable, Generator, Any, Mapping, Tuple
+import inspect
+import logging
+import os
+import sys
+import traceback
+from typing import Any, Callable, Dict, Generator, Mapping, Optional, Set, Tuple, Union
+import uuid
 
 from dateutil.tz import tzlocal
 
