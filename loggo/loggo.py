@@ -171,7 +171,7 @@ class Loggo:
             deco = self.logme(candidate, just_errors=just_errors)
             # somehow, decorating classmethods as staticmethods is the only way
             # to make everything work properly. we should find out why, some day
-            if isinstance(cls.__dict__[name], (staticmethod, classmethod)):
+            if isinstance(vars(cls)[name], (staticmethod, classmethod)):
                 # Make mypy ignore due to an open issue: https://github.com/python/mypy/issues/5530
                 deco = staticmethod(deco)  # type: ignore
             try:
@@ -362,7 +362,7 @@ class Loggo:
                     "thread",
                     "levelno",
                 }
-                extra = dict(record.__dict__)
+                extra = dict(vars(record))
                 [extra.pop(attrib, None) for attrib in attributes]
                 extra["sublogger"] = facility
                 loggo_self.log(record.levelno, record.msg, extra)
