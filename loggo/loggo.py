@@ -363,13 +363,14 @@ class Loggo:
                     "levelno",
                 }
                 extra = dict(vars(record))
-                [extra.pop(attrib, None) for attrib in attributes]
+                for attr in attributes:
+                    extra.pop(attr, None)
                 extra["sublogger"] = facility
                 loggo_self.log(record.levelno, record.msg, extra)
 
-        other_loggo = logging.getLogger(facility)
-        other_loggo.setLevel(LOG_THRESHOLD)
-        other_loggo.addHandler(LoggoHandler())
+        other_logger = logging.getLogger(facility)
+        other_logger.setLevel(LOG_THRESHOLD)
+        other_logger.addHandler(LoggoHandler())
 
     @staticmethod
     def _params_to_dict(function: Callable, *args: Any, **kwargs: Any) -> Optional[Mapping]:
