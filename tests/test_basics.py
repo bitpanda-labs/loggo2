@@ -509,10 +509,10 @@ class TestLog(unittest.TestCase):
         sub_loggo_facility = "a sub logger"
         sub_loggo = Loggo(facility=sub_loggo_facility)
         self.loggo.listen_to(sub_loggo_facility)
-        self.loggo.log = Mock()
+        self.loggo.log = Mock()  # type: ignore
         warn = "The parent logger should log this message after sublogger logs it"
         sub_loggo.log(logging.WARNING, warn)
-        self.loggo.log.assert_called_with(logging.WARNING, warn, ANY)
+        self.loggo.log.assert_called_with(logging.WARNING, warn, ANY)  # type: ignore
 
 
 if __name__ == "__main__":
