@@ -26,9 +26,7 @@ def function_with_private_kwarg(number, a_float=0.0, mnemonic=None):
 # we can also use loggo.__call__
 @loggo
 def may_or_may_not_error_test(first, other, kwargs=None):
-    """
-    A function that may or may not error
-    """
+    """A function that may or may not error."""
     if not kwargs:
         raise ValueError("no good")
     else:
@@ -43,26 +41,26 @@ def aaa():
 @loggo
 class AllMethodTypes:
     def __secret__(self):
-        """a method that should never be logged"""
+        """a method that should never be logged."""
         return True
 
     def public(self):
-        """normal method"""
+        """normal method."""
         return True
 
     @classmethod
     def cl(cls):
-        """class method"""
+        """class method."""
         return True
 
     @staticmethod
     def st():
-        """static method"""
+        """static method."""
         return True
 
     @loggo
     def doubled(self):
-        """Loggo twice, bad but shouldn't kill"""
+        """Loggo twice, bad but shouldn't kill."""
         return True
 
 
@@ -70,9 +68,7 @@ all_method_types = AllMethodTypes()
 
 
 class NoRepr:
-    """
-    An object that really hates being repr'd
-    """
+    """An object that really hates being repr'd."""
 
     def __repr__(self):
         raise Exception("No.")
@@ -80,9 +76,7 @@ class NoRepr:
 
 @loggo
 class DummyClass:
-    """
-    A class with regular methods, static methods and errors
-    """
+    """A class with regular methods, static methods and errors."""
 
     non_callable = False
 
@@ -176,9 +170,7 @@ class TestDecoration(unittest.TestCase):
             self.assertEqual(logged_msg, expected_msg)
 
     def test_one(self):
-        """
-        Check that an error is thrown for a func
-        """
+        """Check that an error is thrown for a func."""
         with patch("logging.Logger.log") as logger:
             with self.assertRaisesRegex(ValueError, "no good"):
                 may_or_may_not_error_test("astadh", 1331)
@@ -191,9 +183,7 @@ class TestDecoration(unittest.TestCase):
             self.assertEqual(logged_msg, expected_msg)
 
     def test_logme_0(self):
-        """
-        Test correct result
-        """
+        """Test correct result."""
         with patch("logging.Logger.log") as logger:
             res, kwa = may_or_may_not_error_test(2534, 2466, kwargs=True)
             self.assertEqual(res, 5000)
@@ -268,9 +258,7 @@ class TestDecoration(unittest.TestCase):
             self.assertEqual(expected_msg, logged_msg)
 
     def test_error_deco(self):
-        """
-        Test that @loggo.errors logs only errors when decorating a class
-        """
+        """Test that @loggo.errors logs only errors when decorating a class."""
         with patch("logging.Logger.log") as logger:
             fe = ForErrors()
             self.assertTrue(fe.two())
@@ -317,9 +305,10 @@ class TestLog(unittest.TestCase):
         self.log = self.loggo.log
 
     def test_protected_keys(self):
-        """
-        Check that a protected name "name" is converted to "protected_name",
-        in order to stop error in logger later
+        """Test that protected log data keys are renamed.
+
+        Check that a protected name "name" is converted to
+        "protected_name", in order to stop error in logger later.
         """
         with patch("logging.Logger.log") as mock_log:
             self.log(logging.INFO, "fine", dict(name="bad", other="good"))
@@ -339,9 +328,7 @@ class TestLog(unittest.TestCase):
             self.assertEqual(extras["extra"]["extra"], "data")
 
     def test_write_to_file(self):
-        """
-        Check that we can write logs to file
-        """
+        """Check that we can write logs to file."""
         mock = mock_open()
         with patch("builtins.open", mock):
             self.log(logging.INFO, "An entry in our log")
@@ -349,9 +336,7 @@ class TestLog(unittest.TestCase):
             self.assertTrue(os.path.isfile(loggo.logfile))
 
     def test_int_truncation(self):
-        """
-        Log was failing to truncate big integers. Check that this is now fixed.
-        """
+        """Test that large ints in log data are truncated."""
         with patch("logging.Logger.log") as mock_log:
             msg = "This is simply a test of the int truncation inside the log."
             large_number = 10 ** 300001
@@ -364,9 +349,7 @@ class TestLog(unittest.TestCase):
             self.assertEqual(logger_was_passed, done_by_hand)
 
     def test_string_truncation_fail(self):
-        """
-        If something cannot be cast to string, we need to know about it
-        """
+        """If something cannot be cast to string, we need to know about it."""
         with patch("logging.Logger.log") as mock_log:
             no_string_rep = NoRepr()
             result = self.loggo._force_string_and_truncate(no_string_rep, 7500)
@@ -426,7 +409,7 @@ class TestLog(unittest.TestCase):
             logger.assert_called_once()
 
     def test_see_below(self):
-        """legacy test, deletable if it causes problems later"""
+        """legacy test, deletable if it causes problems later."""
         with patch("logging.Logger.log") as logger:
             loggo.log(50, "test")
             (alert, msg), kwargs = logger.call_args
@@ -470,9 +453,7 @@ class TestLog(unittest.TestCase):
             logger.assert_not_called()
 
     def test_stop_and_start(self):
-        """
-        Check that the start and stop commands actually do something
-        """
+        """Check that the start and stop commands actually do something."""
         loggo.start()
         self._working_normally()
         loggo.stop()

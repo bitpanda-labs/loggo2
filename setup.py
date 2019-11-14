@@ -4,7 +4,7 @@ from setuptools import setup
 
 
 def read(fname: str) -> str:
-    """Helper to read README"""
+    """Helper to read README."""
     this_directory = path.abspath(path.dirname(__file__))
     with open(path.join(this_directory, fname), encoding="utf-8") as f:
         return f.read()

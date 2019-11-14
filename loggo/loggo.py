@@ -68,9 +68,7 @@ CallableEvent = Literal["called", "errored", "returned", "returned_none"]
 
 
 class Loggo:
-    """
-    A class for logging
-    """
+    """A class for logging."""
 
     def __init__(
         self,
@@ -89,10 +87,10 @@ class Loggo:
         private_data: Optional[Set[str]] = None,
         log_if_graylog_disabled: bool = True,
     ) -> None:
-        """
-        On instantiation, pass in a dictionary containing the config. Currently
-        accepted config values are:
+        """Initializes a Loggo object.
 
+        On instantiation, pass in a dictionary containing the config.
+        Currently accepted config values are:
         - facility: name of the app the log is coming from
         - graylog_address: A tuple (ip, port). Address for graylog.
         - logfile: path to a file to which logs will be written
@@ -125,17 +123,19 @@ class Loggo:
 
     @staticmethod
     def _get_timestamp() -> str:
-        """
-        Return current time as a string formatted like:
-        "2019-07-17 09:35:06 CEST"
+        """Return current time as a string.
+
+        Formatted as follows: "2019-07-17 09:35:06 CEST".
         """
         return datetime.now(tzlocal()).strftime("%Y-%m-%d %H:%M:%S %Z")
 
     @staticmethod
     def _best_returned_none(returned: Optional[str], returned_none: Optional[str]) -> Optional[str]:
-        """
-        If the user has their own msg format for 'returned' logs, but not one
-        for 'returned_none', we should use theirs over loggo's default
+        """Resolve the format for a log message, when a function returns None.
+
+        If the user has their own msg format for 'returned' logs, but
+        not one for 'returned_none', we should use theirs over loggo's
+        default.
         """
         # if the user explicitly doesn't want logs for returns, set to none
         if not returned_none or not returned:
@@ -151,8 +151,9 @@ class Loggo:
 
     @staticmethod
     def _can_decorate(candidate: Callable, name: Optional[str] = None) -> bool:
-        """
-        Decide if we can decorate a given callable. Must have non private name.
+        """Decide if we can decorate a given callable.
+
+        Don't decorate python magic methods.
         """
         name = name or getattr(candidate, "__name__", None)
         if not name:
@@ -162,13 +163,11 @@ class Loggo:
         return True
 
     def _decorate_all_methods(self, cls: type, just_errors: bool = False) -> type:
-        """
-        Decorate all viable methods in a class
-        """
+        """Decorate all viable methods in a class."""
         members = inspect.getmembers(cls)
         members = [(k, v) for k, v in members if callable(v) and self._can_decorate(v, name=k)]
         for name, candidate in members:
-            deco = self.logme(candidate, just_errors=just_errors)
+            deco = self._logme(candidate, just_errors=just_errors)
             # somehow, decorating classmethods as staticmethods is the only way
             # to make everything work properly. we should find out why, some day
             if isinstance(vars(cls)[name], (staticmethod, classmethod)):
@@ -182,21 +181,23 @@ class Loggo:
         return cls
 
     def __call__(self, class_or_func: Union[Callable, type]) -> Union[Callable, type]:
-        """
-        Make Loggo itself a decorator of either a class or a method/function, so
-        you can just use @loggo on both classes and functions
+        """Make Loggo object itself a decorator.
+
+        Allow decorating either a class or a method/function, so @loggo
+        can be used on both classes and functions.
         """
         if isinstance(class_or_func, type):
             return self._decorate_all_methods(class_or_func)
         if self._can_decorate(class_or_func):
-            return self.logme(class_or_func)
+            return self._logme(class_or_func)
         return class_or_func
 
     @contextmanager
     def pause(self, allow_errors: bool = True) -> Generator[None, None, None]:
-        """
-        A context manager that prevents loggo from logging in that context. By
-        default, errors will still make it through, unless allow_errors==False
+        """A context manager that prevents loggo from logging in that context.
+
+        By default, errors will still make it through, unless
+        allow_errors==False
         """
         original = self.allow_errors, self.stopped
         self.stopped = True
@@ -207,25 +208,24 @@ class Loggo:
             self.allow_errors, self.stopped = original
 
     def stop(self, allow_errors: bool = True) -> None:
-        """
-        Normal function: manually stop loggo from logging, but by default allow
-        errors through
+        """Stop loggo from logging.
+
+        By default still log raised exceptions.
         """
         self.stopped = True
         self.allow_errors = allow_errors
 
     def start(self, allow_errors: bool = True) -> None:
-        """
-        Normal function: manually restart loggo, also allowing errors by default
-        """
+        """Continue logging after a call to `stop` or inside a `pause`."""
         self.stopped = False
         self.allow_errors = allow_errors
 
     @staticmethod
     def ignore(function: Callable) -> Callable:
-        """
-        A decorator that will override Loggo class deco, in case you do not want
-        to log one particular method for some reason
+        """A decorator that will override Loggo class decorator.
+
+        If a class is decorated with @loggo, logging can still be
+        disabled for certain methods using this decorator.
         """
         setattr(function, NO_LOGS_ATTR_NAME, True)
         return function
@@ -236,31 +236,26 @@ class Loggo:
         """
         if isinstance(class_or_func, type):
             return self._decorate_all_methods(class_or_func, just_errors=True)
-        return self.logme(class_or_func, just_errors=True)
+        return self._logme(class_or_func, just_errors=True)
 
-    def logme(self, function: Callable, just_errors: bool = False) -> Callable:
+    def _logme(self, function: Callable, just_errors: bool = False) -> Callable:
+        """A decorator for automated input/output logging.
+
+        Used by @loggo and @loggo.errors decorators. Makes a log when a
+        callable is called, returns, or raises. If `just_errors` is
+        True, only logs when a callable raises.
         """
-        This the function decorator. After having instantiated Loggo, use it as a
-        decorator like so:
-
-        @loggo.logme
-        def f(): pass
-
-        It will the call, return and errors that occurred during the function/method
-        """
-
         # if logging has been turned off, just do nothing
         if getattr(function, NO_LOGS_ATTR_NAME, False):
             return function
 
         @wraps(function)
         def full_decoration(*args: Any, **kwargs: Any) -> Any:
-            """
-            Main decorator logic. Generate a log before running the callable,
-            then try to run it. If it errors, log the error. If it doesn't,
-            log the return value.
+            """Main decorator logic.
 
-            Args and kwargs are for/from the decorated function
+            Generate a log before running the callable, then try to run
+            it. If it errors, log the error. If it doesn't, log the
+            return value.
             """
             bound = self._params_to_dict(function, *args, **kwargs)
             if bound is None:
@@ -306,9 +301,7 @@ class Loggo:
         return full_decoration
 
     def _string_params(self, non_private_params: Dict, use_repr: bool = True) -> Dict[str, str]:
-        """
-        Turn every entry in log_data into truncated strings
-        """
+        """Turn every entry in log_data into truncated strings."""
         params = dict()
         for key, val in non_private_params.items():
             truncation = self.truncation if key not in {"trace", "traceback"} else None
@@ -319,8 +312,8 @@ class Loggo:
 
     @staticmethod
     def _make_call_signature(function: Callable, param_strings: Dict[str, str]) -> Formatters:
-        """
-        Represent the call as a string mimicking how it is written in Python.
+        """Represent the call as a string mimicking how it is written in
+        Python.
 
         Return it within a dict containing some other format strings.
         """
@@ -333,9 +326,12 @@ class Loggo:
         return format_strings
 
     def listen_to(loggo_self, facility: str) -> None:
-        """
-        This method can hook the logger up to anything else that logs using the
-        Python logging module (i.e. another logger) and steals its logs
+        """Listen to logs from another logger and make loggo log them.
+
+        This method can hook the logger up to anything else that logs
+        using the Python logging module (i.e. another logger) and steals
+        its logs. This can be useful for instance for logging logs of a
+        library using a shared Loggo configuration.
         """
 
         class LoggoHandler(logging.Handler):
@@ -374,8 +370,8 @@ class Loggo:
 
     @staticmethod
     def _params_to_dict(function: Callable, *args: Any, **kwargs: Any) -> Optional[Mapping]:
-        """
-        Turn args and kwargs into an OrderedDict of {param_name: value}.
+        """Turn args and kwargs into an OrderedDict of {param_name: value}.
+
         Returns None if getting the signature, or binding arguments to
         the signature's parameters fails.
         """
@@ -399,9 +395,7 @@ class Loggo:
         return bound
 
     def _obscure_private_keys(self, log_data: Any, dict_depth: int = 0) -> Any:
-        """
-        Obscure any private values in a dictionary recursively
-        """
+        """Obscure any private values in a dictionary recursively."""
         if not isinstance(log_data, dict) or dict_depth >= MAX_DICT_OBSCURATION_DEPTH:
             return log_data
 
@@ -414,9 +408,7 @@ class Loggo:
         return out
 
     def _represent_return_value(self, response: Any) -> str:
-        """
-        Make a string representation of whatever a method returns
-        """
+        """Make a string representation of whatever a method returns."""
         # some custom handling for request response objects
         if str(type(response)) == "<class 'requests.models.Response'>":
             response = response.text
@@ -426,13 +418,12 @@ class Loggo:
     def _generate_log(
         self, where: CallableEvent, returned: Any, formatters: Formatters, safe_log_data: Dict[str, str]
     ) -> None:
-        """
-        generate message, level and log data for automated logs
+        """Generate message, level and log data for automated logs.
 
-        msg (str): the unformatted message
-        returned (ANY): what the decorated callable returned
-        formatters (dict): dict containing format strings needed for message
-        safe_log_data (dict): dict of stringified, truncated, censored parameters
+        - msg (str): the unformatted message
+        - returned (ANY): what the decorated callable returned
+        - formatters (dict): dict containing format strings needed for message
+        - safe_log_data (dict): dict of stringified, truncated, censored parameters
         """
         # if the user turned off logs of this type, do nothing immediately
         msg = getattr(self, where)
@@ -482,15 +473,11 @@ class Loggo:
             self.stopped = original_state
 
     def add_custom_log_data(self) -> Dict[str, str]:
-        """
-        An overwritable method useful for adding custom log data
-        """
+        """An overwritable method useful for adding custom log data."""
         return dict()
 
-    def write_to_file(self, line: str) -> None:
-        """
-        Very simple log writer, could expand. simple append the line to the file
-        """
+    def _write_to_file(self, line: str) -> None:
+        """Write a line to the log file."""
         needed_dir = os.path.dirname(self.logfile)
         if not os.path.isdir(needed_dir):
             os.makedirs(needed_dir)
@@ -512,9 +499,10 @@ class Loggo:
         self.logger.addHandler(handler)
 
     def _force_string_and_truncate(self, obj: Any, truncate: Optional[int], use_repr: bool = False) -> str:
-        """
-        Return stringified and truncated obj. If stringification fails, log a warning
-        and return the string '<<Unstringable input>>'
+        """Return stringified and truncated obj.
+
+        If stringification fails, log a warning and return the string
+        '<<Unstringable input>>'
         """
         try:
             obj = str(obj) if not use_repr else repr(obj)
@@ -530,8 +518,10 @@ class Loggo:
 
     @staticmethod
     def _rename_protected_keys(log_data: Dict) -> Dict:
-        """
-        Some names cannot go into logger; remove them here and log the problem
+        """Rename log data keys with valid names.
+
+        Some names cannot go into logger. Rename the invalid keys with a
+        prefix before logging.
         """
         out = dict()
         # names that logger will not like
@@ -543,8 +533,7 @@ class Loggo:
         return out
 
     def sanitise(self, unsafe_dict: Mapping, use_repr: bool = True) -> Dict[str, str]:
-        """
-        Ensure that log data is safe to log:
+        """Ensure that log data is safe to log.
 
         - No private keys
         - Rename protected keys
@@ -555,14 +544,11 @@ class Loggo:
         return self._string_params(no_protected, use_repr=use_repr)
 
     def sanitise_msg(self, msg: str) -> str:
-        """
-        Overwritable method to clean or alter log messages
-        """
+        """Overwritable method to clean or alter log messages."""
         return msg
 
     def log(self, level: int, msg: str, extra: Optional[Dict] = None, safe: bool = False) -> None:
-        """
-        Main logging method, called both in auto logs and manually by user
+        """Main logging method, called both in auto logs and manually by user.
 
         level: int, priority of log
         msg: string to log
@@ -593,7 +579,7 @@ class Loggo:
         if self.do_print:
             print(line)
         if self.do_write:
-            self.write_to_file(line)
+            self._write_to_file(line)
 
         try:
             self.logger.log(level, msg, extra=extra)

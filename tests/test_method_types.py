@@ -9,26 +9,26 @@ loggo = Loggo(log_if_graylog_disabled=False)
 @loggo
 class AllMethodTypes:
     def __secret__(self):
-        """a method that should never be logged"""
+        """a method that should never be logged."""
         return True
 
     def public(self):
-        """normal method"""
+        """normal method."""
         return True
 
     @classmethod
     def cl(cls):
-        """class method"""
+        """class method."""
         return True
 
     @staticmethod
     def st():
-        """static method"""
+        """static method."""
         return True
 
     @loggo
     def doubled(self):
-        """Loggo twice, bad but shouldn't kill"""
+        """Loggo twice, bad but shouldn't kill."""
         return True
 
 
