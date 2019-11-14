@@ -123,6 +123,18 @@ class Loggo:
         self.logger.setLevel(LOG_THRESHOLD)
         self._add_graylog_handler()
 
+        formatter = logging.Formatter("%(asctime)s\t%(message)s\t%(levelname)s", "%Y-%m-%d %H:%M:%S %Z")
+
+        if do_write:
+            file_handler = logging.FileHandler(self.logfile, delay=True)
+            file_handler.setFormatter(formatter)
+            self.logger.addHandler(file_handler)
+
+        if do_print:
+            print_handler = logging.StreamHandler(sys.stdout)
+            print_handler.setFormatter(formatter)
+            self.logger.addHandler(print_handler)
+
     @staticmethod
     def _get_timestamp() -> str:
         """
@@ -487,16 +499,6 @@ class Loggo:
         """
         return dict()
 
-    def write_to_file(self, line: str) -> None:
-        """
-        Very simple log writer, could expand. simple append the line to the file
-        """
-        needed_dir = os.path.dirname(self.logfile)
-        if not os.path.isdir(needed_dir):
-            os.makedirs(needed_dir)
-        with open(self.logfile, "a") as fo:
-            fo.write(line + "\n")
-
     def _add_graylog_handler(self) -> None:
         if not graypy:
             if self.graylog_address:
@@ -580,20 +582,6 @@ class Loggo:
             msg = self.sanitise_msg(msg)
 
         extra.update(dict(log_level=str(level), loggo="True"))
-
-        # format logs for printing/writing to file
-        if self.do_write or self.do_print:
-            ts = extra.get("timestamp", self._get_timestamp())
-            line = f"{ts}\t{msg}\t{level}"
-            trace = extra.get("traceback")
-            if trace:
-                line = f"{line} -- see below:\n{trace}"
-            line = line.rstrip("\n")
-        # do printing and writing to file
-        if self.do_print:
-            print(line)
-        if self.do_write:
-            self.write_to_file(line)
 
         try:
             self.logger.log(level, msg, extra=extra)
