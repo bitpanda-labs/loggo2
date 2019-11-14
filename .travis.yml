@@ -13,7 +13,8 @@ script:
       flake8 . &&
       mypy . &&
       isort --check-only -rc . &&
-      black --check .
+      black --check . &&
+      docformatter --recursive --check loggo/ tests/ setup.py
     fi
   # Tests
   - coverage run -m unittest
