@@ -332,7 +332,7 @@ class TestLog(unittest.TestCase):
         mock = mock_open()
         with patch("builtins.open", mock):
             self.log(logging.INFO, "An entry in our log")
-            mock.assert_called_with(loggo.logfile, "a")
+            mock.assert_called_with(loggo.logfile, "a", encoding=None)
             self.assertTrue(os.path.isfile(loggo.logfile))
 
     def test_int_truncation(self):
