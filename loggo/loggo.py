@@ -124,6 +124,18 @@ class Loggo:
         self.logger.setLevel(LOG_THRESHOLD)
         self._add_graylog_handler()
 
+    def __call__(self, class_or_func: Union[Callable, type]) -> Union[Callable, type]:
+        """Make Loggo object itself a decorator.
+
+        Allow decorating either a class or a method/function, so @loggo
+        can be used on both classes and functions.
+        """
+        if isinstance(class_or_func, type):
+            return self._decorate_all_methods(class_or_func)
+        if self._can_decorate(class_or_func):
+            return self._logme(class_or_func)
+        return class_or_func
+
     @staticmethod
     def _get_timestamp() -> str:
         """Return current time as a string.
@@ -182,18 +194,6 @@ class Loggo:
             except AttributeError:
                 pass
         return cls
-
-    def __call__(self, class_or_func: Union[Callable, type]) -> Union[Callable, type]:
-        """Make Loggo object itself a decorator.
-
-        Allow decorating either a class or a method/function, so @loggo
-        can be used on both classes and functions.
-        """
-        if isinstance(class_or_func, type):
-            return self._decorate_all_methods(class_or_func)
-        if self._can_decorate(class_or_func):
-            return self._logme(class_or_func)
-        return class_or_func
 
     @contextmanager
     def pause(self, allow_errors: bool = True) -> Generator[None, None, None]:
@@ -563,7 +563,9 @@ class Loggo:
 
         try:
             self.logger.log(level, msg, extra=extra)
-        # it has been known to fail, e.g. when extra contains weird stuff
+        # The log call shouldn't ever fail, because of the way we rename protected
+        # keys in `extra`. For the paranoid, we still keep the option to swallow
+        # any unexpected errors (due to possible bugs in a 3rd party Handler etc.).
         except Exception:
             if self.raise_logging_errors:
                 raise
