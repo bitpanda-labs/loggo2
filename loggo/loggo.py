@@ -72,10 +72,11 @@ class _Formatter(logging.Formatter):
     def __init__(self) -> None:
         super().__init__("%(asctime)s\t%(message)s\t%(levelno)s", "%Y-%m-%d %H:%M:%S %Z")
 
-    def format(self, record: logging.LogRecord) -> str:
+    def format(self, record: logging.LogRecord) -> str:  # noqa: A003
         msg = super().format(record)
-        if hasattr(record, "traceback"):
-            msg += " -- see below:\n" + record.traceback
+        traceback = getattr(record, "traceback", None)
+        if traceback:
+            msg += " -- see below:\n" + traceback
         return msg.rstrip("\n")
 
 
