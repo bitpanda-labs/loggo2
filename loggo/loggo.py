@@ -39,6 +39,7 @@ MAX_DICT_OBSCURATION_DEPTH = 5
 OBSCURED_STRING = "********"
 # Callables with an attribute of this name set to True will not be logged by Loggo
 NO_LOGS_ATTR_NAME = "_do_not_log_this_callable"
+DATE_FORMAT = "%Y-%m-%d %H:%M:%S %Z"
 
 # Make a dummy logging.LogRecord object, so that we can inspect what
 # attributes instances of that class have.
@@ -73,14 +74,14 @@ CallableEvent = Literal["called", "errored", "returned", "returned_none"]
 
 class _Formatter(logging.Formatter):
     def __init__(self) -> None:
-        super().__init__("%(asctime)s\t%(message)s\t%(levelno)s", "%Y-%m-%d %H:%M:%S %Z")
+        super().__init__("%(asctime)s\t%(message)s\t%(levelno)s", DATE_FORMAT)
 
     def format(self, record: logging.LogRecord) -> str:  # noqa: A003
         msg = super().format(record)
         traceback = getattr(record, "traceback", None)
         if traceback:
-            msg += " -- see below:\n" + traceback
-        return msg.rstrip("\n")
+            msg += " -- see below:\n" + traceback.rstrip("\n")
+        return msg
 
 
 class Loggo:
@@ -135,7 +136,6 @@ class Loggo:
         self.log_if_graylog_disabled = log_if_graylog_disabled
         self.logger = logging.getLogger(self.facility)
         self.logger.setLevel(LOG_THRESHOLD)
-        self._add_graylog_handler()
 
         if do_write:
             # create the directory where logs are stored if it does not exist yet
@@ -148,6 +148,8 @@ class Loggo:
             print_handler = logging.StreamHandler(sys.stdout)
             print_handler.setFormatter(_Formatter())
             self.logger.addHandler(print_handler)
+
+        self._add_graylog_handler()
 
     def __call__(self, class_or_func: Union[Callable, type]) -> Union[Callable, type]:
         """Make Loggo object itself a decorator.
@@ -167,7 +169,7 @@ class Loggo:
 
         Formatted as follows: "2019-07-17 09:35:06 CEST".
         """
-        return time.strftime("%Y-%m-%d %H:%M:%S %Z", time.localtime())
+        return time.strftime(DATE_FORMAT, time.localtime())
 
     @staticmethod
     def _best_returned_none(returned: Optional[str], returned_none: Optional[str]) -> Optional[str]:
