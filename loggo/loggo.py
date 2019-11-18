@@ -505,7 +505,8 @@ class Loggo:
         prefix before logging.
         """
         out = dict()
-        # names that logger will not like
+        # Names that stdlib logger will not like. Based on [1]
+        # [1]: https://github.com/python/cpython/blob/04c79d6088a22d467f04dbe438050c26de22fa85/Lib/logging/__init__.py#L1550  # noqa: E501
         protected = {"message", "asctime"} | LOG_RECORD_ATTRS
         for key, value in log_data.items():
             if key in protected:
