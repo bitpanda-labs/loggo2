@@ -8,6 +8,7 @@ from functools import wraps
 import inspect
 import logging
 import os
+import pathlib
 import sys
 import traceback
 from typing import Any, Callable, Dict, Generator, Mapping, Optional, Set, Tuple, Union
@@ -123,9 +124,11 @@ class Loggo:
         self.logger.setLevel(LOG_THRESHOLD)
         self._add_graylog_handler()
 
-        formatter = logging.Formatter("%(asctime)s\t%(message)s\t%(levelname)s", "%Y-%m-%d %H:%M:%S %Z")
+        formatter = logging.Formatter("%(asctime)s\t%(message)s\t%(levelno)s", "%Y-%m-%d %H:%M:%S %Z")
 
         if do_write:
+            # create the directory where logs are stored if it does not exist yet
+            pathlib.Path(os.path.dirname(self.logfile)).mkdir(parents=True, exist_ok=True)
             file_handler = logging.FileHandler(self.logfile, delay=True)
             file_handler.setFormatter(formatter)
             self.logger.addHandler(file_handler)
