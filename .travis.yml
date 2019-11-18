@@ -13,10 +13,12 @@ script:
       flake8 . &&
       mypy . &&
       isort --check-only -rc . &&
-      black --check .
+      black --check . &&
+      docformatter --recursive --check loggo/ tests/ setup.py
     fi
   # Tests
   - coverage run -m unittest
   - coverage report --fail-under=95
+after_success:
   # Upload coverage (only in Python 3.6 job)
   - if [[ $TRAVIS_PYTHON_VERSION == '3.6' ]]; then codecov; fi

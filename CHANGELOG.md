@@ -7,6 +7,9 @@ This log should always be updated when doing backwards incompatible changes, res
 -----
 - Changed
     - Graypy dependency is not installed by default. To install with Graylog support, install with the `graylog` extra: `pip install loggo[graylog]`
+    - Don't allow using @loggo.logme to decorate callables. Use @loggo instead.
+    - Make Loggo.write_to_file() a private method.
+    - Make Loggo init param `raise_logging_errors` default to True
 
 6.0.0
 -----

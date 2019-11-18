@@ -2,6 +2,7 @@
 pre-commit
 isort
 black
+docformatter
 flake8
 flake8-bugbear
 flake8-builtins
@@ -10,5 +11,4 @@ codecov
 
 # Requirements of the package
 graypy>=1.1.2
-python-dateutil
 typing-extensions
