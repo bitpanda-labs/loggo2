@@ -3,17 +3,15 @@ Loggo: safe and automatable logging
 """
 
 from contextlib import contextmanager
-from datetime import datetime
 from functools import wraps
 import inspect
 import logging
 import os
 import sys
+import time
 import traceback
 from typing import Any, Callable, Dict, Generator, Mapping, Optional, Set, Tuple, Union
 import uuid
-
-from dateutil.tz import tzlocal
 
 if sys.version_info < (3, 8):
     from typing_extensions import Literal, TypedDict
@@ -132,7 +130,7 @@ class Loggo:
 
         Formatted as follows: "2019-07-17 09:35:06 CEST".
         """
-        return datetime.now(tzlocal()).strftime("%Y-%m-%d %H:%M:%S %Z")
+        return time.strftime("%Y-%m-%d %H:%M:%S %Z", time.localtime())
 
     @staticmethod
     def _best_returned_none(returned: Optional[str], returned_none: Optional[str]) -> Optional[str]:

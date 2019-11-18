@@ -11,5 +11,4 @@ codecov
 
 # Requirements of the package
 graypy>=1.1.2
-python-dateutil
 typing-extensions
