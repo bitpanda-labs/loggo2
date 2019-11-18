@@ -39,6 +39,11 @@ OBSCURED_STRING = "********"
 # Callables with an attribute of this name set to True will not be logged by Loggo
 NO_LOGS_ATTR_NAME = "_do_not_log_this_callable"
 
+# Make a dummy logging.LogRecord object, so that we can inspect what
+# attributes instances of that class have.
+_dummy_log_record = logging.LogRecord("dummy_name", logging.INFO, "dummy_pathname", 1, "dummy_msg", {}, None)
+LOG_RECORD_ATTRS = vars(_dummy_log_record).keys()
+
 
 class Formatters(TypedDict, total=False):
     call_signature: str
@@ -334,31 +339,7 @@ class Loggo:
 
         class LoggoHandler(logging.Handler):
             def emit(handler_self, record: logging.LogRecord) -> None:
-                attributes = {
-                    "msg",
-                    "created",
-                    "msecs",
-                    "stack_info",
-                    "levelname",
-                    "filename",
-                    "module",
-                    "args",
-                    "funcName",
-                    "process",
-                    "relativeCreated",
-                    "exc_info",
-                    "name",
-                    "processName",
-                    "threadName",
-                    "lineno",
-                    "exc_text",
-                    "pathname",
-                    "thread",
-                    "levelno",
-                }
-                extra = dict(vars(record))
-                for attr in attributes:
-                    extra.pop(attr, None)
+                extra = {k: v for k, v in vars(record).items() if k not in LOG_RECORD_ATTRS}
                 extra["sublogger"] = facility
                 loggo_self.log(record.levelno, record.msg, extra)
 
@@ -523,7 +504,7 @@ class Loggo:
         """
         out = dict()
         # names that logger will not like
-        protected = {"name", "message", "asctime", "msg", "module", "args", "exc_info"}
+        protected = {"message", "asctime"} | LOG_RECORD_ATTRS
         for key, value in log_data.items():
             if key in protected:
                 key = "protected_" + key
@@ -545,7 +526,7 @@ class Loggo:
         """Overwritable method to clean or alter log messages."""
         return msg
 
-    def log(self, level: int, msg: str, extra: Optional[Dict] = None, safe: bool = False) -> None:
+    def log(self, level: int, msg: str, extra: dict = None, safe: bool = False) -> None:
         """Main logging method, called both in auto logs and manually by user.
 
         level: int, priority of log
