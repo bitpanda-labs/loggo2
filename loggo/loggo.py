@@ -85,7 +85,7 @@ class Loggo:
         do_print: bool = False,
         do_write: bool = False,
         truncation: int = 7500,
-        raise_logging_errors: bool = False,
+        raise_logging_errors: bool = True,
         logfile: str = "./logs/logs.txt",
         private_data: Optional[Set[str]] = None,
         log_if_graylog_disabled: bool = True,
@@ -101,7 +101,7 @@ class Loggo:
         - do_write: write logs to file
         - truncation: truncate value of log data fields to this length
         - private_data: key names that should be filtered out of logging. when not
-        - raise_logging_errors: should Loggo errors be allowed to happen?
+        - raise_logging_errors: should stdlib `log` call errors be suppressed or no?
         - log_if_graylog_disabled: boolean value, should a warning log be made when failing to
             connect to graylog
         """
