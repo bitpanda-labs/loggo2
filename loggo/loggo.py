@@ -68,6 +68,17 @@ class Formatters(TypedDict, total=False):
 CallableEvent = Literal["called", "errored", "returned", "returned_none"]
 
 
+class _Formatter(logging.Formatter):
+    def __init__(self) -> None:
+        super().__init__("%(asctime)s\t%(message)s\t%(levelno)s", "%Y-%m-%d %H:%M:%S %Z")
+
+    def format(self, record: logging.LogRecord) -> str:
+        msg = super().format(record)
+        if hasattr(record, "traceback"):
+            msg += " -- see below:\n" + record.traceback
+        return msg.rstrip("\n")
+
+
 class Loggo:
     """
     A class for logging
@@ -124,18 +135,16 @@ class Loggo:
         self.logger.setLevel(LOG_THRESHOLD)
         self._add_graylog_handler()
 
-        formatter = logging.Formatter("%(asctime)s\t%(message)s\t%(levelno)s", "%Y-%m-%d %H:%M:%S %Z")
-
         if do_write:
             # create the directory where logs are stored if it does not exist yet
             pathlib.Path(os.path.dirname(self.logfile)).mkdir(parents=True, exist_ok=True)
             file_handler = logging.FileHandler(self.logfile, delay=True)
-            file_handler.setFormatter(formatter)
+            file_handler.setFormatter(_Formatter())
             self.logger.addHandler(file_handler)
 
         if do_print:
             print_handler = logging.StreamHandler(sys.stdout)
-            print_handler.setFormatter(formatter)
+            print_handler.setFormatter(_Formatter())
             self.logger.addHandler(print_handler)
 
     @staticmethod
