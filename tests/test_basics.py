@@ -370,7 +370,6 @@ class TestLog(unittest.TestCase):
     def test_log_fail(self):
         with patch("logging.Logger.log") as mock_log:
             mock_log.side_effect = Exception("Really dead.")
-            self.loggo.raise_logging_errors = True
             with self.assertRaises(Exception):
                 self.loggo.log(logging.INFO, "Anything")
 
