@@ -18,14 +18,14 @@ class TestWithoutGraypy(unittest.TestCase):
         builtins.__import__ = self.import_orig
         import loggo
 
-        reload(loggo.loggo)
+        reload(loggo._loggo)
 
     def tests_using_graypy(self):
         import loggo
 
-        reload(loggo.loggo)
+        reload(loggo._loggo)
         loggo.Loggo()
-        self.assertEqual(loggo.loggo.graypy, None)
+        self.assertEqual(loggo._loggo.graypy, None)
 
 
 if __name__ == "__main__":
