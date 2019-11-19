@@ -11,7 +11,7 @@ import pathlib
 import sys
 import time
 import traceback
-from typing import Any, Callable, Dict, Generator, Mapping, Optional, Set, Tuple, Union
+from typing import Any, Callable, Dict, Generator, Mapping, Optional, Set, Tuple, TypeVar
 import uuid
 
 if sys.version_info < (3, 8):
@@ -77,6 +77,7 @@ class Formatters(TypedDict, total=False):
 
 
 CallableEvent = Literal["called", "errored", "returned", "returned_none"]
+CallableOrType = TypeVar("CallableOrType", Callable, type)
 
 
 class LocalLogFormatter(logging.Formatter):
@@ -155,7 +156,7 @@ class Loggo:
 
         self._add_graylog_handler(graylog_address, log_if_disabled=log_if_graylog_disabled)
 
-    def __call__(self, class_or_func: Union[Callable, type]) -> Union[Callable, type]:
+    def __call__(self, class_or_func: CallableOrType) -> CallableOrType:
         """Make Loggo object itself a decorator.
 
         Allow decorating either a class or a method/function, so @loggo
@@ -264,7 +265,7 @@ class Loggo:
         setattr(function, NO_LOGS_ATTR_NAME, True)
         return function
 
-    def errors(self, class_or_func: Union[Callable, type]) -> Union[Callable, type]:
+    def errors(self, class_or_func: CallableOrType) -> CallableOrType:
         """
         Decorator: only log errors within a given method
         """
