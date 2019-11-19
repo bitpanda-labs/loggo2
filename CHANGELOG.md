@@ -11,6 +11,7 @@ This log should always be updated when doing backwards incompatible changes, res
     - Make Loggo.write_to_file() a private method.
     - Make Loggo init param `raise_logging_errors` default to True
     - Make loggo.loggo module private
+    - Reduce a Loggo object's public data members to minimum. Only `called`, `returned`, `returned_none` and `errored` remain public now.
 
 6.0.0
 -----

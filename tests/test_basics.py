@@ -299,9 +299,10 @@ class TestDecoration(unittest.TestCase):
 
 class TestLog(unittest.TestCase):
     def setUp(self):
+        self.logfile = "./logs/logs.txt"
         self.log_msg = "This is a message that can be used when the content does not matter."
         self.log_data = {"This is": "log data", "that can be": "used when content does not matter"}
-        self.loggo = Loggo(do_print=True, do_write=True, log_if_graylog_disabled=False)
+        self.loggo = Loggo(do_print=True, do_write=True, logfile=self.logfile, log_if_graylog_disabled=False)
         self.log = self.loggo.log
 
     def test_protected_keys(self):
@@ -329,11 +330,12 @@ class TestLog(unittest.TestCase):
 
     def test_write_to_file(self):
         """Check that we can write logs to file."""
+        expected_logfile = os.path.abspath(os.path.expanduser(self.logfile))
         mock = mock_open()
         with patch("builtins.open", mock):
             self.log(logging.INFO, "An entry in our log")
-            mock.assert_called_with(loggo.logfile, "a", encoding=None)
-            self.assertTrue(os.path.isfile(loggo.logfile))
+            mock.assert_called_with(expected_logfile, "a", encoding=None)
+            self.assertTrue(os.path.isfile(expected_logfile))
 
     def test_int_truncation(self):
         """Test that large ints in log data are truncated."""

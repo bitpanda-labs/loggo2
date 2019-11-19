@@ -128,37 +128,32 @@ class Loggo:
         - log_if_graylog_disabled: boolean value, should a warning log be made when failing to
             connect to graylog
         """
-        self.stopped = False
-        self.allow_errors = True
+        self._stopped = False
+        self._allow_errors = True
         self.called = called
         self.returned = returned
         self.returned_none = self._best_returned_none(returned, returned_none)
         self.errored = errored
-        self.facility = facility
-        self.graylog_address = graylog_address
-        self.do_print = do_print
-        self.do_write = do_write
-        self.truncation = truncation
-        self.raise_logging_errors = raise_logging_errors
-        self.logfile = os.path.abspath(os.path.expanduser(logfile))
-        self.private_data = private_data or set()
-        self.log_if_graylog_disabled = log_if_graylog_disabled
-        self.logger = logging.getLogger(self.facility)
-        self.logger.setLevel(LOG_THRESHOLD)
+        self._truncation = truncation
+        self._raise_logging_errors = raise_logging_errors
+        self._private_data = private_data or set()
+        self._logger = logging.getLogger(facility)
+        self._logger.setLevel(LOG_THRESHOLD)
 
         if do_write:
+            logfile = os.path.abspath(os.path.expanduser(logfile))
             # create the directory where logs are stored if it does not exist yet
-            pathlib.Path(os.path.dirname(self.logfile)).mkdir(parents=True, exist_ok=True)
-            file_handler = logging.FileHandler(self.logfile, delay=True)
+            pathlib.Path(os.path.dirname(logfile)).mkdir(parents=True, exist_ok=True)
+            file_handler = logging.FileHandler(logfile, delay=True)
             file_handler.setFormatter(LocalLogFormatter())
-            self.logger.addHandler(file_handler)
+            self._logger.addHandler(file_handler)
 
         if do_print:
             print_handler = logging.StreamHandler(sys.stdout)
             print_handler.setFormatter(LocalLogFormatter())
-            self.logger.addHandler(print_handler)
+            self._logger.addHandler(print_handler)
 
-        self._add_graylog_handler()
+        self._add_graylog_handler(graylog_address, log_if_disabled=log_if_graylog_disabled)
 
     def __call__(self, class_or_func: Union[Callable, type]) -> Union[Callable, type]:
         """Make Loggo object itself a decorator.
@@ -238,26 +233,26 @@ class Loggo:
         By default, errors will still make it through, unless
         allow_errors==False
         """
-        original = self.allow_errors, self.stopped
-        self.stopped = True
-        self.allow_errors = allow_errors
+        original = self._allow_errors, self._stopped
+        self._stopped = True
+        self._allow_errors = allow_errors
         try:
             yield
         finally:
-            self.allow_errors, self.stopped = original
+            self._allow_errors, self._stopped = original
 
     def stop(self, allow_errors: bool = True) -> None:
         """Stop loggo from logging.
 
         By default still log raised exceptions.
         """
-        self.stopped = True
-        self.allow_errors = allow_errors
+        self._stopped = True
+        self._allow_errors = allow_errors
 
     def start(self, allow_errors: bool = True) -> None:
         """Continue logging after a call to `stop` or inside a `pause`."""
-        self.stopped = False
-        self.allow_errors = allow_errors
+        self._stopped = False
+        self._allow_errors = allow_errors
 
     @staticmethod
     def ignore(function: Callable) -> Callable:
@@ -343,7 +338,7 @@ class Loggo:
         """Turn every entry in log_data into truncated strings."""
         params = dict()
         for key, val in non_private_params.items():
-            truncation = self.truncation if key not in {"trace", "traceback"} else None
+            truncation = self._truncation if key not in {"trace", "traceback"} else None
             safe_key = self._force_string_and_truncate(key, 50, use_repr=False)
             safe_val = self._force_string_and_truncate(val, truncation, use_repr=use_repr)
             params[safe_key] = safe_val
@@ -416,7 +411,7 @@ class Loggo:
 
         out = dict()
         for key, value in log_data.items():
-            if key in self.private_data:
+            if key in self._private_data:
                 out[key] = OBSCURED_STRING
             else:
                 out[key] = self._obscure_private_keys(value, dict_depth + 1)
@@ -446,11 +441,11 @@ class Loggo:
             return
 
         # if errors not to be shown and this is an error, quit
-        if not self.allow_errors and where == "errored":
+        if not self._allow_errors and where == "errored":
             return
 
         # if state is stopped and not an error, quit
-        if self.stopped and where != "errored":
+        if self._stopped and where != "errored":
             return
 
         # do not log loggo, because why would you ever want that?
@@ -478,32 +473,32 @@ class Loggo:
         log_data.update(custom_log_data)
 
         # record if logging was on or off
-        original_state = self.stopped
+        original_state = self._stopped
         # turn it on just for now, as if we shouldn't log we'd have returned
-        self.stopped = False
+        self._stopped = False
         try:
             self.log(LOG_LEVEL, msg, extra=log_data, safe=True)
         finally:
             # restore old stopped state
-            self.stopped = original_state
+            self._stopped = original_state
 
     def add_custom_log_data(self) -> Dict[str, str]:
         """An overwritable method useful for adding custom log data."""
         return dict()
 
-    def _add_graylog_handler(self) -> None:
+    def _add_graylog_handler(self, address: Optional[Tuple[str, int]], log_if_disabled: bool) -> None:
         if not graypy:
-            if self.graylog_address:
+            if address:
                 raise ValueError("Misconfiguration: Graylog configured but graypy not installed")
             return
 
-        if not self.graylog_address:
-            if self.log_if_graylog_disabled:
+        if not address:
+            if log_if_disabled:
                 self.warning("Graypy installed, but Graylog not configured! Disabling it")
             return
 
-        handler = graypy.GELFUDPHandler(*self.graylog_address, debugging_fields=False)
-        self.logger.addHandler(handler)
+        handler = graypy.GELFUDPHandler(*address, debugging_fields=False)
+        self._logger.addHandler(handler)
 
     def _force_string_and_truncate(self, obj: Any, truncate: Optional[int], use_repr: bool = False) -> str:
         """Return stringified and truncated obj.
@@ -564,7 +559,7 @@ class Loggo:
         safe: do we need to sanitise extra?
         """
         # don't log in a stopped state
-        if self.stopped:
+        if self._stopped:
             return
 
         extra = extra or dict()
@@ -576,12 +571,12 @@ class Loggo:
         extra.update(dict(log_level=str(level), loggo="True"))
 
         try:
-            self.logger.log(level, msg, extra=extra)
+            self._logger.log(level, msg, extra=extra)
         # The log call shouldn't ever fail, because of the way we rename protected
         # keys in `extra`. For the paranoid, we still keep the option to swallow
         # any unexpected errors (due to possible bugs in a 3rd party Handler etc.).
         except Exception:
-            if self.raise_logging_errors:
+            if self._raise_logging_errors:
                 raise
 
     def debug(self, *args: Any, **kwargs: Any) -> None:
