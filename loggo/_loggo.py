@@ -26,13 +26,19 @@ except ImportError:
     graypy = None
 
 
+# Types for the typechecker
+CallableEvent = Literal["called", "errored", "returned", "returned_none"]
+CallableOrType = TypeVar("CallableOrType", Callable, type)
+
 # Strings to be formatted for pre function, post function and error during function
-DEFAULT_FORMS = dict(
+DEFAULT_FORMS: Dict[CallableEvent, str] = dict(
     called="*Called {call_signature}",
     returned="*Returned from {call_signature} with {return_type} {return_value}",
     returned_none="*Returned None from {call_signature}",
     errored='*Errored during {call_signature} with {exception_type} "{exception_msg}"',
 )
+
+# Miscellaneous constants
 LOG_LEVEL = logging.DEBUG  # Log level used for Loggo decoration logs
 LOG_THRESHOLD = logging.DEBUG  # Only log when log level is this or higher
 MAX_DICT_OBSCURATION_DEPTH = 5
@@ -74,10 +80,6 @@ class Formatters(TypedDict, total=False):
     # Only available if 'returned' or 'returned_none'
     return_value: str
     return_type: str
-
-
-CallableEvent = Literal["called", "errored", "returned", "returned_none"]
-CallableOrType = TypeVar("CallableOrType", Callable, type)
 
 
 class LocalLogFormatter(logging.Formatter):
@@ -131,10 +133,12 @@ class Loggo:
         """
         self._stopped = False
         self._allow_errors = True
-        self.called = called
-        self.returned = returned
-        self.returned_none = self._best_returned_none(returned, returned_none)
-        self.errored = errored
+        self._msg_forms: Dict[CallableEvent, Optional[str]] = {
+            "called": called,
+            "returned": returned,
+            "returned_none": self._best_returned_none(returned, returned_none),
+            "errored": errored,
+        }
         self._truncation = truncation
         self._raise_logging_errors = raise_logging_errors
         self._private_data = private_data or set()
@@ -437,7 +441,7 @@ class Loggo:
         - safe_log_data (dict): dict of stringified, truncated, censored parameters
         """
         # if the user turned off logs of this type, do nothing immediately
-        msg = getattr(self, where)
+        msg = self._msg_forms[where]
         if not msg:
             return
 
