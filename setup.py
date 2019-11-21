@@ -24,7 +24,7 @@ setup(
     long_description=read("README.md"),
     long_description_content_type="text/markdown",
     install_requires=["typing-extensions>=3.7.4,<4.0.0; python_version<'3.8'"],
-    extras_require={"graylog": ["graypy>=1.1.2,<2.0.0"]},
+    extras_require={"graylog": ["graypy>=2.0.0,<3.0.0"]},
     python_requires=">=3.6",
     classifiers=[
         "Topic :: Utilities",

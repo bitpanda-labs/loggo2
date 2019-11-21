@@ -10,5 +10,5 @@ mypy
 codecov
 
 # Requirements of the package
-graypy>=1.1.2
+graypy
 typing-extensions
