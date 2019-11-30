@@ -17,6 +17,7 @@ setup(
     author_email="nosupport@bitpanda.com",
     description="Python logging tools",
     url="https://github.com/bitpanda-labs/loggo",
+    project_urls={"Changelog": "https://github.com/bitpanda-labs/loggo/blob/master/CHANGELOG.md"},
     keywords="bitpanda utilities logging",
     packages=["loggo"],
     package_data={"loggo": ["py.typed"]},
