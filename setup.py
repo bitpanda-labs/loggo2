@@ -16,7 +16,8 @@ EXTRAS_REQUIRE = {
     ],
     "tools": ["codecov", "bump2version"],
 }
-EXTRAS_REQUIRE["dev"] = EXTRAS_REQUIRE["lint"] + EXTRAS_REQUIRE["tools"]
+# Install all dependencies for development
+EXTRAS_REQUIRE["dev"] = EXTRAS_REQUIRE["graylog"] + EXTRAS_REQUIRE["lint"] + EXTRAS_REQUIRE["tools"]
 
 
 def read(fname: str) -> str:
