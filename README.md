@@ -227,7 +227,7 @@ Issues, feature requests and code contributions are welcomed. Follow these steps
 
 1. Install dependencies (you'll probably want to create a virtual environment, using your preferred method, first).
     ```bash
-    pip install -r requirements.txt
+    pip install -e .[dev]
     ```
 
 1. Install pre-commit hooks
