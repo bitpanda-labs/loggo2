@@ -331,11 +331,11 @@ class TestLog(unittest.TestCase):
     def test_write_to_file(self):
         """Check that we can write logs to file."""
         expected_logfile = os.path.abspath(os.path.expanduser(self.logfile))
-        mock = mock_open()
-        with patch("builtins.open", mock):
+        open_ = mock_open()
+        with patch("builtins.open", open_):
             self.log(logging.INFO, "An entry in our log")
-            mock.assert_called_with(expected_logfile, "a", encoding=None)
-            self.assertTrue(os.path.isfile(expected_logfile))
+        self.assertTupleEqual(open_.call_args.args, (expected_logfile, "a"))
+        open_().write.assert_called()
 
     def test_int_truncation(self):
         """Test that large ints in log data are truncated."""
