@@ -2,7 +2,7 @@ import logging
 import os
 from typing import Any, Mapping
 import unittest
-from unittest.mock import ANY, Mock, mock_open, patch
+from unittest.mock import ANY, Mock, call, mock_open, patch
 
 from loggo import Loggo
 
@@ -334,7 +334,7 @@ class TestLog(unittest.TestCase):
         open_ = mock_open()
         with patch("builtins.open", open_):
             self.log(logging.INFO, "An entry in our log")
-        self.assertTupleEqual(open_.call_args.args, (expected_logfile, "a"))
+        open_.assert_has_calls([call(expected_logfile, "a", encoding=None)])
         open_().write.assert_called()
 
     def test_int_truncation(self):
