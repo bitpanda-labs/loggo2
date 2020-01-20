@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 from typing import Any, Mapping
 import unittest
 from unittest.mock import ANY, Mock, call, mock_open, patch
@@ -334,7 +335,11 @@ class TestLog(unittest.TestCase):
         open_ = mock_open()
         with patch("builtins.open", open_):
             self.log(logging.INFO, "An entry in our log")
-        open_.assert_has_calls([call(expected_logfile, "a", encoding=None)])
+        if sys.version_info < (3, 9):
+            expected_open_call = call(expected_logfile, "a", encoding=None)
+        else:
+            expected_open_call = call(expected_logfile, "a", encoding=None, errors=None)
+        open_.assert_has_calls([expected_open_call])
         open_().write.assert_called()
 
     def test_int_truncation(self):
