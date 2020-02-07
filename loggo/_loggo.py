@@ -31,7 +31,7 @@ CallableEvent = Literal["called", "errored", "returned", "returned_none"]
 CallableOrType = TypeVar("CallableOrType", Callable, type)
 
 # Strings to be formatted for pre function, post function and error during function
-DEFAULT_FORMS: Dict[CallableEvent, str] = dict(
+DEFAULT_FORMS: Mapping[CallableEvent, str] = dict(
     called="*Called {call_signature}",
     returned="*Returned from {call_signature} with {return_type} {return_value}",
     returned_none="*Returned None from {call_signature}",
@@ -339,7 +339,7 @@ class Loggo:
 
         return full_decoration
 
-    def _string_params(self, non_private_params: Dict, use_repr: bool = True) -> Dict[str, str]:
+    def _string_params(self, non_private_params: Mapping, use_repr: bool = True) -> Dict[str, str]:
         """Turn every entry in log_data into truncated strings."""
         params = dict()
         for key, val in non_private_params.items():
@@ -350,7 +350,7 @@ class Loggo:
         return params
 
     @staticmethod
-    def _make_call_signature(function: Callable, param_strings: Dict[str, str]) -> Formatters:
+    def _make_call_signature(function: Callable, param_strings: Mapping[str, str]) -> Formatters:
         """Represent the call as a string mimicking how it is written in
         Python.
 
@@ -431,14 +431,14 @@ class Loggo:
         return "({})".format(self._force_string_and_truncate(response, truncate=None, use_repr=True))
 
     def _generate_log(
-        self, where: CallableEvent, returned: Any, formatters: Formatters, safe_log_data: Dict[str, str]
+        self, where: CallableEvent, returned: Any, formatters: Formatters, safe_log_data: Mapping[str, str]
     ) -> None:
         """Generate message, level and log data for automated logs.
 
         - msg (str): the unformatted message
         - returned (ANY): what the decorated callable returned
         - formatters (dict): dict containing format strings needed for message
-        - safe_log_data (dict): dict of stringified, truncated, censored parameters
+        - safe_log_data (Mapping): A mapping of stringified, truncated, censored parameters
         """
         # if the user turned off logs of this type, do nothing immediately
         msg = self._msg_forms[where]
@@ -524,7 +524,7 @@ class Loggo:
         return (obj[:truncate] + "...") if len(obj) > (truncate + 3) else obj
 
     @staticmethod
-    def _rename_protected_keys(log_data: Dict) -> Dict:
+    def _rename_protected_keys(log_data: Mapping) -> Dict:
         """Rename log data keys with valid names.
 
         Some names cannot go into logger. Rename the invalid keys with a
@@ -555,7 +555,7 @@ class Loggo:
         """Overwritable method to clean or alter log messages."""
         return msg
 
-    def log(self, level: int, msg: str, extra: dict = None, safe: bool = False) -> None:
+    def log(self, level: int, msg: str, extra: Mapping = None, safe: bool = False) -> None:
         """Main logging method, called both in auto logs and manually by user.
 
         level: int, priority of log
@@ -567,7 +567,10 @@ class Loggo:
         if self._stopped:
             return
 
-        extra = extra or dict()
+        if extra is None:
+            extra = dict()
+        else:  # Make a copy of the user input to not mutate the original
+            extra = dict(extra)
 
         if not safe:
             extra = self.sanitise(extra, use_repr=False)
