@@ -7,7 +7,7 @@ python:
   - '3.9-dev'
 jobs:
   allow_failures:
-  - python: '3.9-dev'
+    - python: '3.9-dev'
 install:
   - pip install .[dev]
 script:
