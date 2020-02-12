@@ -8,7 +8,7 @@ This log should always be updated when doing backwards incompatible changes, res
 - Removed
     - The remaining public data members of a Loggo object: `called`, `returned`, `returned_none` and `errored`
 - Fixed
-    - Logging calls no more mutate the extra data
+    - Logging calls no longer mutate extra data
 
 7.0.0
 -----
