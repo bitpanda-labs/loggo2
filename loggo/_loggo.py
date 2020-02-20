@@ -111,6 +111,8 @@ class Loggo:
         do_print: bool = False,
         do_write: bool = False,
         truncation: int = 7500,
+        msg_truncation: int = 7500,
+        trace_truncation: int = 15000,
         raise_logging_errors: bool = True,
         logfile: str = "./logs/logs.txt",
         private_data: Optional[Set[str]] = None,
@@ -140,6 +142,8 @@ class Loggo:
             "errored": errored,
         }
         self._truncation = truncation
+        self._msg_truncation = msg_truncation
+        self._trace_truncation = trace_truncation
         self._raise_logging_errors = raise_logging_errors
         self._private_data = private_data or set()
         self._logger = logging.getLogger(facility)
@@ -343,7 +347,7 @@ class Loggo:
         """Turn every entry in log_data into truncated strings."""
         params = dict()
         for key, val in non_private_params.items():
-            truncation = self._truncation if key not in {"trace", "traceback"} else None
+            truncation = self._truncation if key not in {"trace", "traceback"} else self._trace_truncation
             safe_key = self._force_string_and_truncate(key, 50, use_repr=False)
             safe_val = self._force_string_and_truncate(val, truncation, use_repr=use_repr)
             params[safe_key] = safe_val
@@ -518,10 +522,14 @@ class Loggo:
                 "Object could not be cast to string", extra=dict(exception_type=type(exc), exception=exc)
             )
             return "<<Unstringable input>>"
-        if truncate is None:
-            return obj
-        # truncate and return
-        return (obj[:truncate] + "...") if len(obj) > (truncate + 3) else obj
+        return self._truncate(obj, truncate)
+
+    @staticmethod
+    def _truncate(string_to_truncate: str, max_len: Optional[int]) -> str:
+        """Return a truncated string."""
+        if max_len is None:
+            return string_to_truncate
+        return (string_to_truncate[:max_len] + "...") if len(string_to_truncate) > (max_len + 3) else string_to_truncate
 
     @staticmethod
     def _rename_protected_keys(log_data: Mapping) -> Dict:
@@ -575,6 +583,8 @@ class Loggo:
         if not safe:
             extra = self.sanitise(extra, use_repr=False)
             msg = self.sanitise_msg(msg)
+
+        msg = self._truncate(msg, self._msg_truncation)
 
         extra.update(dict(log_level=str(level), loggo="True"))
 
