@@ -359,6 +359,26 @@ class TestLog(unittest.TestCase):
             (alert, msg), kwargs = mock_log.call_args
             self.assertEqual("Object could not be cast to string", msg)
 
+    def test_msg_truncation(self):
+        """Test log message truncation."""
+        with patch("logging.Logger.log") as mock_log:
+            self.loggo.info("a" * 50000)
+            mock_log.assert_called_with(logging.INFO, "a" * (7500) + "...", extra=ANY)
+
+    def test_trace_truncation(self):
+        """Test that trace is truncated correctly."""
+        for trace_key in {"trace", "traceback"}:
+            with patch("logging.Logger.log") as mock_log:
+                msg = "This is simply a test of the int truncation inside the log."
+                large_number = 10 ** 300001
+                log_data = {trace_key: large_number}
+                self.log(logging.INFO, msg, log_data)
+                mock_log.assert_called_with(20, msg, extra=ANY)
+                logger_was_passed = mock_log.call_args[1]["extra"][trace_key]
+                # 7500 here is the default self.truncation for loggo
+                done_by_hand = str(large_number)[:15000] + "..."
+                self.assertEqual(logger_was_passed, done_by_hand)
+
     def test_fail_to_add_entry(self):
         with patch("logging.Logger.log") as mock_log:
             no_string_rep = NoRepr()
