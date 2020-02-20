@@ -529,7 +529,11 @@ class Loggo:
         """Return a truncated string."""
         if max_len is None:
             return string_to_truncate
-        return (string_to_truncate[:max_len] + "...") if len(string_to_truncate) > (max_len + 3) else string_to_truncate
+        return (
+            (string_to_truncate[:max_len] + "...")
+            if len(string_to_truncate) > (max_len + 3)
+            else string_to_truncate
+        )
 
     @staticmethod
     def _rename_protected_keys(log_data: Mapping) -> Dict:
