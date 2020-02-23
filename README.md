@@ -145,7 +145,6 @@ Notice, in the example above, you can include particular format strings in the l
 * `timestamp`: time at time of logging
 * `couplet`: `uuid.uuid1()` for the called and returned/errored pair
 * `number_of_params`: total `args + kwargs` as int
-* `private_keys`: list of identified private argument names
 * `decorated`: always `True`
 
 The `errored` log additionally supports:
