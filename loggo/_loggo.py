@@ -68,7 +68,6 @@ class Formatters(TypedDict, total=False):
     decorated: bool
     couplet: uuid.UUID
     number_of_params: int
-    private_keys: str
     timestamp: str
     log_level: int
 
@@ -130,7 +129,7 @@ class Loggo:
         - truncation: truncate value of log data fields to this length
         - msg_truncation: truncate value of log messages to this length
         - trace_truncation: truncate value of log data fields "trace" and "traceback" to this length
-        - private_data: key names that should be filtered out of logging. when not
+        - private_data: key names that should be filtered out of logging
         - raise_logging_errors: should stdlib `log` call errors be suppressed or no?
         - log_if_graylog_disabled: boolean value, should a warning log be made when failing to
             connect to graylog
@@ -312,14 +311,12 @@ class Loggo:
 
             param_strings = self.sanitise(bound)
             formatters = self._make_call_signature(function, param_strings)
-            privates = [key for key in param_strings if key not in bound]
 
             # add more format strings
             more = Formatters(
                 decorated=True,
                 couplet=uuid.uuid1(),
                 number_of_params=len(args) + len(kwargs),
-                private_keys=", ".join(privates),
                 timestamp=self._get_timestamp(),
             )
             formatters.update(more)
@@ -479,7 +476,7 @@ class Loggo:
         formatters["log_level"] = LOG_LEVEL
 
         # format the string template
-        msg = msg.format(**formatters).replace("  ", " ")
+        msg = msg.format(**formatters)
 
         # make the log data
         log_data = {**formatters, **safe_log_data}
