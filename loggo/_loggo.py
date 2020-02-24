@@ -128,6 +128,8 @@ class Loggo:
         - do_print: print logs to console
         - do_write: write logs to file
         - truncation: truncate value of log data fields to this length
+        - msg_truncation: truncate value of log messages to this length
+        - trace_truncation: truncate value of log data fields "trace" and "traceback" to this length
         - private_data: key names that should be filtered out of logging. when not
         - raise_logging_errors: should stdlib `log` call errors be suppressed or no?
         - log_if_graylog_disabled: boolean value, should a warning log be made when failing to
@@ -347,7 +349,10 @@ class Loggo:
         """Turn every entry in log_data into truncated strings."""
         params = dict()
         for key, val in non_private_params.items():
-            truncation = self._truncation if key not in {"trace", "traceback"} else self._trace_truncation
+            if key in {"trace", "traceback"}:
+                truncation = self._trace_truncation
+            else:
+                truncation = self._truncation
             safe_key = self._force_string_and_truncate(key, 50, use_repr=False)
             safe_val = self._force_string_and_truncate(val, truncation, use_repr=use_repr)
             params[safe_key] = safe_val
@@ -526,12 +531,22 @@ class Loggo:
 
     @staticmethod
     def _truncate(string_to_truncate: str, max_len: Optional[int]) -> str:
-        """Return a truncated string."""
+        """Return a truncated string.
+
+        Returns a truncated string of length `max_len` or less. If
+        truncation needs to be done, the last 3 characters are replaced
+        by the truncation suffix "...".
+        """
         if max_len is None:
             return string_to_truncate
-        if len(string_to_truncate) <= (max_len + 3):
+
+        truncation_suffix = "..."
+        if max_len < len(truncation_suffix):
+            raise ValueError(f"Can't truncate to less than {len(truncation_suffix)} characters")
+
+        if len(string_to_truncate) <= max_len:
             return string_to_truncate
-        return string_to_truncate[:max_len] + "..."
+        return string_to_truncate[: max_len - len(truncation_suffix)] + truncation_suffix
 
     @staticmethod
     def _rename_protected_keys(log_data: Mapping) -> Dict:

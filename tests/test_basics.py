@@ -351,8 +351,11 @@ class TestLog(unittest.TestCase):
             self.log(logging.INFO, msg, log_data)
             mock_log.assert_called_with(20, msg, extra=ANY)
             logger_was_passed = mock_log.call_args[1]["extra"]["key"]
-            # 7500 here is the default self.truncation for loggo
-            done_by_hand = str(large_number)[:7500] + "..."
+            default_truncation_len = 7500
+            truncation_suffix = "..."
+            done_by_hand = (
+                str(large_number)[: default_truncation_len - len(truncation_suffix)] + truncation_suffix
+            )
             self.assertEqual(logger_was_passed, done_by_hand)
 
     def test_string_truncation_fail(self):
@@ -366,9 +369,15 @@ class TestLog(unittest.TestCase):
 
     def test_msg_truncation(self):
         """Test log message truncation."""
+        default_truncation_len = 7500
+        truncation_suffix = "..."
         with patch("logging.Logger.log") as mock_log:
             self.loggo.info("a" * 50000)
-            mock_log.assert_called_with(logging.INFO, "a" * (7500) + "...", extra=ANY)
+            mock_log.assert_called_with(
+                logging.INFO,
+                "a" * (default_truncation_len - len(truncation_suffix)) + truncation_suffix,
+                extra=ANY,
+            )
 
     def test_trace_truncation(self):
         """Test that trace is truncated correctly."""
@@ -380,8 +389,11 @@ class TestLog(unittest.TestCase):
                 self.log(logging.INFO, msg, log_data)
                 mock_log.assert_called_with(20, msg, extra=ANY)
                 logger_was_passed = mock_log.call_args[1]["extra"][trace_key]
-                # 7500 here is the default self.truncation for loggo
-                done_by_hand = str(large_number)[:15000] + "..."
+                default_truncation_len = 15000
+                truncation_suffix = "..."
+                done_by_hand = (
+                    str(large_number)[: default_truncation_len - len(truncation_suffix)] + truncation_suffix
+                )
                 self.assertEqual(logger_was_passed, done_by_hand)
 
     def test_fail_to_add_entry(self):
