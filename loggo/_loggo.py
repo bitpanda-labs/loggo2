@@ -11,7 +11,7 @@ import pathlib
 import sys
 import time
 import traceback
-from typing import Any, Callable, Dict, Generator, Mapping, Optional, Set, Tuple, TypeVar
+from typing import AbstractSet, Any, Callable, Dict, Generator, Mapping, Optional, Tuple, TypeVar
 import uuid
 
 if sys.version_info < (3, 8):
@@ -114,7 +114,7 @@ class Loggo:
         trace_truncation: int = 15000,
         raise_logging_errors: bool = True,
         logfile: str = "./logs/logs.txt",
-        private_data: Optional[Set[str]] = None,
+        private_data: AbstractSet[str] = frozenset(),
         log_if_graylog_disabled: bool = True,
     ) -> None:
         """Initializes a Loggo object.
@@ -146,7 +146,7 @@ class Loggo:
         self._msg_truncation = msg_truncation
         self._trace_truncation = trace_truncation
         self._raise_logging_errors = raise_logging_errors
-        self._private_data = private_data or set()
+        self._private_data = private_data
         self._logger = logging.getLogger(facility)
         self._logger.setLevel(LOG_THRESHOLD)
 
