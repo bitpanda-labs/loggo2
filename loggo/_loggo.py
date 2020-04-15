@@ -62,7 +62,7 @@ class Formatters(TypedDict, total=False):
     """
 
     call_signature: str
-    callable: str
+    callable: str  # noqa: A003
     params: str
 
     decorated: bool
