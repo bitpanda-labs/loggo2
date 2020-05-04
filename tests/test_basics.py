@@ -126,31 +126,17 @@ def first_test_func(number):
     raise ValueError("Broken!")
 
 
-@loggo
-def test_func3(number):
-    raise ValueError("Broken!")
-
-
-@loggo
-def test_inner():
-    try:
-        test_func3(1)
-    except Exception:
-        pass
-    return 1
-
-
 within = dict(lst=list(), ok=dict(ok=dict(priv="secret")))
 beyond = dict(lst=list(), ok=dict(ok=dict(ok=dict(ok=dict(ok=dict(ok=dict(priv="allowed")))))))
 
 
 @loggo
-def test_func_with_recursive_data_beyond(data):
+def func_with_recursive_data_beyond(data):
     pass
 
 
 @loggo
-def test_func_with_recursive_data_within(data):
+def func_with_recursive_data_within(data):
     pass
 
 
@@ -287,13 +273,13 @@ class TestDecoration(unittest.TestCase):
 
     def test_private_beyond(self):
         with patch("logging.Logger.log") as logger:
-            test_func_with_recursive_data_beyond(beyond)
+            func_with_recursive_data_beyond(beyond)
             (_alert, _logged_msg), extras = logger.call_args_list[0]
             self.assertTrue("allowed" in extras["extra"]["data"])
 
     def test_private_within(self):
         with patch("logging.Logger.log") as logger:
-            test_func_with_recursive_data_within(within)
+            func_with_recursive_data_within(within)
             (_alert, _logged_msg), extras = logger.call_args_list[0]
             self.assertFalse("secret" in extras["extra"]["data"])
 
