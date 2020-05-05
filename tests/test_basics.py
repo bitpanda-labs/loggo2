@@ -2,8 +2,9 @@ import logging
 import os
 import sys
 from typing import Any, Mapping
-import unittest
 from unittest.mock import ANY, Mock, call, mock_open, patch
+
+import pytest
 
 from loggo import Loggo
 
@@ -143,149 +144,149 @@ def func_with_recursive_data_within(data):
 dummy = DummyClass()
 
 
-class TestDecoration(unittest.TestCase):
+class TestDecoration:
     def test_inheritance_signature_change(self):
         d2 = DummyClass2()
-        self.assertEqual(6, d2.add(1, 2, 3))
+        assert 6 == d2.add(1, 2, 3)
 
     def test_errors_on_func(self):
         with patch("logging.Logger.log") as logger:
-            with self.assertRaises(ValueError):
+            with pytest.raises(ValueError):
                 first_test_func(5)
             (alert, logged_msg), extras = logger.call_args_list[-1]
             expected_msg = '*Errored during first_test_func(number=5) with ValueError "Broken!"'
-            self.assertEqual(logged_msg, expected_msg)
+            assert logged_msg == expected_msg
 
     def test_one(self):
         """Check that an error is thrown for a func."""
         with patch("logging.Logger.log") as logger:
-            with self.assertRaisesRegex(ValueError, "no good"):
+            with pytest.raises(ValueError, match="no good"):
                 may_or_may_not_error_test("astadh", 1331)
             (alert, logged_msg), extras = logger.call_args
-            self.assertEqual(alert, 10)
+            assert alert == 10
             expected_msg = (
                 "*Errored during may_or_may_not_error_test(first='astadh', "
                 'other=1331) with ValueError "no good"'
             )
-            self.assertEqual(logged_msg, expected_msg)
+            assert logged_msg == expected_msg
 
     def test_logme_0(self):
         """Test correct result."""
         with patch("logging.Logger.log") as logger:
             res, kwa = may_or_may_not_error_test(2534, 2466, kwargs=True)
-            self.assertEqual(res, 5000)
-            self.assertTrue(kwa)
+            assert res == 5000
+            assert kwa
             (alert, logged_msg), extras = logger.call_args_list[0]
             expected_msg = "*Called may_or_may_not_error_test(first=2534, other=2466, kwargs=True)"
-            self.assertEqual(logged_msg, expected_msg)
+            assert logged_msg == expected_msg
             (alert, logged_msg), extras = logger.call_args_list[-1]
             expected_msg = (
                 "*Returned from may_or_may_not_error_test(first=2534, other=2466, "
                 "kwargs=True) with tuple ((5000, True))"
             )
-            self.assertEqual(logged_msg, expected_msg)
+            assert logged_msg == expected_msg
 
     def test_logme_1(self):
         with patch("logging.Logger.log") as logger:
             result = dummy.add(1, 2)
-            self.assertEqual(result, 3)
+            assert result == 3
             (alert, logged_msg), extras = logger.call_args_list[0]
-            self.assertEqual(logged_msg, "*Called DummyClass.add(a=1, b=2)")
+            assert logged_msg == "*Called DummyClass.add(a=1, b=2)"
             (alert, logged_msg), extras = logger.call_args_list[-1]
-            self.assertEqual("*Returned from DummyClass.add(a=1, b=2) with int (3)", logged_msg)
+            assert "*Returned from DummyClass.add(a=1, b=2) with int (3)" == logged_msg
 
     def test_everything_0(self):
         with patch("logging.Logger.log") as logger:
             dummy.add_and_maybe_subtract(15, 10, 5)
             (alert, logged_msg), extras = logger.call_args_list[0]
             expected_msg = "*Called DummyClass.add_and_maybe_subtract(a=15, b=10, c=5)"
-            self.assertEqual(logged_msg, expected_msg)
+            assert logged_msg == expected_msg
             (alert, logged_msg), extras = logger.call_args_list[-1]
             expected_msg = "*Returned from DummyClass.add_and_maybe_subtract(a=15, b=10, c=5) with int (20)"
-            self.assertEqual(expected_msg, logged_msg)
+            assert expected_msg == logged_msg
 
     def test_everything_1(self):
         with patch("logging.Logger.log") as logger:
             result = dummy.static_method(10)
-            self.assertEqual(result, 100)
+            assert result == 100
             (alert, logged_msg), extras = logger.call_args_list[-1]
             expected_msg = "*Returned from DummyClass.static_method(number=10) with int (100)"
-            self.assertEqual(logged_msg, expected_msg)
+            assert logged_msg == expected_msg
 
     def test_everything_3(self):
         with patch("logging.Logger.log") as logger:
             dummy.optional_provided()
             (alert, logged_msg), extras = logger.call_args_list[0]
-            self.assertEqual(logged_msg, "*Called DummyClass.optional_provided()")
+            assert logged_msg == "*Called DummyClass.optional_provided()"
             (alert, logged_msg), extras = logger.call_args_list[-1]
-            self.assertTrue("Returned None" in logged_msg)
+            assert "Returned None" in logged_msg
 
     def test_everything_4(self):
         with patch("logging.Logger.log") as logger:
-            with self.assertRaisesRegex(ValueError, "Should not have provided!"):
+            with pytest.raises(ValueError, match="Should not have provided!"):
                 result = dummy.optional_provided(kw="Something")
-                self.assertIsNone(result)
+                assert result is None
                 (alert, logged_msg), extras = logger.call_args_list[0]
-                self.assertTrue("0 args, 1 kwargs" in logged_msg)
+                assert "0 args, 1 kwargs" in logged_msg
                 (alert, logged_msg), extras = logger.call_args_list[-1]
-                self.assertTrue("Errored with ValueError" in logged_msg, logged_msg)
+                assert "Errored with ValueError" in logged_msg, logged_msg
 
     def test_loggo_ignore(self):
         with patch("logging.Logger.log") as logger:
             result = dummy.hopefully_ignored(5)
-            self.assertEqual(result, 5 ** 5)
+            assert result == 5 ** 5
             logger.assert_not_called()
 
     def test_loggo_errors(self):
         with patch("logging.Logger.log") as logger:
-            with self.assertRaises(ValueError):
+            with pytest.raises(ValueError):
                 dummy.hopefully_only_errors(5)
             (alert, logged_msg), extras = logger.call_args
             expected_msg = '*Errored during DummyClass.hopefully_only_errors(n=5) with ValueError "Bam!"'
-            self.assertEqual(expected_msg, logged_msg)
+            assert expected_msg == logged_msg
 
     def test_error_deco(self):
         """Test that @loggo.errors logs only errors when decorating a class."""
         with patch("logging.Logger.log") as logger:
             fe = ForErrors()
-            self.assertTrue(fe.two())
+            assert fe.two()
             logger.assert_not_called()
-            with self.assertRaises(ValueError):
+            with pytest.raises(ValueError):
                 fe.one()
-            self.assertEqual(logger.call_count, 1)
+            assert logger.call_count == 1
             (alert, logged_msg), extras = logger.call_args
-            self.assertEqual(logged_msg, '*Errored during ForErrors.one() with ValueError "Boom!"')
+            assert logged_msg == '*Errored during ForErrors.one() with ValueError "Boom!"'
 
     def test_private_keyword_removal(self):
         with patch("logging.Logger.log") as logger:
             mnem = "every good boy deserves fruit"
             res = function_with_private_kwarg(10, a_float=5.5, mnemonic=mnem)
-            self.assertEqual(res, 10 * 5.5)
+            assert res == 10 * 5.5
             (_alert, _logged_msg), extras = logger.call_args_list[0]
-            self.assertEqual(extras["extra"]["mnemonic"], "'********'")
+            assert extras["extra"]["mnemonic"] == "'********'"
 
     def test_private_positional_removal(self):
         with patch("logging.Logger.log") as logger:
             res = function_with_private_arg("should not log", False)
-            self.assertFalse(res)
+            assert not res
             (_alert, _logged_msg), extras = logger.call_args_list[0]
-            self.assertEqual(extras["extra"]["priv"], "'********'")
+            assert extras["extra"]["priv"] == "'********'"
 
     def test_private_beyond(self):
         with patch("logging.Logger.log") as logger:
             func_with_recursive_data_beyond(beyond)
             (_alert, _logged_msg), extras = logger.call_args_list[0]
-            self.assertTrue("allowed" in extras["extra"]["data"])
+            assert "allowed" in extras["extra"]["data"]
 
     def test_private_within(self):
         with patch("logging.Logger.log") as logger:
             func_with_recursive_data_within(within)
             (_alert, _logged_msg), extras = logger.call_args_list[0]
-            self.assertFalse("secret" in extras["extra"]["data"])
+            assert "secret" not in extras["extra"]["data"]
 
 
-class TestLog(unittest.TestCase):
-    def setUp(self):
+class TestLog:
+    def setup_method(self):
         self.logfile = "./logs/logs.txt"
         self.log_msg = "This is a message that can be used when the content does not matter."
         self.log_data = {"This is": "log data", "that can be": "used when content does not matter"}
@@ -301,19 +302,19 @@ class TestLog(unittest.TestCase):
         with patch("logging.Logger.log") as mock_log:
             self.log(logging.INFO, "fine", dict(name="bad", other="good"))
             (_alert, _msg), kwargs = mock_log.call_args
-            self.assertEqual(kwargs["extra"]["protected_name"], "bad")
-            self.assertEqual(kwargs["extra"]["other"], "good")
+            assert kwargs["extra"]["protected_name"] == "bad"
+            assert kwargs["extra"]["other"] == "good"
 
     def test_can_log(self):
         with patch("logging.Logger.log") as logger:
             level_num = 50
             msg = "Test message here"
             result = self.log(level_num, msg, dict(extra="data"))
-            self.assertIsNone(result)
+            assert result is None
             (alert, logged_msg), extras = logger.call_args
-            self.assertEqual(alert, level_num)
-            self.assertEqual(msg, logged_msg)
-            self.assertEqual(extras["extra"]["extra"], "data")
+            assert alert == level_num
+            assert msg == logged_msg
+            assert extras["extra"]["extra"] == "data"
 
     def test_write_to_file(self):
         """Check that we can write logs to file."""
@@ -342,16 +343,16 @@ class TestLog(unittest.TestCase):
             done_by_hand = (
                 str(large_number)[: default_truncation_len - len(truncation_suffix)] + truncation_suffix
             )
-            self.assertEqual(logger_was_passed, done_by_hand)
+            assert logger_was_passed == done_by_hand
 
     def test_string_truncation_fail(self):
         """If something cannot be cast to string, we need to know about it."""
         with patch("logging.Logger.log") as mock_log:
             no_string_rep = NoRepr()
             result = self.loggo._force_string_and_truncate(no_string_rep, 7500)
-            self.assertEqual(result, "<<Unstringable input>>")
+            assert result == "<<Unstringable input>>"
             (alert, msg), kwargs = mock_log.call_args
-            self.assertEqual("Object could not be cast to string", msg)
+            assert "Object could not be cast to string" == msg
 
     def test_msg_truncation(self):
         """Test log message truncation."""
@@ -380,7 +381,7 @@ class TestLog(unittest.TestCase):
                 done_by_hand = (
                     str(large_number)[: default_truncation_len - len(truncation_suffix)] + truncation_suffix
                 )
-                self.assertEqual(logger_was_passed, done_by_hand)
+                assert logger_was_passed == done_by_hand
 
     def test_fail_to_add_entry(self):
         with patch("logging.Logger.log") as mock_log:
@@ -388,14 +389,14 @@ class TestLog(unittest.TestCase):
             sample = dict(fine=123, not_fine=no_string_rep)
             result = self.loggo.sanitise(sample)
             (alert, msg), kwargs = mock_log.call_args
-            self.assertEqual("Object could not be cast to string", msg)
-            self.assertEqual(result["not_fine"], "<<Unstringable input>>")
-            self.assertEqual(result["fine"], "123")
+            assert "Object could not be cast to string" == msg
+            assert result["not_fine"] == "<<Unstringable input>>"
+            assert result["fine"] == "123"
 
     def test_log_fail(self):
         with patch("logging.Logger.log") as mock_log:
             mock_log.side_effect = Exception("Really dead.")
-            with self.assertRaises(Exception):
+            with pytest.raises(Exception):
                 self.loggo.log(logging.INFO, "Anything")
 
     def test_loggo_pause(self):
@@ -409,24 +410,24 @@ class TestLog(unittest.TestCase):
     def test_loggo_pause_error(self):
         with patch("logging.Logger.log") as logger:
             with loggo.pause():
-                with self.assertRaises(ValueError):
+                with pytest.raises(ValueError):
                     may_or_may_not_error_test("one", "two")
             (alert, msg), kwargs = logger.call_args
             expected_msg = (
                 "*Errored during may_or_may_not_error_test(first='one', "
                 "other='two') with ValueError \"no good\""
             )
-            self.assertEqual(expected_msg, msg)
+            assert expected_msg == msg
             logger.assert_called_once()
             logger.reset()
-            with self.assertRaises(ValueError):
+            with pytest.raises(ValueError):
                 may_or_may_not_error_test("one", "two")
-                self.assertEqual(len(logger.call_args_list), 2)
+                assert len(logger.call_args_list) == 2
 
     def test_loggo_error_suppressed(self):
         with patch("logging.Logger.log") as logger:
             with loggo.pause(allow_errors=False):
-                with self.assertRaises(ValueError):
+                with pytest.raises(ValueError):
                     may_or_may_not_error_test("one", "two")
             logger.assert_not_called()
             loggo.log(logging.INFO, "test")
@@ -437,43 +438,43 @@ class TestLog(unittest.TestCase):
         with patch("logging.Logger.log") as logger:
             loggo.log(50, "test")
             (alert, msg), kwargs = logger.call_args
-            self.assertFalse("-- see below:" in msg)
+            assert "-- see below:" not in msg
 
     def test_compat(self):
         test = "a string"
         with patch("loggo.Loggo.log") as logger:
             loggo.log(logging.INFO, test, None)
         args = logger.call_args
-        self.assertIsInstance(args[0][0], int)
-        self.assertEqual(args[0][1], test)
-        self.assertIsNone(args[0][2])
+        assert isinstance(args[0][0], int)
+        assert args[0][1] == test
+        assert args[0][2] is None
         with patch("logging.Logger.log") as logger:
             loggo.log(logging.INFO, test)
         (alert, msg), kwargs = logger.call_args
-        self.assertEqual(test, msg)
+        assert test == msg
 
     def test_bad_args(self):
         @loggo
         def dummy(needed):
             return needed
 
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             dummy()
 
     def _working_normally(self):
         with patch("logging.Logger.log") as logger:
             res = aaa()
-            self.assertEqual(res, "this")
-            self.assertEqual(logger.call_count, 2)
+            assert res == "this"
+            assert logger.call_count == 2
             (alert, logged_msg), extras = logger.call_args_list[0]
-            self.assertTrue(logged_msg.startswith("*Called"))
+            assert logged_msg.startswith("*Called")
             (alert, logged_msg), extras = logger.call_args_list[-1]
-            self.assertTrue(logged_msg.startswith("*Returned"))
+            assert logged_msg.startswith("*Returned")
 
     def _not_logging(self):
         with patch("logging.Logger.log") as logger:
             res = aaa()
-            self.assertEqual(res, "this")
+            assert res == "this"
             logger.assert_not_called()
 
     def test_stop_and_start(self):
@@ -518,7 +519,3 @@ class TestLog(unittest.TestCase):
         warn = "The parent logger should log this message after sublogger logs it"
         sub_loggo.log(logging.WARNING, warn)
         self.loggo.log.assert_called_with(logging.WARNING, warn, ANY)  # type: ignore
-
-
-if __name__ == "__main__":
-    unittest.main()
