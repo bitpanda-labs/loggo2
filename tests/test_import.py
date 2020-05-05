@@ -1,10 +1,9 @@
 import builtins
 from importlib import reload
-import unittest
 
 
-class TestWithoutGraypy(unittest.TestCase):
-    def setUp(self):
+class TestWithoutGraypy:
+    def setup_method(self):
         self.import_orig = builtins.__import__
 
         def mocked_import(name, *args):
@@ -14,7 +13,7 @@ class TestWithoutGraypy(unittest.TestCase):
 
         builtins.__import__ = mocked_import
 
-    def tearDown(self):
+    def teardown_method(self):
         builtins.__import__ = self.import_orig
         import loggo
 
@@ -25,8 +24,4 @@ class TestWithoutGraypy(unittest.TestCase):
 
         reload(loggo._loggo)
         loggo.Loggo()
-        self.assertEqual(loggo._loggo.graypy, None)
-
-
-if __name__ == "__main__":
-    unittest.main()
+        assert loggo._loggo.graypy is None
