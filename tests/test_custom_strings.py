@@ -1,6 +1,7 @@
 from typing import Mapping, Optional
-import unittest
 from unittest.mock import patch
+
+import pytest
 
 from loggo import Loggo
 
@@ -50,54 +51,50 @@ def custom_without_return():
     return 1
 
 
-class TestCustomStrings(unittest.TestCase):
+class TestCustomStrings:
     def test_pass(self):
         with patch("logging.Logger.log") as logger:
             n = custom_success()
-            self.assertEqual(n, 1)
-            self.assertEqual(logger.call_count, 2)
+            assert n == 1
+            assert logger.call_count == 2
             (alert, logged_msg), extras = logger.call_args_list[0]
-            self.assertEqual(logged_msg, "Log string custom_success()")
+            assert logged_msg == "Log string custom_success()"
             (alert, logged_msg), extras = logger.call_args_list[1]
-            self.assertEqual(logged_msg, "Log string for return")
+            assert logged_msg == "Log string for return"
 
     def test_user_default_none(self):
         with patch("logging.Logger.log") as logger:
             n = custom_success()
-            self.assertEqual(n, 1)
-            self.assertEqual(logger.call_count, 2)
+            assert n == 1
+            assert logger.call_count == 2
             (alert, logged_msg), extras = logger.call_args_list[0]
-            self.assertEqual(logged_msg, "Log string custom_success()")
+            assert logged_msg == "Log string custom_success()"
             (alert, logged_msg), extras = logger.call_args_list[1]
-            self.assertEqual(logged_msg, "Log string for return")
+            assert logged_msg == "Log string for return"
 
     def custom_none_default(self):
         with patch("logging.Logger.log") as logger:
             n = custom_success()
-            self.assertEqual(n, 1)
-            self.assertEqual(logger.call_count, 1)
+            assert n == 1
+            assert logger.call_count == 1
             (alert, logged_msg), extras = logger.call_args_list[1]
-            self.assertEqual(logged_msg, "Log string for return")
+            assert logged_msg == "Log string for return"
 
     def test_fail(self):
         with patch("logging.Logger.log") as logger:
-            with self.assertRaises(ValueError):
+            with pytest.raises(ValueError):
                 custom_fail()
-            self.assertEqual(logger.call_count, 2)
+            assert logger.call_count == 2
             (alert, logged_msg), extras = logger.call_args_list[0]
-            self.assertEqual(logged_msg, "Log string custom_fail()")
+            assert logged_msg == "Log string custom_fail()"
             (alert, logged_msg), extras = logger.call_args_list[1]
-            self.assertEqual(logged_msg, "Log string on exception")
-            self.assertEqual(alert, 10)
+            assert logged_msg == "Log string on exception"
+            assert alert == 10
 
     def test_no_return_string(self):
         with patch("logging.Logger.log") as logger:
             n = custom_without_return()
-            self.assertEqual(n, 1)
-            self.assertEqual(logger.call_count, 1)
+            assert n == 1
+            assert logger.call_count == 1
             (alert, logged_msg), extras = logger.call_args_list[0]
-            self.assertEqual(logged_msg, "called fine")
-
-
-if __name__ == "__main__":
-    unittest.main()
+            assert logged_msg == "called fine"
