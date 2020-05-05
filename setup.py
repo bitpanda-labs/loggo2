@@ -4,6 +4,7 @@ from setuptools import setup
 
 EXTRAS_REQUIRE = {
     "graylog": ["graypy>=2.0.0,<3.0.0"],
+    "tests": ["pytest", "pytest-randomly", "pytest-cov"],
     "lint": [
         "isort",
         "black",
@@ -17,7 +18,9 @@ EXTRAS_REQUIRE = {
     "tools": ["codecov", "bump2version"],
 }
 # Install all dependencies for development
-EXTRAS_REQUIRE["dev"] = EXTRAS_REQUIRE["graylog"] + EXTRAS_REQUIRE["lint"] + EXTRAS_REQUIRE["tools"]
+EXTRAS_REQUIRE["dev"] = (
+    EXTRAS_REQUIRE["graylog"] + EXTRAS_REQUIRE["tests"] + EXTRAS_REQUIRE["lint"] + EXTRAS_REQUIRE["tools"]
+)
 
 
 def read(fname: str) -> str:
