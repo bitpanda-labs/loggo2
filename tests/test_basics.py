@@ -331,19 +331,18 @@ class TestLog:
 
     def test_int_truncation(self):
         """Test that large ints in log data are truncated."""
+        truncation = 100
+        loggo = Loggo(truncation=truncation)
+        msg = "This is simply a test of the int truncation inside the log."
+        large_number = 10 ** (truncation + 1)
+        log_data = dict(key=large_number)
         with patch("logging.Logger.log") as mock_log:
-            msg = "This is simply a test of the int truncation inside the log."
-            large_number = 10 ** 300001
-            log_data = dict(key=large_number)
-            self.log(logging.INFO, msg, log_data)
-            mock_log.assert_called_with(20, msg, extra=ANY)
-            logger_was_passed = mock_log.call_args[1]["extra"]["key"]
-            default_truncation_len = 7500
-            truncation_suffix = "..."
-            done_by_hand = (
-                str(large_number)[: default_truncation_len - len(truncation_suffix)] + truncation_suffix
-            )
-            assert logger_was_passed == done_by_hand
+            loggo.log(logging.INFO, msg, log_data)
+        mock_log.assert_called_with(20, msg, extra=ANY)
+        logger_was_passed = mock_log.call_args[1]["extra"]["key"]
+        truncation_suffix = "..."
+        done_by_hand = str(large_number)[: truncation - len(truncation_suffix)] + truncation_suffix
+        assert logger_was_passed == done_by_hand
 
     def test_string_truncation_fail(self):
         """If something cannot be cast to string, we need to know about it."""
@@ -368,20 +367,19 @@ class TestLog:
 
     def test_trace_truncation(self):
         """Test that trace is truncated correctly."""
+        trace_truncation = 100
+        loggo = Loggo(trace_truncation=trace_truncation)
         for trace_key in {"trace", "traceback"}:
+            msg = "This is simply a test of the int truncation inside the log."
+            large_number = 10 ** (trace_truncation + 1)
+            log_data = {trace_key: large_number}
             with patch("logging.Logger.log") as mock_log:
-                msg = "This is simply a test of the int truncation inside the log."
-                large_number = 10 ** 300001
-                log_data = {trace_key: large_number}
-                self.log(logging.INFO, msg, log_data)
-                mock_log.assert_called_with(20, msg, extra=ANY)
-                logger_was_passed = mock_log.call_args[1]["extra"][trace_key]
-                default_truncation_len = 15000
-                truncation_suffix = "..."
-                done_by_hand = (
-                    str(large_number)[: default_truncation_len - len(truncation_suffix)] + truncation_suffix
-                )
-                assert logger_was_passed == done_by_hand
+                loggo.log(logging.INFO, msg, log_data)
+            mock_log.assert_called_with(20, msg, extra=ANY)
+            logger_was_passed = mock_log.call_args[1]["extra"][trace_key]
+            truncation_suffix = "..."
+            done_by_hand = str(large_number)[: trace_truncation - len(truncation_suffix)] + truncation_suffix
+            assert logger_was_passed == done_by_hand
 
     def test_fail_to_add_entry(self):
         with patch("logging.Logger.log") as mock_log:
