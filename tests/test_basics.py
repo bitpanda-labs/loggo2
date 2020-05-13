@@ -8,9 +8,11 @@ import pytest
 
 from loggo import Loggo
 
-test_setup: Mapping[str, Any] = dict(
-    do_write=True, log_if_graylog_disabled=False, private_data={"mnemonic", "priv"}
-)
+test_setup: Mapping[str, Any] = {
+    "do_write": True,
+    "log_if_graylog_disabled": False,
+    "private_data": {"mnemonic", "priv"},
+}
 
 loggo = Loggo(**test_setup)
 
@@ -127,8 +129,8 @@ def first_test_func(number):
     raise ValueError("Broken!")
 
 
-within = dict(lst=list(), ok=dict(ok=dict(priv="secret")))
-beyond = dict(lst=list(), ok=dict(ok=dict(ok=dict(ok=dict(ok=dict(ok=dict(priv="allowed")))))))
+within = {"lst": [], "ok": {"ok": {"priv": "secret"}}}
+beyond = {"lst": [], "ok": {"ok": {"ok": {"ok": {"ok": {"ok": {"priv": "allowed"}}}}}}}
 
 
 @loggo
@@ -300,7 +302,7 @@ class TestLog:
         "protected_name", in order to stop error in logger later.
         """
         with patch("logging.Logger.log") as mock_log:
-            self.log(logging.INFO, "fine", dict(name="bad", other="good"))
+            self.log(logging.INFO, "fine", {"name": "bad", "other": "good"})
             (_alert, _msg), kwargs = mock_log.call_args
             assert kwargs["extra"]["protected_name"] == "bad"
             assert kwargs["extra"]["other"] == "good"
@@ -309,7 +311,7 @@ class TestLog:
         with patch("logging.Logger.log") as logger:
             level_num = 50
             msg = "Test message here"
-            result = self.log(level_num, msg, dict(extra="data"))
+            result = self.log(level_num, msg, {"extra": "data"})
             assert result is None
             (alert, logged_msg), extras = logger.call_args
             assert alert == level_num
@@ -335,7 +337,7 @@ class TestLog:
         loggo = Loggo(truncation=truncation)
         msg = "This is simply a test of the int truncation inside the log."
         large_number = 10 ** (truncation + 1)
-        log_data = dict(key=large_number)
+        log_data = {"key": large_number}
         with patch("logging.Logger.log") as mock_log:
             loggo.log(logging.INFO, msg, log_data)
         mock_log.assert_called_with(20, msg, extra=ANY)
@@ -384,7 +386,7 @@ class TestLog:
     def test_fail_to_add_entry(self):
         with patch("logging.Logger.log") as mock_log:
             no_string_rep = NoRepr()
-            sample = dict(fine=123, not_fine=no_string_rep)
+            sample = {"fine": 123, "not_fine": no_string_rep}
             result = self.loggo.sanitise(sample)
             (alert, msg), kwargs = mock_log.call_args
             assert "Object could not be cast to string" == msg

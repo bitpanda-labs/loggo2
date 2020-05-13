@@ -5,20 +5,22 @@ import pytest
 
 from loggo import Loggo
 
-strings: Mapping[str, str] = dict(
-    called="Log string {call_signature}", returned="Log string for return", errored="Log string on exception"
-)
+strings: Mapping[str, str] = {
+    "called": "Log string {call_signature}",
+    "returned": "Log string for return",
+    "errored": "Log string on exception",
+}
 
 custom_strings = Loggo(log_if_graylog_disabled=False, **strings)
 
-nocalled: Mapping[str, Optional[str]] = dict(
-    called=None,
-    returned="Log string for return",
-    returned_none="Returned none!",
-    errored="Log string on exception",
-)
+nocalled: Mapping[str, Optional[str]] = {
+    "called": None,
+    "returned": "Log string for return",
+    "returned_none": "Returned none!",
+    "errored": "Log string on exception",
+}
 
-no_return: Mapping[str, Optional[str]] = dict(called="called fine", returned=None, returned_none=None)
+no_return: Mapping[str, Optional[str]] = {"called": "called fine", "returned": None, "returned_none": None}
 
 custom_none_string = Loggo(log_if_graylog_disabled=False, **nocalled)
 
