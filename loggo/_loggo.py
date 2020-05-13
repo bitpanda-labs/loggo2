@@ -31,12 +31,12 @@ CallableEvent = Literal["called", "errored", "returned", "returned_none"]
 CallableOrType = TypeVar("CallableOrType", Callable, type)
 
 # Strings to be formatted for pre function, post function and error during function
-DEFAULT_FORMS: Mapping[CallableEvent, str] = dict(
-    called="*Called {call_signature}",
-    returned="*Returned from {call_signature} with {return_type} {return_value}",
-    returned_none="*Returned None from {call_signature}",
-    errored='*Errored during {call_signature} with {exception_type} "{exception_msg}"',
-)
+DEFAULT_FORMS: Mapping[CallableEvent, str] = {
+    "called": "*Called {call_signature}",
+    "returned": "*Returned from {call_signature} with {return_type} {return_value}",
+    "returned_none": "*Returned None from {call_signature}",
+    "errored": '*Errored during {call_signature} with {exception_type} "{exception_msg}"',
+}
 
 # Miscellaneous constants
 LOG_LEVEL = logging.DEBUG  # Log level used for Loggo decoration logs
@@ -344,7 +344,7 @@ class Loggo:
 
     def _string_params(self, non_private_params: Mapping, use_repr: bool = True) -> Dict[str, str]:
         """Turn every entry in log_data into truncated strings."""
-        params = dict()
+        params = {}
         for key, val in non_private_params.items():
             if key in {"trace", "traceback"}:
                 truncation = self._trace_truncation
@@ -420,7 +420,7 @@ class Loggo:
         if not isinstance(log_data, dict) or dict_depth >= MAX_DICT_OBSCURATION_DEPTH:
             return log_data
 
-        out = dict()
+        out = {}
         for key, value in log_data.items():
             if key in self._private_data:
                 out[key] = OBSCURED_STRING
@@ -495,7 +495,7 @@ class Loggo:
 
     def add_custom_log_data(self) -> Dict[str, str]:
         """An overwritable method useful for adding custom log data."""
-        return dict()
+        return {}
 
     def _add_graylog_handler(self, address: Optional[Tuple[str, int]], log_if_disabled: bool) -> None:
         if not graypy:
@@ -521,7 +521,7 @@ class Loggo:
             obj = str(obj) if not use_repr else repr(obj)
         except Exception as exc:
             self.warning(
-                "Object could not be cast to string", extra=dict(exception_type=type(exc), exception=exc)
+                "Object could not be cast to string", extra={"exception_type": type(exc), "exception": exc}
             )
             return "<<Unstringable input>>"
         return self._truncate(obj, truncate)
@@ -552,7 +552,7 @@ class Loggo:
         Some names cannot go into logger. Rename the invalid keys with a
         prefix before logging.
         """
-        out = dict()
+        out = {}
         # Names that stdlib logger will not like. Based on [1]
         # [1]: https://github.com/python/cpython/blob/04c79d6088a22d467f04dbe438050c26de22fa85/Lib/logging/__init__.py#L1550  # noqa: E501
         protected = {"message", "asctime"} | LOG_RECORD_ATTRS
@@ -590,7 +590,7 @@ class Loggo:
             return
 
         if extra is None:
-            extra = dict()
+            extra = {}
         else:  # Make a copy of the user input to not mutate the original
             extra = dict(extra)
 
@@ -600,7 +600,7 @@ class Loggo:
 
         msg = self._truncate(msg, self._msg_truncation)
 
-        extra.update(dict(log_level=str(level), loggo="True"))
+        extra.update({"log_level": str(level), "loggo": "True"})
 
         try:
             self._logger.log(level, msg, extra=extra)
