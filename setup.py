@@ -42,7 +42,6 @@ setup(
     keywords="bitpanda utilities logging",
     packages=["loggo"],
     package_data={"loggo": ["py.typed"]},
-    zip_safe=False,  # For mypy to be able to find the installed package
     long_description=read("README.md"),
     long_description_content_type="text/markdown",
     install_requires=["typing-extensions>=3.7.4,<4.0.0; python_version<'3.8'"],
