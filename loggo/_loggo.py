@@ -206,7 +206,7 @@ class Loggo:
         return returned
 
     @staticmethod
-    def _can_decorate(candidate: Callable, name: Optional[str] = None) -> bool:
+    def _can_decorate(candidate: Callable, name: Optional[str] = None, cls: Optional[type] = None) -> bool:
         """Decide if we can decorate a given callable.
 
         Don't decorate python magic methods.
@@ -216,15 +216,16 @@ class Loggo:
             return False
         if name.startswith("__") and name.endswith("__"):
             return False
+        if name not in vars(cls):
+            # Don't decorate inherited methods
+            return False
         return True
 
     def _decorate_all_methods(self, cls: type, just_errors: bool = False) -> type:
         """Decorate all viable methods in a class."""
         members = inspect.getmembers(cls)
-        members = [(k, v) for k, v in members if callable(v) and self._can_decorate(v, name=k)]
+        members = [(k, v) for k, v in members if callable(v) and self._can_decorate(v, name=k, cls=cls)]
         for name, candidate in members:
-            if name not in vars(cls):
-                continue
             deco = self._logme(candidate, just_errors=just_errors)
             # somehow, decorating classmethods as staticmethods is the only way
             # to make everything work properly. we should find out why, some day
