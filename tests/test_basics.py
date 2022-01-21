@@ -518,4 +518,4 @@ class TestLog:
         self.loggo.log = Mock()  # type: ignore
         warn = "The parent logger should log this message after sublogger logs it"
         sub_loggo.log(logging.WARNING, warn)
-        self.loggo.log.assert_called_with(logging.WARNING, warn, ANY)  # type: ignore
+        self.loggo.log.assert_called_with(logging.WARNING, warn, ANY)

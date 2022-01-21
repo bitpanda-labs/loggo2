@@ -223,6 +223,8 @@ class Loggo:
         members = inspect.getmembers(cls)
         members = [(k, v) for k, v in members if callable(v) and self._can_decorate(v, name=k)]
         for name, candidate in members:
+            if name not in vars(cls):
+                continue
             deco = self._logme(candidate, just_errors=just_errors)
             # somehow, decorating classmethods as staticmethods is the only way
             # to make everything work properly. we should find out why, some day
