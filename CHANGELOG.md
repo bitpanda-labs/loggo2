@@ -3,10 +3,12 @@ Changelog
 
 This log should always be updated when doing backwards incompatible changes, resulting in a major version bump. Feel free to add a log for lesser version bumps as well, but for major bumps it's a must.
 
-*unreleased major*
+9.0.0
 -----
 - Changed
     - `private_data` kwarg of `Loggo.__init__` no longer accepts `None` value.
+- Fixed
+  - `@loggo` decorator no longer crashes when decorating a derived class
 
 8.0.0
 -----
