@@ -5,6 +5,7 @@ Loggo: safe and automatable logging
 from contextlib import contextmanager
 from functools import wraps
 import inspect
+import json
 import logging
 import os
 import pathlib
@@ -95,6 +96,69 @@ class LocalLogFormatter(logging.Formatter):
         return msg
 
 
+class JsonLogFormatter(logging.Formatter):
+    """JSON formatter for file logs and stdout logs."""
+
+    REPR_FAIL_PLACEHOLDER = "REPR_FAILED"
+    BASE_TYPES = (int, float, bool, str)
+
+    def __init__(
+        self,
+        *,  # Reject positional arguments
+        exclude_keys: Optional[set] = None,
+        include_keys: Optional[set] = None,
+        add_timestamp: Optional[str] = None,
+    ) -> None:
+        """Initializes JSON formatter object.
+
+        - exclude_keys: Keys which are excluded from the log message. Mutually exclusive with include_keys.
+            If exclude_keys is not of type set, but e.g. a string, the formatter does not work properly.
+        - include_keys: Keys which are included in the log message. If this param is set, all keys not
+            included in this parameter are excluded. If include_keys is not of type set, but e.g. a string,
+            the formatter does not work properly.
+        - add_timestamp: Name of the key to be added, with value equal to record.created. graypy also uses
+            value of the field record.created to add timestamps.
+        """
+        super().__init__()
+        self.exclude_keys = exclude_keys or set()
+        self.include_keys = include_keys or set()
+        if include_keys and exclude_keys:
+            raise RuntimeError("include_keys and exclude_keys are mutually exclusive, cannot be set together")
+        self.add_timestamp = add_timestamp
+
+    def get_json(self, record: logging.LogRecord) -> Dict:
+        extra: dict = {}
+        for attr, value in record.__dict__.items():
+            if attr not in self.exclude_keys and (not self.include_keys or attr in self.include_keys):
+                if isinstance(value, self.BASE_TYPES):
+                    extra[attr] = value
+                else:
+                    try:
+                        extra[attr] = repr(value)
+                    except Exception:
+                        extra[attr] = self.REPR_FAIL_PLACEHOLDER
+        return extra
+
+    def format(self, record: logging.LogRecord) -> str:  # noqa: A003
+        msg: dict = self.get_json(record)
+        if self.add_timestamp:
+            msg[self.add_timestamp] = record.created
+        if msg:
+            try:
+                return json.dumps(msg)
+            except Exception as e:
+                return json.dumps(
+                    {
+                        "formatter_error": repr(e),
+                    }
+                )
+        return ""
+
+
+# Instantiate default log formatter
+default_log_formatter = LocalLogFormatter()
+
+
 class Loggo:
     """A class for logging."""
 
@@ -116,6 +180,7 @@ class Loggo:
         logfile: str = "./logs/logs.txt",
         private_data: AbstractSet[str] = frozenset(),
         log_if_graylog_disabled: bool = True,
+        log_formatter: logging.Formatter = default_log_formatter,
     ) -> None:
         """Initializes a Loggo object.
 
@@ -155,12 +220,12 @@ class Loggo:
             # create the directory where logs are stored if it does not exist yet
             pathlib.Path(os.path.dirname(logfile)).mkdir(parents=True, exist_ok=True)
             file_handler = logging.FileHandler(logfile, delay=True)
-            file_handler.setFormatter(LocalLogFormatter())
+            file_handler.setFormatter(log_formatter)
             self._logger.addHandler(file_handler)
 
         if do_print:
             print_handler = logging.StreamHandler(sys.stdout)
-            print_handler.setFormatter(LocalLogFormatter())
+            print_handler.setFormatter(log_formatter)
             self._logger.addHandler(print_handler)
 
         self._add_graylog_handler(graylog_address, log_if_disabled=log_if_graylog_disabled)
