@@ -6,20 +6,20 @@
 #     - Let mypy access dependencies' typehints.
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v2.5.0
+  rev: v4.1.0
   hooks:
   - id: check-yaml
   - id: check-toml
 - repo: https://github.com/timothycrosley/isort
-  rev: 4.3.21
+  rev: 5.10.1
   hooks:
   - id: isort
 - repo: https://github.com/psf/black
-  rev: 19.10b0
+  rev: 22.1.0
   hooks:
   - id: black
 - repo: https://github.com/pre-commit/mirrors-mypy
-  rev: v0.770
+  rev: v0.931
   hooks:
   - id: mypy
     args:
@@ -29,7 +29,7 @@ repos:
     # Allow multiple scripts (no .py postfix in name) to be checked in a single mypy invocation
     - --scripts-are-modules
 - repo: https://gitlab.com/pycqa/flake8
-  rev: 3.8.1
+  rev: 3.9.2
   hooks:
   - id: flake8
     additional_dependencies:
@@ -37,6 +37,6 @@ repos:
     - flake8-builtins
     - flake8-comprehensions
 - repo: https://github.com/myint/docformatter
-  rev: v1.3.1
+  rev: v1.4
   hooks:
   - id: docformatter
