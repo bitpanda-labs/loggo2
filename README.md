@@ -236,7 +236,7 @@ Issues, feature requests and code contributions are welcomed. Follow these steps
 
 1. After making changes and having written tests, make sure tests pass:
     ```bash
-    python -m unittest
+    pytest --cov
     ```
 
 1. Commit, push, and make a PR.
