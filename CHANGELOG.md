@@ -3,8 +3,11 @@ Changelog
 
 This log should always be updated when doing backwards incompatible changes, resulting in a major version bump. Feel free to add a log for lesser version bumps as well, but for major bumps it's a must.
 
-*unreleased major*
+9.0.0
 -----
+- Added
+    - Make Loggo init accept a new optional parameter log_formatter, which specifies a formatter used while writing log records to stdout or a file. Loggo remains backward compatible, as the default log formatter is LocalLogFormatter.
+    - Add a new log formatter JsonLogFormatter
 - Changed
     - `private_data` kwarg of `Loggo.__init__` no longer accepts `None` value.
 

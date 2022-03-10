@@ -6,7 +6,7 @@
 # `@loggo`: automated logging for Python 3
 
 <!--- Don't edit the version line below manually. Let bump2version do it for you. -->
-> Version 8.1.0
+> Version 9.0.0
 
 > You find Python's builtin `logging` module repetitive, tedious and ugly, and the logs you do write with it clash with your otherwise awesome style. `loggo` is here to help: it automates the boring stuff, simplifies the tricky stuff, hooks up effortlessly to [graylog](https://www.graylog.org/), and keeps an eye out for privacy and security if you need it to.
 
@@ -236,7 +236,7 @@ Issues, feature requests and code contributions are welcomed. Follow these steps
 
 1. After making changes and having written tests, make sure tests pass:
     ```bash
-    python -m unittest
+    pytest --cov
     ```
 
 1. Commit, push, and make a PR.
