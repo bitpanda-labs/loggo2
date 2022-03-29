@@ -255,7 +255,7 @@ class Loggo:
         """Resolve the format for a log message, when a function returns None.
 
         If the user has their own msg format for 'returned' logs, but
-        not one for 'returned_none', we should use theirs over loggo's
+        not one for 'returned_none', we should use theirs over Loggo's
         default.
         """
         # if the user explicitly doesn't want logs for returns, set to none
@@ -303,7 +303,7 @@ class Loggo:
 
     @contextmanager
     def pause(self, allow_errors: bool = True) -> Generator[None, None, None]:
-        """A context manager that prevents loggo from logging in that context.
+        """A context manager that prevents Loggo from logging in that context.
 
         By default, errors will still make it through, unless
         allow_errors==False
@@ -317,7 +317,7 @@ class Loggo:
             self._allow_errors, self._stopped = original
 
     def stop(self, allow_errors: bool = True) -> None:
-        """Stop loggo from logging.
+        """Stop Loggo from logging.
 
         By default still log raised exceptions.
         """
@@ -436,7 +436,7 @@ class Loggo:
         return format_strings
 
     def listen_to(loggo_self, facility: str) -> None:
-        """Listen to logs from another logger and make loggo log them.
+        """Listen to logs from another logger and make Loggo log them.
 
         This method can hook the logger up to anything else that logs
         using the Python logging module (i.e. another logger) and steals
@@ -524,7 +524,7 @@ class Loggo:
         if self._stopped and where != "errored":
             return
 
-        # do not log loggo, because why would you ever want that?
+        # do not log Loggo, because why would you ever want that?
         if "loggo.loggo" in formatters["call_signature"]:
             return
 

@@ -15,13 +15,13 @@ class TestWithoutGraypy:
 
     def teardown_method(self):
         builtins.__import__ = self.import_orig
-        import loggo
+        import loggo2
 
-        reload(loggo._loggo)
+        reload(loggo2._loggo2)
 
     def tests_using_graypy(self):
-        import loggo
+        import loggo2
 
-        reload(loggo._loggo)
-        loggo.Loggo()
-        assert loggo._loggo.graypy is None
+        reload(loggo2._loggo2)
+        loggo2.Loggo()
+        assert loggo2._loggo2.graypy is None

@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 import pytest
 
-from loggo import Loggo
+from loggo2 import Loggo
 
 strings: Mapping[str, str] = {
     "called": "Log string {call_signature}",

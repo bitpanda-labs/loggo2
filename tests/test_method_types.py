@@ -1,6 +1,6 @@
 from unittest.mock import patch
 
-from loggo import Loggo
+from loggo2 import Loggo
 
 loggo = Loggo(log_if_graylog_disabled=False)
 
