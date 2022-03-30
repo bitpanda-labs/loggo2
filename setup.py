@@ -32,21 +32,22 @@ def read(fname: str) -> str:
 
 
 setup(
-    name="loggo",
-    version="9.0.0",  # DO NOT EDIT THIS LINE MANUALLY. LET bump2version UTILITY DO IT
+    name="loggo2",
+    version="10.0.0",  # DO NOT EDIT THIS LINE MANUALLY. LET bump2version UTILITY DO IT
     author="Bitpanda GmbH",
     author_email="nosupport@bitpanda.com",
     description="Python logging tools",
-    url="https://github.com/bitpanda-labs/loggo",
-    project_urls={"Changelog": "https://github.com/bitpanda-labs/loggo/blob/master/CHANGELOG.md"},
+    url="https://github.com/bitpanda-labs/loggo2",
+    project_urls={"Changelog": "https://github.com/bitpanda-labs/loggo2/blob/master/CHANGELOG.md"},
     keywords="bitpanda utilities logging",
-    packages=["loggo"],
-    package_data={"loggo": ["py.typed"]},
+    packages=["loggo2"],
+    package_data={"loggo2": ["py.typed"]},
     long_description=read("README.md"),
     long_description_content_type="text/markdown",
-    install_requires=["typing-extensions>=3.7.4,<4.0.0; python_version<'3.8'"],
+    install_requires=["typing-extensions>=3.7.4,<4.0.0; python_version<='3.9'"],
     extras_require=EXTRAS_REQUIRE,
     python_requires=">=3.6",
+    license="MIT",
     classifiers=[
         "Topic :: Utilities",
         "Typing :: Typed",

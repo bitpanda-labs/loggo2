@@ -6,7 +6,7 @@ from unittest.mock import ANY, Mock, call, mock_open, patch
 
 import pytest
 
-from loggo import Loggo
+from loggo2 import Loggo
 
 test_setup: Mapping[str, Any] = {
     "do_write": True,
@@ -103,7 +103,7 @@ class DummyClass:
 
     @loggo.ignore
     def hopefully_ignored(self, n):
-        return n ** n
+        return n**n
 
     @loggo.errors
     def hopefully_only_errors(self, n):
@@ -236,7 +236,7 @@ class TestDecoration:
     def test_loggo_ignore(self):
         with patch("logging.Logger.log") as logger:
             result = dummy.hopefully_ignored(5)
-            assert result == 5 ** 5
+            assert result == 5**5
             logger.assert_not_called()
 
     def test_loggo_errors(self):
@@ -442,7 +442,7 @@ class TestLog:
 
     def test_compat(self):
         test = "a string"
-        with patch("loggo.Loggo.log") as logger:
+        with patch("loggo2.Loggo.log") as logger:
             loggo.log(logging.INFO, test, None)
         args = logger.call_args
         assert isinstance(args[0][0], int)
@@ -487,27 +487,27 @@ class TestLog:
         self._working_normally()
 
     def test_debug(self):
-        with patch("loggo.Loggo.log") as logger:
+        with patch("loggo2.Loggo.log") as logger:
             self.loggo.debug(self.log_msg, self.log_data)
             logger.assert_called_with(logging.DEBUG, self.log_msg, self.log_data)
 
     def test_info(self):
-        with patch("loggo.Loggo.log") as logger:
+        with patch("loggo2.Loggo.log") as logger:
             self.loggo.info(self.log_msg, self.log_data)
             logger.assert_called_with(logging.INFO, self.log_msg, self.log_data)
 
     def test_warning(self):
-        with patch("loggo.Loggo.log") as logger:
+        with patch("loggo2.Loggo.log") as logger:
             self.loggo.warning(self.log_msg, self.log_data)
             logger.assert_called_with(logging.WARNING, self.log_msg, self.log_data)
 
     def test_error(self):
-        with patch("loggo.Loggo.log") as logger:
+        with patch("loggo2.Loggo.log") as logger:
             self.loggo.error(self.log_msg, self.log_data)
             logger.assert_called_with(logging.ERROR, self.log_msg, self.log_data)
 
     def test_critical(self):
-        with patch("loggo.Loggo.log") as logger:
+        with patch("loggo2.Loggo.log") as logger:
             self.loggo.critical(self.log_msg, self.log_data)
             logger.assert_called_with(logging.CRITICAL, self.log_msg, self.log_data)
 

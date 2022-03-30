@@ -6,21 +6,21 @@
 # `@loggo`: automated logging for Python 3
 
 <!--- Don't edit the version line below manually. Let bump2version do it for you. -->
-> Version 9.0.0
+> Version 10.0.0
 
-> You find Python's builtin `logging` module repetitive, tedious and ugly, and the logs you do write with it clash with your otherwise awesome style. `loggo` is here to help: it automates the boring stuff, simplifies the tricky stuff, hooks up effortlessly to [graylog](https://www.graylog.org/), and keeps an eye out for privacy and security if you need it to.
+> You find Python's builtin `logging` module repetitive, tedious and ugly, and the logs you do write with it clash with your otherwise awesome style. `loggo2` is here to help: it automates the boring stuff, simplifies the tricky stuff, hooks up effortlessly to [graylog](https://www.graylog.org/), and keeps an eye out for privacy and security if you need it to.
 
 ## Install
 
 ```bash
-pip install loggo
+pip install loggo2
 # or
 python setup.py install
 ```
 
 To install with Graylog support, do:
 ```bash
-pip install loggo[graylog]
+pip install loggo2[graylog]
 ```
 
 ## Setup
@@ -30,7 +30,7 @@ To get started, import and instantiate the main class, ideally somewhere at the 
 For example, if your app was called `tester`, you could add the following to `tester/__init__.py`:
 
 ```python
-from loggo import Loggo
+from loggo2 import Loggo
 
 # all setup values are optional
 loggo = Loggo(
@@ -259,4 +259,4 @@ git push <remote> <branch> --follow-tags
 
 ## Limitations
 
-`loggo` uses Python's standard library (`logging`) to generate logs. There are some gotchas when using it: for instance, in terms of the extra data that can be passed in, key names for this extra data cannot clash with some internal names used within the `logging` module (`message`, `args`, etc.). To get around this, you'll get a warning that your data contains a bad key name, and it will be changed (i.e. from `message` to `protected_message`).
+`loggo2` uses Python's standard library (`logging`) to generate logs. There are some gotchas when using it: for instance, in terms of the extra data that can be passed in, key names for this extra data cannot clash with some internal names used within the `logging` module (`message`, `args`, etc.). To get around this, you'll get a warning that your data contains a bad key name, and it will be changed (i.e. from `message` to `protected_message`).
