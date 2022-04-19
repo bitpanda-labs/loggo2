@@ -40,7 +40,7 @@ DEFAULT_FORMS: Mapping[CallableEvent, str] = {
 }
 
 # Miscellaneous constants
-LOG_LEVEL = logging.DEBUG  # Log level used for Loggo decoration logs
+LOG_LEVEL = logging.INFO  # Log level used for Loggo decoration logs
 LOG_THRESHOLD = logging.DEBUG  # Only log when log level is this or higher
 MAX_DICT_OBSCURATION_DEPTH = 5
 OBSCURED_STRING = "********"

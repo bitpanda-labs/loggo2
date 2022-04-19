@@ -91,7 +91,7 @@ class TestCustomStrings:
             assert logged_msg == "Log string custom_fail()"
             (alert, logged_msg), extras = logger.call_args_list[1]
             assert logged_msg == "Log string on exception"
-            assert alert == 10
+            assert alert == 20
 
     def test_no_return_string(self):
         with patch("logging.Logger.log") as logger:
