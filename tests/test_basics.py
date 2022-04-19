@@ -165,7 +165,7 @@ class TestDecoration:
             with pytest.raises(ValueError, match="no good"):
                 may_or_may_not_error_test("astadh", 1331)
             (alert, logged_msg), extras = logger.call_args
-            assert alert == 10
+            assert alert == 20
             expected_msg = (
                 "*Errored during may_or_may_not_error_test(first='astadh', "
                 'other=1331) with ValueError "no good"'
