@@ -34,7 +34,7 @@ CallableOrType = TypeVar("CallableOrType", Callable, type)
 # Strings to be formatted for pre function, post function and error during function
 DEFAULT_FORMS: Mapping[CallableEvent, str] = {
     "called": "*Called {call_signature}",
-    "returned": "*Returned from {call_signature} with {return_type} {return_value}",
+    "returned": "*Returned from {call_signature} with {return_type}",
     "returned_none": "*Returned None from {call_signature}",
     "errored": '*Errored during {call_signature} with {exception_type} "{exception_msg}"',
 }
