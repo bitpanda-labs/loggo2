@@ -3,6 +3,11 @@ Changelog
 
 This log should always be updated when doing backwards incompatible changes, resulting in a major version bump. Feel free to add a log for lesser version bumps as well, but for major bumps it's a must.
 
+10.1.1
+-----
+- Changed
+  - "Returned from" log message is now more concise.
+
 10.1.0
 -----
 - Changed
