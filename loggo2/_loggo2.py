@@ -642,7 +642,7 @@ class Loggo:
         """Overwritable method to clean or alter log messages."""
         return msg
 
-    def log(self, level: int, msg: str, extra: Mapping = None, safe: bool = False) -> None:
+    def log(self, level: int, msg: str, extra: Optional[Mapping] = None, safe: bool = False) -> None:
         """Main logging method, called both in auto logs and manually by user.
 
         level: int, priority of log
