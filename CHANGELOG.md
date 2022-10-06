@@ -3,6 +3,14 @@ Changelog
 
 This log should always be updated when doing backwards incompatible changes, resulting in a major version bump. Feel free to add a log for lesser version bumps as well, but for major bumps it's a must.
 
+10.1.3
+-----
+- Upgraded typing-extensions to be >=4.2.0,<5.0.0
+  - Needed for Solana compatibility in index-to-address
+- Removing Python < 3.9
+- Adding Github Actions checks to run test suite
+- Minor fixes to previously failing tests
+
 10.1.2
 -----
 - Fixed
