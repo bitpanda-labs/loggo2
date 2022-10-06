@@ -184,7 +184,7 @@ class TestDecoration:
             (alert, logged_msg), extras = logger.call_args_list[-1]
             expected_msg = (
                 "*Returned from may_or_may_not_error_test(first=2534, other=2466, "
-                "kwargs=True) with tuple ((5000, True))"
+                "kwargs=True) with tuple"
             )
             assert logged_msg == expected_msg
 
@@ -195,7 +195,7 @@ class TestDecoration:
             (alert, logged_msg), extras = logger.call_args_list[0]
             assert logged_msg == "*Called DummyClass.add(a=1, b=2)"
             (alert, logged_msg), extras = logger.call_args_list[-1]
-            assert "*Returned from DummyClass.add(a=1, b=2) with int (3)" == logged_msg
+            assert "*Returned from DummyClass.add(a=1, b=2) with int" == logged_msg
 
     def test_everything_0(self):
         with patch("logging.Logger.log") as logger:
@@ -204,7 +204,7 @@ class TestDecoration:
             expected_msg = "*Called DummyClass.add_and_maybe_subtract(a=15, b=10, c=5)"
             assert logged_msg == expected_msg
             (alert, logged_msg), extras = logger.call_args_list[-1]
-            expected_msg = "*Returned from DummyClass.add_and_maybe_subtract(a=15, b=10, c=5) with int (20)"
+            expected_msg = "*Returned from DummyClass.add_and_maybe_subtract(a=15, b=10, c=5) with int"
             assert expected_msg == logged_msg
 
     def test_everything_1(self):
@@ -212,7 +212,7 @@ class TestDecoration:
             result = dummy.static_method(10)
             assert result == 100
             (alert, logged_msg), extras = logger.call_args_list[-1]
-            expected_msg = "*Returned from DummyClass.static_method(number=10) with int (100)"
+            expected_msg = "*Returned from DummyClass.static_method(number=10) with int"
             assert logged_msg == expected_msg
 
     def test_everything_3(self):
