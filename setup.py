@@ -33,7 +33,7 @@ def read(fname: str) -> str:
 
 setup(
     name="loggo2",
-    version="10.1.3",  # DO NOT EDIT THIS LINE MANUALLY. LET bump2version UTILITY DO IT
+    version="version="10.1.3"",  # DO NOT EDIT THIS LINE MANUALLY. LET bump2version UTILITY DO IT
     author="Bitpanda GmbH",
     author_email="nosupport@bitpanda.com",
     description="Python logging tools",
