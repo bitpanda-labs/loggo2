@@ -26,12 +26,12 @@ jobs:
       - name: Install dependencies
         run: |
           poetry install
-      - name: Run lint checks
-        run: |
-          poetry run flake8 .
-          poetry run mypy .
-          poetry run black --check .
-          poetry run docformatter --recursive --check loggo/ tests/ setup.py
-          poetry run isort --check-only -rc .
+      # - name: Run lint checks
+      #   run: |
+      #     poetry run flake8 .
+      #     poetry run mypy .
+      #     poetry run black --check .
+      #     poetry run docformatter --recursive --check loggo/ tests/ setup.py
+      #     poetry run isort --check-only -rc .
       - name: Run test suite
-        run: pytest --cov --cov-fail-under=95
+        run: poetry run pytest --cov --cov-fail-under=95
