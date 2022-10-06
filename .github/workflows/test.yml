@@ -1,0 +1,31 @@
+name: Test suite for Loggo2
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10"]
+    steps:
+      - name: 'Set up Python ${{ matrix.python-version }}'
+        uses: actions/setup-python@v4
+        with:
+          python-version: '${{ matrix.python-version }}'
+      - uses: actions/checkout@v3
+      - name: Install dependencies
+        run: python setup.py develop
+      - name: Run lint checks
+        run: |
+          flake8 .
+          mypy .
+          black --check .
+          docformatter --recursive --check loggo/ tests/ setup.py
+          isort --check-only -rc .
+      - name: Run test suite
+        run: pytest --cov --cov-fail-under=95
