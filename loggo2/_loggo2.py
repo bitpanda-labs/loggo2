@@ -668,7 +668,7 @@ class Loggo:
         extra.update({"log_level": str(level), "loggo": "True"})
 
         try:
-            self._logger.log(level, msg, extra=extra)
+            self._logger.log(level, msg, extra=extra, stacklevel=4)
         # The log call shouldn't ever fail, because of the way we rename protected
         # keys in `extra`. For the paranoid, we still keep the option to swallow
         # any unexpected errors (due to possible bugs in a 3rd party Handler etc.).
